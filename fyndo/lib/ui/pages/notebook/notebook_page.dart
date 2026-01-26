@@ -1,7 +1,7 @@
-// ═══════════════════════════════════════════════════════════════════════════
 // FYNDO - Zero-Trust Notes OS
-// Notebook Page - Notes List in Notebook
-// ═══════════════════════════════════════════════════════════════════════════
+// Notebook Page - Split View with Notes List and Editor
+
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,11 +13,12 @@ import 'package:fyndo_app/ui/consumers/notebook_consumer.dart';
 import 'package:fyndo_app/ui/theme/fyndo_theme.dart';
 import 'package:fyndo_app/ui/widgets/common/fyndo_app_bar.dart';
 import 'package:fyndo_app/ui/widgets/common/fyndo_empty_state.dart';
-import 'package:fyndo_app/ui/widgets/note/note_card.dart';
+import 'package:fyndo_app/ui/widgets/note/note_editor.dart';
+import 'package:fyndo_app/ui/widgets/note/note_export_helper.dart';
 import 'package:fyndo_app/ui/widgets/note/note_share_dialog.dart';
-import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
-/// Notebook page showing notes in a notebook.
+/// Notebook page showing notes in a split view - list on left, editor on right.
 class NotebookPage extends ConsumerWidget {
   final String notebookId;
 
@@ -45,14 +46,249 @@ class NotebookPage extends ConsumerWidget {
   }
 }
 
-class _NotebookPageContent extends ConsumerWidget {
+class _NotebookPageContent extends ConsumerStatefulWidget {
   final Notebook notebook;
 
   const _NotebookPageContent({required this.notebook});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_NotebookPageContent> createState() =>
+      _NotebookPageContentState();
+}
+
+class _NotebookPageContentState extends ConsumerState<_NotebookPageContent>
+    with WidgetsBindingObserver {
+  String? _selectedNoteId;
+  Note? _currentNote;
+  final _titleController = TextEditingController();
+  // Create a new GlobalKey for each note selection to force widget rebuild
+  GlobalKey<NoteEditorState>? _editorKey;
+  Timer? _saveTimer;
+  bool _hasChanges = false;
+  bool _isSaving = false;
+  DateTime? _lastSavedAt;
+
+  Notebook get notebook => widget.notebook;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    if (_hasChanges && !_isSaving) {
+      _saveNoteSync();
+    }
+    _titleController.dispose();
+    _saveTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      if (_hasChanges && !_isSaving) {
+        _saveNote();
+      }
+    }
+  }
+
+  void _onTitleChanged(String value) {
+    setState(() => _hasChanges = true);
+    _debounceSave();
+  }
+
+  void _onContentChanged(String content) {
+    setState(() => _hasChanges = true);
+    _debounceSave();
+  }
+
+  void _debounceSave() {
+    _saveTimer?.cancel();
+    _saveTimer = Timer(const Duration(seconds: 2), _saveNote);
+  }
+
+  Future<void> _saveNote() async {
+    if (_currentNote == null || !_hasChanges || _isSaving) return;
+
+    setState(() => _isSaving = true);
+
+    try {
+      final content = _editorKey?.currentState?.getContent() ?? '';
+      debugPrint('_saveNote: saving note ${_currentNote!.id}');
+      debugPrint(
+        '_saveNote: title="${_titleController.text}", content length=${content.length}',
+      );
+      debugPrint(
+        '_saveNote: content preview: ${content.substring(0, content.length.clamp(0, 100))}',
+      );
+      final updatedNote = _currentNote!.copyWith(
+        title: _titleController.text,
+        content: content,
+      );
+
+      await ref.read(noteOperationsProvider.notifier).updateNote(updatedNote);
+
+      if (mounted) {
+        // Invalidate providers to refresh cached data
+        ref.invalidate(notebookNotesProvider(notebook.id));
+        ref.invalidate(noteProvider(updatedNote.id));
+        setState(() {
+          _hasChanges = false;
+          _currentNote = updatedNote;
+          _lastSavedAt = DateTime.now();
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to save: $e')));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
+  }
+
+  void _saveNoteSync() {
+    if (_currentNote == null || !_hasChanges) return;
+    final content = _editorKey?.currentState?.getContent() ?? '';
+    final updatedNote = _currentNote!.copyWith(
+      title: _titleController.text,
+      content: content,
+    );
+    ref.read(noteOperationsProvider.notifier).updateNote(updatedNote);
+  }
+
+  Future<void> _selectNote(String noteId) async {
+    if (_hasChanges && !_isSaving) {
+      await _saveNote();
+    }
+
+    setState(() {
+      _selectedNoteId = noteId;
+      _currentNote = null;
+      _hasChanges = false;
+      // Create new key to force NoteEditor rebuild with fresh content
+      _editorKey = GlobalKey<NoteEditorState>();
+    });
+
+    // Invalidate to ensure we get fresh data from the repository
+    ref.invalidate(noteProvider(noteId));
+    final note = await ref.read(noteProvider(noteId).future);
+    debugPrint(
+      '_selectNote: loaded note ${note?.id}, content length: ${note?.content.length ?? 0}',
+    );
+    debugPrint(
+      '_selectNote: content preview: ${note?.content.substring(0, (note?.content.length ?? 0).clamp(0, 100))}',
+    );
+    if (note != null && mounted) {
+      setState(() {
+        _currentNote = note;
+        _titleController.text = note.title;
+      });
+    }
+  }
+
+  Future<void> _createNote() async {
+    if (_hasChanges && !_isSaving) {
+      await _saveNote();
+    }
+
+    try {
+      final note = await ref
+          .read(noteOperationsProvider.notifier)
+          .createNote(title: '', content: '', notebookId: notebook.id);
+
+      if (mounted) {
+        setState(() {
+          _selectedNoteId = note.id;
+          _currentNote = note;
+          _titleController.text = '';
+          _hasChanges = false;
+          // Create new key to force NoteEditor rebuild
+          _editorKey = GlobalKey<NoteEditorState>();
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to create note: $e')));
+      }
+    }
+  }
+
+  Future<void> _exportNoteAsMarkdown(String noteId) async {
+    try {
+      final note = await ref.read(noteProvider(noteId).future);
+      if (note != null) {
+        await NoteExportHelper.exportAsMarkdown(
+          title: note.title.isEmpty ? 'Untitled' : note.title,
+          content: note.content,
+          tags: note.tags.toList(),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to export: $e')));
+      }
+    }
+  }
+
+  Future<void> _duplicateNote(String noteId) async {
+    try {
+      final note = await ref.read(noteProvider(noteId).future);
+      if (note != null) {
+        await ref
+            .read(noteOperationsProvider.notifier)
+            .createNote(
+              title: '${note.title} (Copy)',
+              content: note.content,
+              notebookId: notebook.id,
+              tags: note.tags.toList(),
+            );
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Note duplicated')));
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to duplicate: $e')));
+      }
+    }
+  }
+
+  String _getStatusText() {
+    if (_isSaving) return 'Saving...';
+    if (_hasChanges) return 'Edited';
+    if (_lastSavedAt != null) {
+      final diff = DateTime.now().difference(_lastSavedAt!);
+      if (diff.inSeconds < 5) return 'Saved just now';
+      if (diff.inMinutes < 1) return 'Saved ${diff.inSeconds}s ago';
+      if (diff.inMinutes < 60) return 'Saved ${diff.inMinutes}m ago';
+      return 'Saved';
+    }
+    return 'Saved';
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final size = MediaQuery.of(context).size;
+    final isWide = size.width > 600;
     final color = notebook.color != null
         ? Color(int.parse('0xFF${notebook.color}'))
         : theme.colorScheme.primary;
@@ -75,7 +311,40 @@ class _NotebookPageContent extends ConsumerWidget {
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
-                  if (notebook.description != null)
+                  if (_selectedNoteId != null) ...[
+                    Row(
+                      children: [
+                        if (_isSaving)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 4),
+                            child: SizedBox(
+                              width: 10,
+                              height: 10,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 1.5,
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                        if (_hasChanges && !_isSaving)
+                          Container(
+                            width: 6,
+                            height: 6,
+                            margin: const EdgeInsets.only(right: 4),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primary,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        Text(
+                          _getStatusText(),
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ] else if (notebook.description != null)
                     Text(
                       notebook.description!,
                       style: theme.textTheme.bodySmall?.copyWith(
@@ -90,9 +359,9 @@ class _NotebookPageContent extends ConsumerWidget {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () => _showSearch(context),
-            tooltip: 'Search',
+            icon: const Icon(Icons.add),
+            onPressed: _createNote,
+            tooltip: 'New Note',
           ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),
@@ -114,14 +383,6 @@ class _NotebookPageContent extends ConsumerWidget {
                   contentPadding: EdgeInsets.zero,
                 ),
               ),
-              const PopupMenuItem(
-                value: 'archive',
-                child: ListTile(
-                  leading: Icon(Icons.archive),
-                  title: Text('Archive'),
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
               PopupMenuItem(
                 value: 'delete',
                 child: ListTile(
@@ -137,91 +398,286 @@ class _NotebookPageContent extends ConsumerWidget {
           ),
         ],
       ),
-      body: NotebookNotesConsumer(
-        notebookId: notebook.id,
-        builder: (context, notesAsync, _) {
-          return notesAsync.when(
-            data: (notes) => _buildNotesList(context, ref, notes),
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, _) => Center(child: Text('Error: $error')),
-          );
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _createNote(context, ref),
-        tooltip: 'Create Note',
-        child: const Icon(Icons.add),
-      ),
+      body: isWide ? _buildWideLayout(theme) : _buildNarrowLayout(theme),
     );
   }
 
-  Widget _buildNotesList(
-    BuildContext context,
-    WidgetRef ref,
-    List<NoteMetadata> notes,
-  ) {
-    if (notes.isEmpty) {
-      return FyndoEmptyState(
-        icon: Icons.note,
-        title: 'No Notes Yet',
-        description: 'Create your first note in this notebook.',
-        actionText: 'Create Note',
-        onAction: () => _createNote(context, ref),
-      );
-    }
-
-    // Separate pinned and regular notes
-    final pinnedNotes = notes.where((n) => n.isPinned).toList();
-    final regularNotes = notes.where((n) => !n.isPinned).toList();
-
-    return ListView(
-      padding: const EdgeInsets.all(FyndoTheme.padding),
+  Widget _buildWideLayout(ThemeData theme) {
+    return Row(
       children: [
-        if (pinnedNotes.isNotEmpty) ...[
-          _SectionHeader(title: 'Pinned'),
-          const SizedBox(height: 8),
-          ...pinnedNotes.map(
-            (note) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: NoteCard(
-                title: note.title,
-                preview: null,
-                modifiedAt: note.modifiedAt,
-                tags: note.tags,
-                isPinned: note.isPinned,
-                onTap: () => context.push('/note/${note.id}'),
-                onLongPress: () => _showNoteOptions(context, ref, note),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-        ],
-        if (regularNotes.isNotEmpty) ...[
-          if (pinnedNotes.isNotEmpty) _SectionHeader(title: 'Notes'),
-          const SizedBox(height: 8),
-          ...regularNotes.map(
-            (note) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: NoteCard(
-                title: note.title,
-                preview: null,
-                modifiedAt: note.modifiedAt,
-                tags: note.tags,
-                isPinned: note.isPinned,
-                onTap: () => context.push('/note/${note.id}'),
-                onLongPress: () => _showNoteOptions(context, ref, note),
-              ),
-            ),
-          ),
-        ],
+        SizedBox(width: 300, child: _buildNotesList(theme)),
+        Container(width: 1, color: theme.dividerColor),
+        Expanded(child: _buildEditorArea(theme)),
       ],
     );
   }
 
-  void _showSearch(BuildContext context) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Search coming soon')));
+  Widget _buildNarrowLayout(ThemeData theme) {
+    if (_selectedNoteId == null) {
+      return _buildNotesList(theme);
+    } else {
+      return Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              border: Border(bottom: BorderSide(color: theme.dividerColor)),
+            ),
+            child: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () {
+                    if (_hasChanges) _saveNote();
+                    setState(() {
+                      _selectedNoteId = null;
+                      _currentNote = null;
+                    });
+                  },
+                ),
+                const Text('Back to notes'),
+              ],
+            ),
+          ),
+          Expanded(child: _buildEditorArea(theme)),
+        ],
+      );
+    }
+  }
+
+  Widget _buildNotesList(ThemeData theme) {
+    return NotebookNotesConsumer(
+      notebookId: notebook.id,
+      builder: (context, notesAsync, _) {
+        return notesAsync.when(
+          data: (notes) {
+            if (notes.isEmpty) {
+              return FyndoEmptyState(
+                icon: Icons.note_outlined,
+                title: 'No Notes Yet',
+                description: 'Create your first note in this notebook.',
+                actionText: 'Create Note',
+                onAction: _createNote,
+              );
+            }
+
+            final pinnedNotes = notes.where((n) => n.isPinned).toList();
+            final regularNotes = notes.where((n) => !n.isPinned).toList();
+
+            return ListView(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              children: [
+                if (pinnedNotes.isNotEmpty) ...[
+                  const _SectionHeader(title: 'PINNED'),
+                  ...pinnedNotes.map(
+                    (note) => _NoteListItem(
+                      note: note,
+                      isSelected: note.id == _selectedNoteId,
+                      onTap: () => _selectNote(note.id),
+                      onLongPress: () => _showNoteOptions(context, ref, note),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                if (regularNotes.isNotEmpty) ...[
+                  if (pinnedNotes.isNotEmpty)
+                    const _SectionHeader(title: 'NOTES'),
+                  ...regularNotes.map(
+                    (note) => _NoteListItem(
+                      note: note,
+                      isSelected: note.id == _selectedNoteId,
+                      onTap: () => _selectNote(note.id),
+                      onLongPress: () => _showNoteOptions(context, ref, note),
+                    ),
+                  ),
+                ],
+              ],
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, _) => Center(child: Text('Error: $error')),
+        );
+      },
+    );
+  }
+
+  Widget _buildEditorArea(ThemeData theme) {
+    if (_selectedNoteId == null) {
+      return FyndoEmptyState(
+        icon: Icons.edit_note,
+        title: 'Select a Note',
+        description: 'Choose a note from the list to start editing.',
+        actionText: 'Create Note',
+        onAction: _createNote,
+      );
+    }
+
+    if (_currentNote == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    // Use pure white for light theme, pure black for dark theme
+    final editorBackground = theme.brightness == Brightness.light
+        ? Colors.white
+        : Colors.black;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: editorBackground,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Note actions toolbar
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: FyndoTheme.paddingSmall,
+              vertical: 4,
+            ),
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(
+                  color: theme.dividerColor.withValues(alpha: 0.3),
+                ),
+              ),
+            ),
+            child: Row(
+              children: [
+                // Status indicator
+                Text(
+                  _getStatusText(),
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: _hasChanges
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const Spacer(),
+                // Pin button
+                IconButton(
+                  icon: Icon(
+                    _currentNote!.isPinned
+                        ? Icons.push_pin
+                        : Icons.push_pin_outlined,
+                    size: 20,
+                  ),
+                  onPressed: () => ref
+                      .read(noteOperationsProvider.notifier)
+                      .togglePin(_currentNote!.id),
+                  tooltip: _currentNote!.isPinned
+                      ? 'Unpin note'
+                      : 'Pin note',
+                  padding: const EdgeInsets.all(8),
+                  constraints: const BoxConstraints(),
+                ),
+                const SizedBox(width: 4),
+                // More options menu
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert, size: 20),
+                  padding: const EdgeInsets.all(8),
+                  onSelected: (value) =>
+                      _handleNoteMenuAction(context, value),
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'share',
+                      child: ListTile(
+                        leading: Icon(Icons.share),
+                        title: Text('Share'),
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'export',
+                      child: ListTile(
+                        leading: Icon(Icons.download),
+                        title: Text('Export as Markdown'),
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'duplicate',
+                      child: ListTile(
+                        leading: Icon(Icons.copy),
+                        title: Text('Duplicate'),
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'archive',
+                      child: ListTile(
+                        leading: Icon(Icons.archive),
+                        title: Text('Archive'),
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'delete',
+                      child: ListTile(
+                        leading: Icon(
+                          Icons.delete,
+                          color: theme.colorScheme.error,
+                        ),
+                        title: Text(
+                          'Move to Trash',
+                          style: TextStyle(
+                            color: theme.colorScheme.error,
+                          ),
+                        ),
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              FyndoTheme.padding,
+              FyndoTheme.padding,
+              FyndoTheme.padding,
+              FyndoTheme.paddingSmall,
+            ),
+            child: TextField(
+              controller: _titleController,
+              onChanged: _onTitleChanged,
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+              decoration: const InputDecoration(
+                hintText: 'Untitled',
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.zero,
+              ),
+              maxLines: 1,
+            ),
+          ),
+          Container(
+            margin: const EdgeInsets.symmetric(
+              horizontal: FyndoTheme.padding,
+              vertical: FyndoTheme.paddingSmall,
+            ),
+            height: 1,
+            color: theme.dividerColor.withValues(alpha: 0.5),
+          ),
+          Expanded(
+            child: NoteEditor(
+              key: _editorKey,
+              initialContent: _currentNote!.content,
+              onContentChanged: _onContentChanged,
+              autofocus: _currentNote!.title.isEmpty,
+              placeholder: 'Start writing...',
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _handleMenuAction(BuildContext context, WidgetRef ref, String action) {
@@ -234,20 +690,50 @@ class _NotebookPageContent extends ConsumerWidget {
           onGenerateLink: () async {
             return 'https://fyndo.app/share/notebook/${notebook.id}';
           },
-          onShareWithUser: (email, role) {
-            // TODO: Share with user
-          },
+          onShareWithUser: (email, role) {},
         );
         break;
       case 'rename':
         _showRenameDialog(context, ref);
         break;
-      case 'archive':
-        ref.read(notebooksProvider.notifier).archiveNotebook(notebook.id);
-        context.pop();
-        break;
       case 'delete':
         _confirmDelete(context, ref);
+        break;
+    }
+  }
+
+  void _handleNoteMenuAction(BuildContext context, String action) {
+    if (_currentNote == null) return;
+
+    switch (action) {
+      case 'share':
+        ShareDialog.show(
+          context,
+          itemName: _currentNote!.title.isEmpty
+              ? 'Untitled'
+              : _currentNote!.title,
+          itemType: ShareItemType.note,
+        );
+        break;
+      case 'export':
+        _exportNoteAsMarkdown(_currentNote!.id);
+        break;
+      case 'duplicate':
+        _duplicateNote(_currentNote!.id);
+        break;
+      case 'archive':
+        ref.read(noteOperationsProvider.notifier).archiveNote(_currentNote!.id);
+        setState(() {
+          _selectedNoteId = null;
+          _currentNote = null;
+        });
+        break;
+      case 'delete':
+        ref.read(noteOperationsProvider.notifier).trashNote(_currentNote!.id);
+        setState(() {
+          _selectedNoteId = null;
+          _currentNote = null;
+        });
         break;
     }
   }
@@ -303,7 +789,7 @@ class _NotebookPageContent extends ConsumerWidget {
             onPressed: () {
               Navigator.pop(context);
               ref.read(notebooksProvider.notifier).deleteNotebook(notebook.id);
-              context.pop();
+              Navigator.of(context).pop();
             },
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,
@@ -313,23 +799,6 @@ class _NotebookPageContent extends ConsumerWidget {
         ],
       ),
     );
-  }
-
-  Future<void> _createNote(BuildContext context, WidgetRef ref) async {
-    try {
-      final note = await ref
-          .read(noteOperationsProvider.notifier)
-          .createNote(title: '', content: '', notebookId: notebook.id);
-      if (context.mounted) {
-        context.push('/note/${note.id}');
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to create note: $e')));
-      }
-    }
   }
 
   void _showNoteOptions(
@@ -368,11 +837,33 @@ class _NotebookPageContent extends ConsumerWidget {
               },
             ),
             ListTile(
+              leading: const Icon(Icons.download),
+              title: const Text('Export as Markdown'),
+              onTap: () async {
+                Navigator.pop(context);
+                await _exportNoteAsMarkdown(note.id);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.copy),
+              title: const Text('Duplicate'),
+              onTap: () async {
+                Navigator.pop(context);
+                await _duplicateNote(note.id);
+              },
+            ),
+            ListTile(
               leading: const Icon(Icons.archive),
               title: const Text('Archive'),
               onTap: () {
                 Navigator.pop(context);
                 ref.read(noteOperationsProvider.notifier).archiveNote(note.id);
+                if (note.id == _selectedNoteId) {
+                  setState(() {
+                    _selectedNoteId = null;
+                    _currentNote = null;
+                  });
+                }
               },
             ),
             ListTile(
@@ -384,6 +875,12 @@ class _NotebookPageContent extends ConsumerWidget {
               onTap: () {
                 Navigator.pop(context);
                 ref.read(noteOperationsProvider.notifier).trashNote(note.id);
+                if (note.id == _selectedNoteId) {
+                  setState(() {
+                    _selectedNoteId = null;
+                    _currentNote = null;
+                  });
+                }
               },
             ),
           ],
@@ -403,14 +900,112 @@ class _SectionHeader extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
       child: Text(
         title,
-        style: theme.textTheme.labelMedium?.copyWith(
+        style: theme.textTheme.labelSmall?.copyWith(
           color: theme.colorScheme.onSurfaceVariant,
           fontWeight: FontWeight.w600,
+          letterSpacing: 1.2,
         ),
       ),
     );
+  }
+}
+
+class _NoteListItem extends StatelessWidget {
+  final NoteMetadata note;
+  final bool isSelected;
+  final VoidCallback onTap;
+  final VoidCallback onLongPress;
+
+  const _NoteListItem({
+    required this.note,
+    required this.isSelected,
+    required this.onTap,
+    required this.onLongPress,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Material(
+      color: isSelected
+          ? theme.colorScheme.primaryContainer.withValues(alpha: 0.3)
+          : Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        onLongPress: onLongPress,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            border: Border(
+              left: BorderSide(
+                color: isSelected
+                    ? theme.colorScheme.primary
+                    : Colors.transparent,
+                width: 3,
+              ),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  if (note.isPinned)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: Icon(
+                        Icons.push_pin,
+                        size: 14,
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                  Expanded(
+                    child: Text(
+                      note.title.isEmpty ? 'Untitled' : note.title,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        fontStyle: note.title.isEmpty ? FontStyle.italic : null,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                _formatDate(note.modifiedAt),
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final diff = now.difference(date);
+
+    if (diff.inMinutes < 1) {
+      return 'Just now';
+    } else if (diff.inHours < 1) {
+      return '${diff.inMinutes}m ago';
+    } else if (diff.inDays == 0) {
+      return DateFormat.jm().format(date);
+    } else if (diff.inDays == 1) {
+      return 'Yesterday';
+    } else if (diff.inDays < 7) {
+      return DateFormat.EEEE().format(date);
+    } else {
+      return DateFormat.MMMd().format(date);
+    }
   }
 }

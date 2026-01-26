@@ -106,7 +106,7 @@ class EncryptedNoteRepository {
     );
 
     try {
-      final note = Note.fromBytes(plaintext.unsafeBytes);
+      final note = Note.fromBytes(Uint8List.fromList(plaintext.unsafeBytes));
       return note;
     } finally {
       plaintext.dispose();
@@ -189,31 +189,27 @@ class EncryptedNoteRepository {
       return;
     }
 
-    // Derive index encryption key
+    // Derive index encryption key (cached in vault, do NOT dispose)
     final indexKey = _vault.deriveSearchIndexKey();
 
-    try {
-      // Decrypt index
-      final plaintext = _crypto.xchacha20.decrypt(
-        ciphertext: Uint8List.fromList(indexBytes),
-        key: indexKey,
-      );
+    // Decrypt index
+    final plaintext = _crypto.xchacha20.decrypt(
+      ciphertext: Uint8List.fromList(indexBytes),
+      key: indexKey,
+    );
 
-      try {
-        // Parse JSONL format
-        final lines = utf8.decode(plaintext.unsafeBytes).split('\n');
-        for (final line in lines) {
-          if (line.trim().isEmpty) continue;
-          final metadata = NoteMetadata.fromJson(
-            jsonDecode(line) as Map<String, dynamic>,
-          );
-          _metadataCache[metadata.id] = metadata;
-        }
-      } finally {
-        plaintext.dispose();
+    try {
+      // Parse JSONL format
+      final lines = utf8.decode(plaintext.unsafeBytes).split('\n');
+      for (final line in lines) {
+        if (line.trim().isEmpty) continue;
+        final metadata = NoteMetadata.fromJson(
+          jsonDecode(line) as Map<String, dynamic>,
+        );
+        _metadataCache[metadata.id] = metadata;
       }
     } finally {
-      indexKey.dispose();
+      plaintext.dispose();
     }
 
     _indexLoaded = true;
@@ -235,24 +231,20 @@ class EncryptedNoteRepository {
 
     final plaintext = SecureBytes(Uint8List.fromList(utf8.encode(lines)));
 
-    // Derive index key
+    // Derive index key (cached in vault, do NOT dispose)
     final indexKey = _vault.deriveSearchIndexKey();
 
-    try {
-      // Encrypt
-      final encrypted = _crypto.xchacha20.encrypt(
-        plaintext: plaintext,
-        key: indexKey,
-      );
+    // Encrypt
+    final encrypted = _crypto.xchacha20.encrypt(
+      plaintext: plaintext,
+      key: indexKey,
+    );
 
-      // Write atomically
-      await _vault.filesystem.writeAtomic(
-        _vault.filesystem.paths.notesIndex,
-        encrypted.ciphertext,
-      );
-    } finally {
-      indexKey.dispose();
-    }
+    // Write atomically
+    await _vault.filesystem.writeAtomic(
+      _vault.filesystem.paths.notesIndex,
+      encrypted.ciphertext,
+    );
   }
 
   /// Gets statistics about stored notes.

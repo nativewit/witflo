@@ -33,9 +33,8 @@ dependencies:
   # ═══════════════════════════════════════════════════════════════════════════
   flutter_riverpod: ^2.5.1         # State management
   riverpod_annotation: ^2.3.5      # Code generation for Riverpod
-  freezed_annotation: ^2.4.1       # Immutable data classes
-  json_annotation: ^4.8.1          # JSON serialization
-  equatable: ^2.0.5                # Value equality
+  built_value: ^8.9.2              # Immutable data classes
+  built_collection: ^5.1.1         # Immutable collections
   uuid: ^4.3.3                     # UUID generation
 
   # ═══════════════════════════════════════════════════════════════════════════
@@ -71,8 +70,7 @@ dev_dependencies:
 
   # Code generation
   build_runner: ^2.4.8
-  freezed: ^2.4.7
-  json_serializable: ^6.7.1
+  built_value_generator: ^8.9.2
   riverpod_generator: ^2.4.0
   drift_dev: ^2.22.1               # Drift code generator
 

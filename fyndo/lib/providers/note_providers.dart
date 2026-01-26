@@ -42,6 +42,14 @@ final trashedNotesProvider = FutureProvider<List<NoteMetadata>>((ref) async {
   return repo.listTrashed();
 });
 
+/// Provider for archived notes.
+final archivedNotesProvider = FutureProvider<List<NoteMetadata>>((ref) async {
+  final repo = ref.watch(noteRepositoryProvider);
+  final all = await repo.listAll();
+  return all.where((n) => n.isArchived && !n.isTrashed).toList()
+    ..sort((a, b) => b.modifiedAt.compareTo(a.modifiedAt));
+});
+
 /// Provider for notes in a specific notebook.
 final notebookNotesProvider =
     FutureProvider.family<List<NoteMetadata>, String?>((ref, notebookId) async {
@@ -62,6 +70,16 @@ final tagNotesProvider = FutureProvider.family<List<NoteMetadata>, String>((
 final noteProvider = FutureProvider.family<Note?, String>((ref, noteId) async {
   final repo = ref.watch(noteRepositoryProvider);
   return repo.load(noteId);
+});
+
+/// Provider for note count in a specific notebook.
+/// This is computed dynamically from the notes list, so it's always up-to-date.
+final notebookNoteCountProvider = FutureProvider.family<int, String?>((
+  ref,
+  notebookId,
+) async {
+  final notes = await ref.watch(notebookNotesProvider(notebookId).future);
+  return notes.where((n) => !n.isTrashed).length;
 });
 
 /// Provider for note statistics.
@@ -141,6 +159,9 @@ class NoteOperationsNotifier extends Notifier<void> {
       ref.invalidate(activeNotesProvider);
       ref.invalidate(trashedNotesProvider);
       ref.invalidate(noteStatsProvider);
+      if (note.notebookId != null) {
+        ref.invalidate(notebookNotesProvider(note.notebookId));
+      }
     }
   }
 
@@ -156,12 +177,17 @@ class NoteOperationsNotifier extends Notifier<void> {
       ref.invalidate(activeNotesProvider);
       ref.invalidate(trashedNotesProvider);
       ref.invalidate(noteStatsProvider);
+      if (note.notebookId != null) {
+        ref.invalidate(notebookNotesProvider(note.notebookId));
+      }
     }
   }
 
   /// Permanently deletes a note.
   Future<void> deleteNote(String noteId) async {
     final repo = ref.read(noteRepositoryProvider);
+    // Load note first to get notebookId before deleting
+    final note = await repo.load(noteId);
     await repo.delete(noteId);
 
     ref.invalidate(noteProvider(noteId));
@@ -169,6 +195,9 @@ class NoteOperationsNotifier extends Notifier<void> {
     ref.invalidate(activeNotesProvider);
     ref.invalidate(trashedNotesProvider);
     ref.invalidate(noteStatsProvider);
+    if (note?.notebookId != null) {
+      ref.invalidate(notebookNotesProvider(note!.notebookId));
+    }
   }
 
   /// Toggles pin status of a note.

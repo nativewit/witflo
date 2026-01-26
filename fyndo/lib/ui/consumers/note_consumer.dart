@@ -164,3 +164,47 @@ class NoteStatsConsumer extends ConsumerWidget {
     return builder(context, statsAsync, child);
   }
 }
+
+/// Consumer widget for trashed notes.
+class TrashedNotesConsumer extends ConsumerWidget {
+  /// Builder function called with async value of trashed notes.
+  final Widget Function(
+    BuildContext context,
+    AsyncValue<List<NoteMetadata>> notesAsync,
+    Widget? child,
+  )
+  builder;
+
+  /// Optional child widget.
+  final Widget? child;
+
+  const TrashedNotesConsumer({super.key, required this.builder, this.child});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final notesAsync = ref.watch(trashedNotesProvider);
+    return builder(context, notesAsync, child);
+  }
+}
+
+/// Consumer widget for archived notes.
+class ArchivedNotesConsumer extends ConsumerWidget {
+  /// Builder function called with async value of archived notes.
+  final Widget Function(
+    BuildContext context,
+    AsyncValue<List<NoteMetadata>> notesAsync,
+    Widget? child,
+  )
+  builder;
+
+  /// Optional child widget.
+  final Widget? child;
+
+  const ArchivedNotesConsumer({super.key, required this.builder, this.child});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final notesAsync = ref.watch(archivedNotesProvider);
+    return builder(context, notesAsync, child);
+  }
+}

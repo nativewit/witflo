@@ -27,19 +27,43 @@ class NotePage extends ConsumerStatefulWidget {
   ConsumerState<NotePage> createState() => _NotePageState();
 }
 
-class _NotePageState extends ConsumerState<NotePage> {
+class _NotePageState extends ConsumerState<NotePage>
+    with WidgetsBindingObserver {
   final _titleController = TextEditingController();
   final _editorKey = GlobalKey<NoteEditorState>();
   Timer? _saveTimer;
   Note? _note;
   bool _hasChanges = false;
   bool _isSaving = false;
+  DateTime? _lastSavedAt;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    // Save any pending changes before disposing
+    if (_hasChanges && !_isSaving) {
+      _saveNoteSync();
+    }
     _titleController.dispose();
     _saveTimer?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Save when app goes to background or is paused
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      if (_hasChanges && !_isSaving) {
+        _saveNote();
+      }
+    }
   }
 
   void _onTitleChanged(String value) {
@@ -72,10 +96,13 @@ class _NotePageState extends ConsumerState<NotePage> {
 
       await ref.read(noteOperationsProvider.notifier).updateNote(updatedNote);
 
-      setState(() {
-        _hasChanges = false;
-        _note = updatedNote;
-      });
+      if (mounted) {
+        setState(() {
+          _hasChanges = false;
+          _note = updatedNote;
+          _lastSavedAt = DateTime.now();
+        });
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -87,6 +114,20 @@ class _NotePageState extends ConsumerState<NotePage> {
         setState(() => _isSaving = false);
       }
     }
+  }
+
+  /// Sync save for dispose - fire and forget
+  void _saveNoteSync() {
+    if (_note == null || !_hasChanges) return;
+
+    final content = _editorKey.currentState?.getContent() ?? '';
+    final updatedNote = _note!.copyWith(
+      title: _titleController.text,
+      content: content,
+    );
+
+    // Fire and forget - we can't await in dispose
+    ref.read(noteOperationsProvider.notifier).updateNote(updatedNote);
   }
 
   @override
@@ -120,6 +161,19 @@ class _NotePageState extends ConsumerState<NotePage> {
         );
       },
     );
+  }
+
+  String _getStatusText() {
+    if (_isSaving) return 'Saving...';
+    if (_hasChanges) return 'Edited';
+    if (_lastSavedAt != null) {
+      final diff = DateTime.now().difference(_lastSavedAt!);
+      if (diff.inSeconds < 5) return 'Saved just now';
+      if (diff.inMinutes < 1) return 'Saved ${diff.inSeconds}s ago';
+      if (diff.inMinutes < 60) return 'Saved ${diff.inMinutes}m ago';
+      return 'Saved';
+    }
+    return 'Saved';
   }
 
   Widget _buildEditor(BuildContext context, Note note) {
@@ -164,7 +218,7 @@ class _NotePageState extends ConsumerState<NotePage> {
                   ),
                 ),
               Text(
-                _isSaving ? 'Saving...' : (_hasChanges ? 'Edited' : 'Saved'),
+                _getStatusText(),
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -230,80 +284,130 @@ class _NotePageState extends ConsumerState<NotePage> {
             ),
           ],
         ),
-        body: Column(
-          children: [
-            // Title field
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: FyndoTheme.padding,
-                vertical: FyndoTheme.paddingSmall,
+        body: Container(
+          // Paper-like background with subtle texture effect
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
               ),
-              child: TextField(
-                controller: _titleController,
-                onChanged: _onTitleChanged,
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-                decoration: const InputDecoration(
-                  hintText: 'Untitled',
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.zero,
-                ),
-                maxLines: 1,
-              ),
-            ),
-
-            // Tags
-            if (note.tags.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: FyndoTheme.padding,
-                ),
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 4,
-                  children: note.tags.map((tag) {
-                    return Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: theme.dividerColor),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
+            ],
+          ),
+          child: Column(
+            children: [
+              // Paper margin indicator (left red line like real paper)
+              Expanded(
+                child: Row(
+                  children: [
+                    // Left margin line (optional paper aesthetic)
+                    Container(
+                      width: 2,
+                      margin: const EdgeInsets.only(left: 32),
+                      color: theme.colorScheme.error.withValues(alpha: 0.15),
+                    ),
+                    // Main content area
+                    Expanded(
+                      child: Column(
                         children: [
-                          Text(tag, style: theme.textTheme.labelSmall),
-                          const SizedBox(width: 4),
-                          InkWell(
-                            onTap: () => _removeTag(note, tag),
-                            child: Icon(
-                              Icons.close,
-                              size: 14,
-                              color: theme.colorScheme.onSurfaceVariant,
+                          // Title field
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(
+                              FyndoTheme.padding,
+                              FyndoTheme.padding,
+                              FyndoTheme.padding,
+                              FyndoTheme.paddingSmall,
+                            ),
+                            child: TextField(
+                              controller: _titleController,
+                              onChanged: _onTitleChanged,
+                              style: theme.textTheme.headlineSmall?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                              decoration: const InputDecoration(
+                                hintText: 'Untitled',
+                                border: InputBorder.none,
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                              maxLines: 1,
+                            ),
+                          ),
+
+                          // Tags
+                          if (note.tags.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: FyndoTheme.padding,
+                              ),
+                              child: Wrap(
+                                spacing: 8,
+                                runSpacing: 4,
+                                children: note.tags.map((tag) {
+                                  return Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      border: Border.all(
+                                        color: theme.dividerColor,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          tag,
+                                          style: theme.textTheme.labelSmall,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        InkWell(
+                                          onTap: () => _removeTag(note, tag),
+                                          child: Icon(
+                                            Icons.close,
+                                            size: 14,
+                                            color: theme
+                                                .colorScheme
+                                                .onSurfaceVariant,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            ),
+
+                          // Subtle divider
+                          Container(
+                            margin: const EdgeInsets.symmetric(
+                              horizontal: FyndoTheme.padding,
+                              vertical: FyndoTheme.paddingSmall,
+                            ),
+                            height: 1,
+                            color: theme.dividerColor.withValues(alpha: 0.5),
+                          ),
+
+                          // Editor
+                          Expanded(
+                            child: NoteEditor(
+                              key: _editorKey,
+                              initialContent: note.content,
+                              onContentChanged: _onContentChanged,
+                              autofocus: note.title.isEmpty,
+                              placeholder: 'Start writing...',
                             ),
                           ),
                         ],
                       ),
-                    );
-                  }).toList(),
+                    ),
+                  ],
                 ),
               ),
-
-            const Divider(),
-
-            // Editor
-            Expanded(
-              child: NoteEditor(
-                key: _editorKey,
-                initialContent: note.content,
-                onContentChanged: _onContentChanged,
-                autofocus: note.title.isEmpty,
-                placeholder: 'Start writing...',
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -352,7 +456,7 @@ class _NotePageState extends ConsumerState<NotePage> {
     NoteExportHelper.exportAsMarkdown(
       title: note.title.isEmpty ? 'Untitled' : note.title,
       content: content,
-      tags: note.tags,
+      tags: note.tags.toList(),
     );
   }
 

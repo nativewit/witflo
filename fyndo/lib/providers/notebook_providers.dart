@@ -1,148 +1,13 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // FYNDO - Zero-Trust Notes OS
-// Notebook Model & Providers
+// Notebook Providers
 // ═══════════════════════════════════════════════════════════════════════════
 
-import 'dart:convert';
-
-import 'package:equatable/equatable.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fyndo_app/features/notes/models/notebook.dart';
 import 'package:fyndo_app/providers/vault_providers.dart';
-import 'package:uuid/uuid.dart';
 
-/// A notebook for organizing notes.
-class Notebook extends Equatable {
-  /// Unique identifier (UUID v4)
-  final String id;
-
-  /// Notebook name
-  final String name;
-
-  /// Optional description
-  final String? description;
-
-  /// Parent vault ID
-  final String vaultId;
-
-  /// Color hex code (without #)
-  final String? color;
-
-  /// Icon name
-  final String? icon;
-
-  /// Creation timestamp (UTC)
-  final DateTime createdAt;
-
-  /// Last modification timestamp (UTC)
-  final DateTime modifiedAt;
-
-  /// Whether this notebook is archived
-  final bool isArchived;
-
-  /// Note count (computed, not stored)
-  final int noteCount;
-
-  const Notebook({
-    required this.id,
-    required this.name,
-    this.description,
-    required this.vaultId,
-    this.color,
-    this.icon,
-    required this.createdAt,
-    required this.modifiedAt,
-    this.isArchived = false,
-    this.noteCount = 0,
-  });
-
-  /// Creates a new notebook with generated ID and timestamps.
-  factory Notebook.create({
-    required String name,
-    required String vaultId,
-    String? description,
-    String? color,
-    String? icon,
-  }) {
-    final now = DateTime.now().toUtc();
-    return Notebook(
-      id: const Uuid().v4(),
-      name: name,
-      vaultId: vaultId,
-      description: description,
-      color: color,
-      icon: icon,
-      createdAt: now,
-      modifiedAt: now,
-    );
-  }
-
-  Notebook copyWith({
-    String? name,
-    String? description,
-    String? color,
-    String? icon,
-    bool? isArchived,
-    int? noteCount,
-    DateTime? modifiedAt,
-  }) {
-    return Notebook(
-      id: id,
-      name: name ?? this.name,
-      description: description ?? this.description,
-      vaultId: vaultId,
-      color: color ?? this.color,
-      icon: icon ?? this.icon,
-      createdAt: createdAt,
-      modifiedAt: modifiedAt ?? DateTime.now().toUtc(),
-      isArchived: isArchived ?? this.isArchived,
-      noteCount: noteCount ?? this.noteCount,
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'name': name,
-      'description': description,
-      'vaultId': vaultId,
-      'color': color,
-      'icon': icon,
-      'createdAt': createdAt.toIso8601String(),
-      'modifiedAt': modifiedAt.toIso8601String(),
-      'isArchived': isArchived,
-    };
-  }
-
-  factory Notebook.fromJson(Map<String, dynamic> json) {
-    return Notebook(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      description: json['description'] as String?,
-      vaultId: json['vaultId'] as String,
-      color: json['color'] as String?,
-      icon: json['icon'] as String?,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      modifiedAt: DateTime.parse(json['modifiedAt'] as String),
-      isArchived: json['isArchived'] as bool? ?? false,
-    );
-  }
-
-  String toJsonString() => jsonEncode(toJson());
-
-  @override
-  List<Object?> get props => [
-    id,
-    name,
-    description,
-    vaultId,
-    color,
-    icon,
-    createdAt,
-    modifiedAt,
-    isArchived,
-    noteCount,
-  ];
-}
+export 'package:fyndo_app/features/notes/models/notebook.dart';
 
 /// State for notebooks.
 class NotebooksState {
@@ -215,7 +80,9 @@ class NotebooksNotifier extends Notifier<NotebooksState> {
 
   /// Updates a notebook.
   Future<void> updateNotebook(Notebook notebook) async {
-    final updated = notebook.copyWith(modifiedAt: DateTime.now().toUtc());
+    final updated = notebook.rebuild(
+      (b) => b..modifiedAt = DateTime.now().toUtc(),
+    );
 
     state = state.copyWith(
       notebooks: state.notebooks
@@ -238,13 +105,13 @@ class NotebooksNotifier extends Notifier<NotebooksState> {
   /// Archives a notebook.
   Future<void> archiveNotebook(String notebookId) async {
     final notebook = state.notebooks.firstWhere((n) => n.id == notebookId);
-    await updateNotebook(notebook.copyWith(isArchived: true));
+    await updateNotebook(notebook.rebuild((b) => b..isArchived = true));
   }
 
   /// Unarchives a notebook.
   Future<void> unarchiveNotebook(String notebookId) async {
     final notebook = state.notebooks.firstWhere((n) => n.id == notebookId);
-    await updateNotebook(notebook.copyWith(isArchived: false));
+    await updateNotebook(notebook.rebuild((b) => b..isArchived = false));
   }
 }
 

@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:fyndo_app/ui/theme/fyndo_colors.dart';
 import 'package:fyndo_app/ui/theme/fyndo_theme.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 /// A rich text editor using Quill.
 class NoteEditor extends StatefulWidget {
@@ -182,8 +183,8 @@ class NoteEditorState extends State<NoteEditor> {
           showUnderLineButton: true,
           showStrikeThrough: true,
           showInlineCode: true,
-          showColorButton: false,
-          showBackgroundColorButton: false,
+          showColorButton: true,
+          showBackgroundColorButton: true,
           showClearFormat: true,
           showAlignmentButtons: false,
           showHeaderStyle: true,
@@ -217,8 +218,7 @@ class NoteEditorState extends State<NoteEditor> {
   }
 
   DefaultStyles _buildStyles(ThemeData theme, bool isDark) {
-    final baseStyle = TextStyle(
-      fontFamily: 'Nunito',
+    final baseStyle = GoogleFonts.nunito(
       fontSize: 16,
       height: 1.6,
       color: theme.colorScheme.onSurface,

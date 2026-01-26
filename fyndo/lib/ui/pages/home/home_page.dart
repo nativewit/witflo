@@ -5,6 +5,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fyndo_app/providers/note_providers.dart';
 import 'package:fyndo_app/providers/notebook_providers.dart';
 import 'package:fyndo_app/providers/vault_providers.dart';
 import 'package:fyndo_app/ui/consumers/notebook_consumer.dart';
@@ -203,16 +204,8 @@ class _HomePageContent extends ConsumerWidget {
                 itemCount: notebooks.length,
                 itemBuilder: (context, index) {
                   final notebook = notebooks[index];
-                  return FyndoListTile(
-                    leading: Icon(
-                      Icons.book,
-                      size: 20,
-                      color: notebook.color != null
-                          ? Color(int.parse('0xFF${notebook.color}'))
-                          : null,
-                    ),
-                    title: Text(notebook.name),
-                    subtitle: Text('${notebook.noteCount} notes'),
+                  return _NotebookListTile(
+                    notebook: notebook,
                     onTap: () => context.push('/notebook/${notebook.id}'),
                   );
                 },
@@ -449,7 +442,34 @@ class _HomePageContent extends ConsumerWidget {
   }
 }
 
-class _NotebookGridCard extends StatelessWidget {
+/// List tile for notebook in sidebar with dynamic note count.
+class _NotebookListTile extends ConsumerWidget {
+  final Notebook notebook;
+  final VoidCallback? onTap;
+
+  const _NotebookListTile({required this.notebook, this.onTap});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final noteCountAsync = ref.watch(notebookNoteCountProvider(notebook.id));
+    final noteCount = noteCountAsync.valueOrNull ?? 0;
+
+    return FyndoListTile(
+      leading: Icon(
+        Icons.book,
+        size: 20,
+        color: notebook.color != null
+            ? Color(int.parse('0xFF${notebook.color}'))
+            : null,
+      ),
+      title: Text(notebook.name),
+      subtitle: Text('$noteCount notes'),
+      onTap: onTap,
+    );
+  }
+}
+
+class _NotebookGridCard extends ConsumerWidget {
   final Notebook notebook;
   final VoidCallback? onTap;
   final VoidCallback? onMoreOptions;
@@ -461,8 +481,10 @@ class _NotebookGridCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final noteCountAsync = ref.watch(notebookNoteCountProvider(notebook.id));
+    final noteCount = noteCountAsync.valueOrNull ?? 0;
     final color = notebook.color != null
         ? Color(int.parse('0xFF${notebook.color}'))
         : theme.colorScheme.primary;
@@ -522,7 +544,7 @@ class _NotebookGridCard extends StatelessWidget {
                     else
                       const Spacer(),
                     Text(
-                      '${notebook.noteCount} notes',
+                      '$noteCount notes',
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),

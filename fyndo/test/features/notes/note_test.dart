@@ -34,10 +34,7 @@ void main() {
 
   group('Note Model', () {
     test('should create note with generated ID', () {
-      final note = Note.create(
-        title: 'Test Note',
-        content: 'Some content',
-      );
+      final note = Note.create(title: 'Test Note', content: 'Some content');
 
       expect(note.id, isNotEmpty);
       expect(note.title, equals('Test Note'));
@@ -61,10 +58,7 @@ void main() {
     });
 
     test('should increment version on copyWith', () {
-      final note = Note.create(
-        title: 'Original',
-        content: 'Content',
-      );
+      final note = Note.create(title: 'Original', content: 'Content');
 
       expect(note.version, equals(1));
 
@@ -75,10 +69,7 @@ void main() {
     });
 
     test('should move to trash', () {
-      final note = Note.create(
-        title: 'Note',
-        content: 'Content',
-      );
+      final note = Note.create(title: 'Note', content: 'Content');
 
       final trashed = note.trash();
 
@@ -87,10 +78,7 @@ void main() {
     });
 
     test('should restore from trash', () {
-      final note = Note.create(
-        title: 'Note',
-        content: 'Content',
-      );
+      final note = Note.create(title: 'Note', content: 'Content');
 
       final trashed = note.trash();
       final restored = trashed.restore();
@@ -118,10 +106,7 @@ void main() {
     });
 
     test('should serialize to bytes and back', () {
-      final note = Note.create(
-        title: 'Bytes Test',
-        content: 'Some content',
-      );
+      final note = Note.create(title: 'Bytes Test', content: 'Some content');
 
       final bytes = note.toBytes();
       final restored = Note.fromBytes(bytes);
@@ -134,10 +119,7 @@ void main() {
   group('NoteMetadata', () {
     test('should create from note with preview', () {
       final longContent = 'A' * 200;
-      final note = Note.create(
-        title: 'Long Note',
-        content: longContent,
-      );
+      final note = Note.create(title: 'Long Note', content: longContent);
 
       final metadata = NoteMetadata.fromNote(note, previewLength: 100);
 
@@ -147,13 +129,19 @@ void main() {
     });
 
     test('should serialize and deserialize', () {
+      final now = DateTime.now();
       final metadata = NoteMetadata(
-        id: 'note-1',
-        title: 'Test',
-        tags: ['tag'],
-        createdAt: DateTime.now(),
-        modifiedAt: DateTime.now(),
-        preview: 'Preview text',
+        (b) => b
+          ..id = 'note-1'
+          ..title = 'Test'
+          ..tags.add('tag')
+          ..createdAt = now
+          ..modifiedAt = now
+          ..isPinned = false
+          ..isArchived = false
+          ..isTrashed = false
+          ..version = 1
+          ..preview = 'Preview text',
       );
 
       final json = metadata.toJson();
@@ -186,10 +174,7 @@ void main() {
         password: unlockPassword,
       );
 
-      repo = EncryptedNoteRepository(
-        vault: vault,
-        crypto: crypto,
-      );
+      repo = EncryptedNoteRepository(vault: vault, crypto: crypto);
     });
 
     tearDown(() {
@@ -288,7 +273,10 @@ void main() {
     });
 
     test('should search by title', () async {
-      final note1 = Note.create(title: 'Meeting Notes', content: 'Discussed...');
+      final note1 = Note.create(
+        title: 'Meeting Notes',
+        content: 'Discussed...',
+      );
       final note2 = Note.create(title: 'Shopping List', content: 'Buy milk');
 
       await repo.save(note1);
@@ -378,4 +366,3 @@ void main() {
     });
   });
 }
-
