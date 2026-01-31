@@ -90,21 +90,27 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceState> {
 
   /// Initializes a new workspace at the given path.
   ///
-  /// Creates directory structure and marker files.
+  /// DEPRECATED in spec-002: Workspace initialization now requires a master password
+  /// and returns an UnlockedWorkspace instead of WorkspaceConfig.
+  ///
+  /// Use workspaceService.initializeWorkspace() directly instead:
+  /// ```dart
+  /// final workspaceService = ref.read(workspaceServiceProvider);
+  /// final unlocked = await workspaceService.initializeWorkspace(
+  ///   rootPath: path,
+  ///   masterPassword: password,
+  /// );
+  /// ref.read(unlockedWorkspaceProvider.notifier).unlock(unlocked);
+  /// ```
+  ///
+  /// This method is kept for backward compatibility but should not be used.
+  @Deprecated('Use workspaceService.initializeWorkspace with master password')
   Future<void> initializeWorkspace(String rootPath) async {
-    state = const AsyncValue.data(WorkspaceState(isLoading: true));
-
-    try {
-      final config = await _service.initializeWorkspace(rootPath);
-      final vaults = await _service.discoverVaults(rootPath);
-
-      state = AsyncValue.data(
-        WorkspaceState(config: config, discoveredVaults: vaults),
-      );
-    } catch (e) {
-      state = AsyncValue.data(WorkspaceState(error: e.toString()));
-      rethrow;
-    }
+    throw UnsupportedError(
+      'initializeWorkspace without password is deprecated in spec-002. '
+      'Use workspaceService.initializeWorkspace(rootPath, masterPassword) instead. '
+      'See: docs/specs/spec-002-workspace-master-password.md',
+    );
   }
 
   /// Switches to an existing workspace.

@@ -2,6 +2,22 @@
 // FYNDO - Zero-Trust Notes OS
 // Vault Providers - Riverpod State Management
 // ═══════════════════════════════════════════════════════════════════════════
+//
+// IMPORTANT - SPEC-002 CHANGES:
+// With the workspace master password architecture, this provider's role has changed:
+// - Vaults no longer have individual passwords (keys are random, stored in keyring)
+// - createVault() and unlock() are DEPRECATED - use workspace-level operations instead
+// - This provider now mainly tracks vault state for UI consumers
+// - In future refactoring, consider merging with workspace providers
+//
+// Migration path:
+// - Old: vaultProvider.notifier.createVault(path, password)
+// - New: workspaceService.createVault(vaultKey from keyring, ...)
+// - Old: vaultProvider.notifier.unlock(password)
+// - New: workspaceService.unlockWorkspace(masterPassword) → all vaults accessible
+//
+// Spec: docs/specs/spec-002-workspace-master-password.md
+// ═══════════════════════════════════════════════════════════════════════════
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fyndo_app/core/core.dart';
@@ -49,12 +65,13 @@ class VaultState {
 }
 
 /// Notifier for vault state management.
+///
+/// NOTE: This notifier is largely deprecated in spec-002. It only tracks state
+/// for backward compatibility with existing UI consumers. All vault operations
+/// should now go through workspace-level services.
 class VaultNotifier extends Notifier<VaultState> {
-  late final VaultService _vaultService;
-
   @override
   VaultState build() {
-    _vaultService = VaultService(ref.read(cryptoServiceProvider));
     return const VaultState();
   }
 
@@ -70,46 +87,43 @@ class VaultNotifier extends Notifier<VaultState> {
   }
 
   /// Creates a new vault.
+  ///
+  /// DEPRECATED in spec-002: Vaults no longer have passwords.
+  /// Use workspace-level vault creation instead:
+  /// 1. Ensure workspace is unlocked
+  /// 2. Generate random vault key
+  /// 3. Add key to workspace keyring
+  /// 4. Call vaultService.createVault(vaultKey, ...)
+  ///
+  /// This method is kept for backward compatibility but should not be used.
+  @Deprecated('Use workspace-level vault creation with random keys')
   Future<void> createVault({
     required String path,
     required SecureBytes password,
     Argon2Params? kdfParams,
   }) async {
-    state = state.copyWith(status: VaultStatus.creating);
-
-    try {
-      await _vaultService.createVault(
-        vaultPath: path,
-        password: password,
-        kdfParams: kdfParams,
-      );
-
-      state = state.copyWith(status: VaultStatus.locked, vaultPath: path);
-    } catch (e) {
-      state = state.copyWith(status: VaultStatus.error, error: e.toString());
-      rethrow;
-    }
+    throw UnsupportedError(
+      'createVault with password is deprecated in spec-002. '
+      'Use workspace-level vault creation with random vault keys. '
+      'See: docs/specs/spec-002-workspace-master-password.md',
+    );
   }
 
   /// Unlocks the vault with a password.
+  ///
+  /// DEPRECATED in spec-002: Vaults no longer have individual passwords.
+  /// Use workspace-level unlock instead:
+  /// 1. Call workspaceService.unlockWorkspace(masterPassword)
+  /// 2. All vaults become accessible via the unlocked keyring
+  ///
+  /// This method is kept for backward compatibility but should not be used.
+  @Deprecated('Use workspace-level unlock with master password')
   Future<void> unlock(SecureBytes password) async {
-    if (state.vaultPath == null) {
-      throw StateError('Vault path not set');
-    }
-
-    state = state.copyWith(status: VaultStatus.unlocking);
-
-    try {
-      final vault = await _vaultService.unlockVault(
-        vaultPath: state.vaultPath!,
-        password: password,
-      );
-
-      state = state.copyWith(status: VaultStatus.unlocked, vault: vault);
-    } on VaultException catch (e) {
-      state = state.copyWith(status: VaultStatus.error, error: e.message);
-      rethrow;
-    }
+    throw UnsupportedError(
+      'unlock with password is deprecated in spec-002. '
+      'Use workspaceService.unlockWorkspace(masterPassword) instead. '
+      'See: docs/specs/spec-002-workspace-master-password.md',
+    );
   }
 
   /// Locks the vault.
@@ -119,18 +133,21 @@ class VaultNotifier extends Notifier<VaultState> {
   }
 
   /// Changes the vault password.
+  ///
+  /// DEPRECATED in spec-002: Vault password changes are now workspace-level.
+  /// Use workspaceService.changeMasterPassword() instead, which re-encrypts
+  /// the entire keyring (not individual vault content).
+  ///
+  /// This method is kept for backward compatibility but should not be used.
+  @Deprecated('Use workspace-level password change')
   Future<void> changePassword({
     required SecureBytes newPassword,
     Argon2Params? newKdfParams,
   }) async {
-    if (!state.isUnlocked) {
-      throw StateError('Vault must be unlocked to change password');
-    }
-
-    await _vaultService.changePassword(
-      vault: state.vault!,
-      newPassword: newPassword,
-      newKdfParams: newKdfParams,
+    throw UnsupportedError(
+      'changePassword is deprecated in spec-002. '
+      'Use workspaceService.changeMasterPassword() instead. '
+      'See: docs/specs/spec-002-workspace-master-password.md',
     );
   }
 }
