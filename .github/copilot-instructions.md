@@ -32,7 +32,7 @@ fvm flutter analyze                              # lints
 
 ## Conventions
 - **Zero-trust**: persist ciphertext only. Plaintext in `note_fts.searchText` is the sole exception—audit exposure carefully.
-- **IDs**: UUID v4 (`uuid` package). Models use `equatable`/`freezed`.
+- **IDs**: UUID v4 (`uuid` package). Models use `built_value`.
 - **DB changes**: update Drift tables + bump `schemaVersion` + add migration in `MigrationStrategy` + regenerate.
 - **Web caveat**: in-memory storage stub—features requiring persistence need IndexedDB implementation.
 
