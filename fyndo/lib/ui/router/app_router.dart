@@ -23,6 +23,9 @@ import 'package:fyndo_app/providers/note_providers.dart';
 import 'package:fyndo_app/providers/vault_providers.dart';
 import 'package:fyndo_app/ui/consumers/note_consumer.dart';
 import 'package:fyndo_app/ui/pages/pages.dart';
+import 'package:fyndo_app/ui/pages/onboarding/onboarding_wizard.dart';
+import 'package:fyndo_app/ui/pages/settings/settings_page.dart';
+import 'package:fyndo_app/providers/workspace_provider.dart';
 import 'package:fyndo_app/ui/theme/fyndo_theme.dart';
 import 'package:fyndo_app/ui/widgets/common/fyndo_app_bar.dart';
 import 'package:fyndo_app/ui/widgets/common/fyndo_empty_state.dart';
@@ -38,10 +41,28 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     refreshListenable: _RouterRefreshNotifier(ref),
     redirect: (context, state) {
       final vaultState = ref.read(vaultProvider);
-      final isOnWelcome = state.matchedLocation == '/';
+      final workspaceAsync = ref.read(workspaceProvider);
 
-      // If vault is not unlocked and not on welcome, redirect to welcome
-      if (!vaultState.isUnlocked && !isOnWelcome) {
+      final isOnWelcome = state.matchedLocation == '/';
+      final isOnOnboarding = state.matchedLocation == '/onboarding';
+
+      // Check if workspace is configured
+      final hasWorkspace = workspaceAsync.when(
+        data: (workspaceState) => workspaceState.hasWorkspace,
+        loading: () => false,
+        error: (error, stackTrace) => false,
+      );
+
+      // If no workspace configured and not on onboarding, redirect to onboarding
+      if (!hasWorkspace && !isOnOnboarding) {
+        return '/onboarding';
+      }
+
+      // If workspace configured but vault not unlocked and not on welcome/onboarding
+      if (hasWorkspace &&
+          !vaultState.isUnlocked &&
+          !isOnWelcome &&
+          !isOnOnboarding) {
         return '/';
       }
 
@@ -53,6 +74,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
+      // Onboarding - First-time workspace setup
+      GoRoute(
+        path: '/onboarding',
+        name: 'onboarding',
+        builder: (context, state) => const OnboardingWizard(),
+      ),
+
       // Welcome / Unlock
       GoRoute(
         path: '/',
@@ -128,7 +156,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/settings',
         name: 'settings',
-        builder: (context, state) => const _SettingsPage(),
+        builder: (context, state) => const SettingsPage(),
       ),
     ],
     errorBuilder: (context, state) => Scaffold(
@@ -156,10 +184,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   );
 });
 
-/// Router refresh notifier that listens to vault state changes.
+/// Router refresh notifier that listens to vault and workspace state changes.
 class _RouterRefreshNotifier extends ChangeNotifier {
   _RouterRefreshNotifier(this._ref) {
     _ref.listen(vaultProvider.select((s) => s.status), (previous, next) {
+      notifyListeners();
+    });
+    _ref.listen(workspaceProvider, (previous, next) {
       notifyListeners();
     });
   }
@@ -692,53 +723,6 @@ class _NoteOptionsSheet {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// SETTINGS PAGE
-// ═══════════════════════════════════════════════════════════════════════════
-
-class _SettingsPage extends StatelessWidget {
-  const _SettingsPage();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
-      body: ListView(
-        children: [
-          ListTile(
-            leading: const Icon(Icons.palette),
-            title: const Text('Appearance'),
-            subtitle: const Text('Theme, font size'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {},
-          ),
-          ListTile(
-            leading: const Icon(Icons.sync),
-            title: const Text('Sync'),
-            subtitle: const Text('Configure sync settings'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {},
-          ),
-          ListTile(
-            leading: const Icon(Icons.security),
-            title: const Text('Security'),
-            subtitle: const Text('Password, biometrics'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {},
-          ),
-          ListTile(
-            leading: const Icon(Icons.info),
-            title: const Text('About'),
-            subtitle: const Text('Version, licenses'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {},
-          ),
-        ],
       ),
     );
   }

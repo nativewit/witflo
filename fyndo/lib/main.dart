@@ -4,7 +4,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 //
 // INITIALIZATION ORDER:
-// 1. WidgetsFlutterBinding.ensureInitialized()
+// 1. WidgetsFlutterBinding.ensureInitialized() OR MarionetteBinding (debug)
 // 2. CryptoService.initialize() - Load libsodium
 // 3. Platform-specific setup (desktop SQLite, etc.)
 // 4. Run app with Riverpod
@@ -18,15 +18,22 @@
 // - Crypto uses sodium.js (included in sodium_libs)
 // - Storage uses IndexedDB/localStorage instead of file system
 // - SQLite uses sql.js for web
+//
+// AI DEVELOPMENT:
+// - Marionette MCP enabled in debug mode for AI-powered testing
+// - Allows AI agents to inspect, interact, and validate UI at runtime
+// - See docs/flutter-setup.md for complete AI tooling setup
 // ═══════════════════════════════════════════════════════════════════════════
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fyndo_app/core/crypto/crypto.dart';
-import 'package:fyndo_app/providers/vault_providers.dart';
+import 'package:fyndo_app/providers/workspace_provider.dart';
 import 'package:fyndo_app/ui/router/app_router.dart';
 import 'package:fyndo_app/ui/theme/fyndo_theme.dart';
+import 'package:marionette_flutter/marionette_flutter.dart';
 
 // Conditional imports for platform-specific code
 import 'platform/platform_init.dart'
@@ -34,8 +41,29 @@ import 'platform/platform_init.dart'
     if (dart.library.io) 'platform/platform_init_native.dart';
 
 Future<void> main() async {
-  // Ensure Flutter binding is initialized
-  WidgetsFlutterBinding.ensureInitialized();
+  // Initialize Flutter binding with Marionette in debug mode
+  if (kDebugMode) {
+    MarionetteBinding.ensureInitialized(
+      MarionetteConfiguration(
+        // TODO: Configure custom widgets when design system is created
+        // isInteractiveWidget: (type) =>
+        //     type == FyndoButton ||
+        //     type == FyndoTextField ||
+        //     type == FyndoCard,
+        //
+        // extractText: (widget) {
+        //   if (widget is FyndoText) return widget.data;
+        //   if (widget is FyndoTextField) return widget.controller?.text;
+        //   return null;
+        // },
+
+        // Optional: Customize screenshot size (default: 2000x2000)
+        // maxScreenshotSize: Size(2000, 2000),
+      ),
+    );
+  } else {
+    WidgetsFlutterBinding.ensureInitialized();
+  }
 
   // Initialize platform-specific dependencies
   await initializePlatform();
@@ -65,11 +93,10 @@ class _FyndoAppState extends ConsumerState<FyndoApp> {
   }
 
   Future<void> _initializeApp() async {
-    // Get default vault path using platform helper
-    final defaultVaultPath = await getAppDocumentsPath();
-
-    // Set vault path
-    await ref.read(vaultProvider.notifier).setVaultPath(defaultVaultPath);
+    // Load workspace configuration
+    // This will check if a workspace is already configured
+    // If not, the router will redirect to onboarding
+    await ref.read(workspaceProvider.future);
 
     setState(() {
       _initialized = true;
