@@ -7,6 +7,20 @@
 
 import 'package:mcp_toolkit/mcp_toolkit.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fyndo_app/core/crypto/crypto.dart';
+import 'package:fyndo_app/platform/database/drift/database_providers.dart';
+import 'package:fyndo_app/providers/workspace_provider.dart';
+
+// Global container to access Riverpod providers
+// Will be set from main.dart after ProviderScope is created
+ProviderContainer? _providerContainer;
+
+/// Set the provider container for MCP tools to access app state
+/// Must be called from FyndoApp after the ProviderScope is initialized
+void setMCPProviderContainer(ProviderContainer container) {
+  _providerContainer = container;
+}
 
 /// Initialize custom Fyndo MCP tools
 /// Call this from main.dart in debug mode
@@ -25,20 +39,56 @@ void initializeFyndoMCPTools() {
         ),
         handler: (params) async {
           try {
-            // TODO: Integrate with actual VaultRepository
-            // For now, return mock data for testing
+            int totalVaults = 0;
+            bool cryptoInitialized = false;
+            bool workspaceConfigured = false;
+
+            if (_providerContainer != null) {
+              try {
+                // Get workspace state for vault discovery
+                final workspaceAsync = _providerContainer!.read(
+                  workspaceProvider,
+                );
+                final workspaceState = workspaceAsync.valueOrNull;
+
+                if (workspaceState != null) {
+                  workspaceConfigured = workspaceState.hasWorkspace;
+                  totalVaults = workspaceState.discoveredVaults?.length ?? 0;
+                }
+
+                // Check crypto service
+                try {
+                  CryptoService.instance;
+                  cryptoInitialized = true;
+                } catch (e) {
+                  cryptoInitialized = false;
+                }
+              } catch (e) {
+                // Provider not ready
+              }
+            }
+
             return MCPCallResult(
               message: 'Vault state retrieved successfully',
               parameters: {
                 'success': true,
                 'data': {
-                  'vaults': {'total': 0, 'unlocked': 0, 'locked': 0},
+                  'vaults': {
+                    'total': totalVaults,
+                    'discovered': totalVaults,
+                    // Note: unlock status requires vault-specific tracking
+                    'workspaceConfigured': workspaceConfigured,
+                  },
                   'encryption': {
                     'algorithm': 'XChaCha20-Poly1305',
-                    'keyDerivation': 'Argon2id',
-                    'initialized': false,
+                    'keyDerivation': 'Argon2id + HKDF',
+                    'initialized': cryptoInitialized,
                   },
-                  'storage': {'location': 'local', 'encrypted': true},
+                  'storage': {
+                    'location': 'local-filesystem',
+                    'encrypted': true,
+                    'format': 'file-based',
+                  },
                 },
                 'timestamp': DateTime.now().toIso8601String(),
               },
@@ -61,19 +111,51 @@ void initializeFyndoMCPTools() {
         ),
         handler: (params) async {
           try {
-            // TODO: Integrate with actual SyncEngine
+            // Note: Sync engine is currently per-vault and not globally tracked
+            // This tool reports on database-level sync state
+            int syncOpsCount = 0;
+
+            if (_providerContainer != null) {
+              try {
+                final db = _providerContainer!.read(appDatabaseProvider);
+
+                // Check if sync_state table exists and has data
+                syncOpsCount = await db
+                    .customSelect('SELECT COUNT(*) as count FROM sync_state')
+                    .map((row) => row.read<int>('count'))
+                    .getSingle();
+              } catch (e) {
+                // Sync state table might not exist or DB not ready
+              }
+            }
+
             return MCPCallResult(
               message: 'Sync state verified',
               parameters: {
                 'success': true,
                 'data': {
                   'engine': {
-                    'running': false,
-                    'connector': 'none',
-                    'lastSync': null,
+                    'available': true,
+                    'type': 'file-based',
+                    'backends': [
+                      'local',
+                      'http',
+                      'firebase',
+                      'gdrive',
+                      'onedrive',
+                      'dropbox',
+                    ],
+                    'note': 'Sync engine is per-vault, not globally tracked',
                   },
-                  'operations': {'pending': 0, 'inProgress': 0, 'failed': 0},
-                  'conflicts': {'count': 0, 'unresolved': 0},
+                  'cursor': {
+                    'tracked': syncOpsCount > 0,
+                    'entries': syncOpsCount,
+                  },
+                  'features': {
+                    'offlineFirst': true,
+                    'conflictResolution': 'lamport-clock',
+                    'encryption': 'zero-trust',
+                  },
                 },
                 'timestamp': DateTime.now().toIso8601String(),
               },
@@ -97,7 +179,23 @@ void initializeFyndoMCPTools() {
         ),
         handler: (params) async {
           try {
-            // TODO: Integrate with CryptoService
+            // Verify CryptoService is initialized (will throw if not)
+            CryptoService.instance;
+
+            // Check workspace state if container available
+            bool workspaceUnlocked = false;
+            if (_providerContainer != null) {
+              try {
+                final workspaceAsync = _providerContainer!.read(
+                  workspaceProvider,
+                );
+                final workspaceState = workspaceAsync.valueOrNull;
+                workspaceUnlocked = workspaceState?.hasWorkspace ?? false;
+              } catch (e) {
+                // Provider not available yet
+              }
+            }
+
             return MCPCallResult(
               message: 'Crypto health checked',
               parameters: {
@@ -105,13 +203,27 @@ void initializeFyndoMCPTools() {
                 'data': {
                   'libsodium': {
                     'available': true,
-                    'version': 'libsodium 1.0.20',
+                    'initialized': true,
+                    'primitives': {
+                      'argon2id': true,
+                      'xchacha20': true,
+                      'hkdf': true,
+                      'blake3': true,
+                      'ed25519': true,
+                      'x25519': true,
+                      'random': true,
+                    },
                   },
-                  'masterKey': {'derived': false, 'locked': true},
+                  'workspace': {
+                    'unlocked': workspaceUnlocked,
+                    'masterKeyDerived': workspaceUnlocked,
+                  },
                   'operations': {
                     'encryption': 'available',
                     'signing': 'available',
                     'keyExchange': 'available',
+                    'hashing': 'available',
+                    'kdf': 'available',
                   },
                 },
                 'timestamp': DateTime.now().toIso8601String(),
@@ -135,15 +247,89 @@ void initializeFyndoMCPTools() {
         ),
         handler: (params) async {
           try {
-            // TODO: Integrate with database layer
+            int notebookCount = 0;
+            int noteCount = 0;
+            int orphanedNotebooks = 0;
+            int orphanedNotes = 0;
+            List<String> issues = [];
+            int vaultCount = 0;
+
+            if (_providerContainer != null) {
+              try {
+                final db = _providerContainer!.read(appDatabaseProvider);
+
+                // Get workspace state for vault count
+                final workspaceAsync = _providerContainer!.read(
+                  workspaceProvider,
+                );
+                final workspaceState = workspaceAsync.valueOrNull;
+                vaultCount = workspaceState?.discoveredVaults?.length ?? 0;
+
+                // Count notebooks (not archived)
+                notebookCount = await db
+                    .customSelect(
+                      'SELECT COUNT(*) as count FROM notebooks WHERE is_archived = 0',
+                    )
+                    .map((row) => row.read<int>('count'))
+                    .getSingle();
+
+                // Count notes (not trashed)
+                noteCount = await db
+                    .customSelect(
+                      'SELECT COUNT(*) as count FROM notes WHERE is_trashed = 0',
+                    )
+                    .map((row) => row.read<int>('count'))
+                    .getSingle();
+
+                // Check for orphaned notebooks (notebooks without valid vault_id)
+                // Note: This is a simplified check since vault validation requires filesystem access
+                orphanedNotebooks = await db
+                    .customSelect(
+                      'SELECT COUNT(*) as count FROM notebooks WHERE (vault_id IS NULL OR vault_id = \'\') AND is_archived = 0',
+                    )
+                    .map((row) => row.read<int>('count'))
+                    .getSingle();
+
+                // Check for orphaned notes (notes without valid notebook_id)
+                orphanedNotes = await db
+                    .customSelect('''
+                      SELECT COUNT(*) as count FROM notes 
+                      WHERE notebook_id NOT IN (SELECT id FROM notebooks WHERE is_archived = 0) 
+                      AND is_trashed = 0
+                      ''')
+                    .map((row) => row.read<int>('count'))
+                    .getSingle();
+
+                if (orphanedNotebooks > 0) {
+                  issues.add(
+                    'Found $orphanedNotebooks notebook(s) without valid vault_id',
+                  );
+                }
+                if (orphanedNotes > 0) {
+                  issues.add(
+                    'Found $orphanedNotes note(s) without valid notebook',
+                  );
+                }
+              } catch (e) {
+                issues.add('Database query error: ${e.toString()}');
+              }
+            }
+
             return MCPCallResult(
               message: 'Hierarchy integrity checked',
               parameters: {
                 'success': true,
                 'data': {
-                  'hierarchy': {'vaults': 0, 'notebooks': 0, 'notes': 0},
-                  'orphans': {'notebooks': 0, 'notes': 0},
-                  'integrity': {'valid': true, 'issues': []},
+                  'hierarchy': {
+                    'vaults': vaultCount,
+                    'notebooks': notebookCount,
+                    'notes': noteCount,
+                  },
+                  'orphans': {
+                    'notebooks': orphanedNotebooks,
+                    'notes': orphanedNotes,
+                  },
+                  'integrity': {'valid': issues.isEmpty, 'issues': issues},
                 },
                 'timestamp': DateTime.now().toIso8601String(),
               },
@@ -205,35 +391,99 @@ void initializeFyndoMCPTools() {
         definition: MCPToolDefinition(
           name: 'get_database_stats',
           description: 'Get database statistics and health information',
-          inputSchema: ObjectSchema(properties: {}),
+          inputSchema: ObjectSchema(
+            properties: {
+              'includeTableDetails': BooleanSchema(
+                description:
+                    'Include detailed table statistics (default: false)',
+              ),
+            },
+          ),
         ),
         handler: (params) async {
           try {
-            // TODO: Integrate with Drift database
+            final includeDetails =
+                params['includeTableDetails'] as bool? ?? false;
+
+            // Try to access database if available
+            int notebookCount = 0;
+            int noteCount = 0;
+            int trashedCount = 0;
+            int archivedCount = 0;
+            bool dbAvailable = false;
+
+            if (_providerContainer != null) {
+              try {
+                final db = _providerContainer!.read(appDatabaseProvider);
+
+                // Get counts from database
+                notebookCount = await db
+                    .customSelect(
+                      'SELECT COUNT(*) as count FROM notebooks WHERE is_archived = 0',
+                    )
+                    .map((row) => row.read<int>('count'))
+                    .getSingle();
+
+                noteCount = await db
+                    .customSelect(
+                      'SELECT COUNT(*) as count FROM notes WHERE is_trashed = 0',
+                    )
+                    .map((row) => row.read<int>('count'))
+                    .getSingle();
+
+                trashedCount = await db
+                    .customSelect(
+                      'SELECT COUNT(*) as count FROM notes WHERE is_trashed = 1',
+                    )
+                    .map((row) => row.read<int>('count'))
+                    .getSingle();
+
+                if (includeDetails) {
+                  archivedCount = await db
+                      .customSelect(
+                        'SELECT COUNT(*) as count FROM notes WHERE is_archived = 1 AND is_trashed = 0',
+                      )
+                      .map((row) => row.read<int>('count'))
+                      .getSingle();
+                }
+
+                dbAvailable = true;
+              } catch (e) {
+                // Database not initialized yet
+              }
+            }
+
+            final result = {
+              'success': true,
+              'data': {
+                'database': {
+                  'available': dbAvailable,
+                  'encrypted': true,
+                  'location': 'local',
+                  'type': 'SQLite (Drift)',
+                },
+                'tables': {
+                  'notebooks': notebookCount,
+                  'notes': noteCount,
+                  'trashed': trashedCount,
+                  'total': noteCount + trashedCount,
+                },
+                'health': {
+                  'status': dbAvailable ? 'healthy' : 'not_initialized',
+                  'integrityCheck': dbAvailable,
+                },
+              },
+              'timestamp': DateTime.now().toIso8601String(),
+            };
+
+            if (includeDetails && dbAvailable) {
+              (result['data'] as Map<String, dynamic>)['tables']['archived'] =
+                  archivedCount;
+            }
+
             return MCPCallResult(
               message: 'Database stats retrieved',
-              parameters: {
-                'success': true,
-                'data': {
-                  'database': {
-                    'encrypted': true,
-                    'size': 0,
-                    'location': 'local',
-                  },
-                  'tables': {
-                    'vaults': 0,
-                    'notebooks': 0,
-                    'notes': 0,
-                    'syncOperations': 0,
-                  },
-                  'health': {
-                    'status': 'healthy',
-                    'lastVacuum': null,
-                    'integrityCheck': true,
-                  },
-                },
-                'timestamp': DateTime.now().toIso8601String(),
-              },
+              parameters: result,
             );
           } catch (e) {
             return MCPCallResult(

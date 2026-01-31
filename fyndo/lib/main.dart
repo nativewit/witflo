@@ -99,6 +99,15 @@ class _FyndoAppState extends ConsumerState<FyndoApp> {
   @override
   void initState() {
     super.initState();
+
+    // Set provider container for MCP tools in debug mode
+    if (kDebugMode) {
+      // We'll set this after the first build when ref is available
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        setMCPProviderContainer(ProviderScope.containerOf(context));
+      });
+    }
+
     _initializeApp();
   }
 
