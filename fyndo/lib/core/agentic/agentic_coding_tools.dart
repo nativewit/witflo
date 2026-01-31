@@ -32,6 +32,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:marionette_flutter/marionette_flutter.dart';
 import 'package:mcp_toolkit/mcp_toolkit.dart';
 import 'package:fyndo_app/core/mcp/fyndo_mcp_tools.dart';
+import 'package:fyndo_app/ui/widgets/common/fyndo_card.dart';
+import 'package:fyndo_app/ui/widgets/common/fyndo_list_tile.dart';
 
 /// Wrapper widget that initializes all agentic coding tools.
 /// Only active in debug mode - has zero impact on production builds.
@@ -56,19 +58,20 @@ class AgenticCodingTools extends StatefulWidget {
     MarionetteBinding.ensureInitialized(
       MarionetteConfiguration(
         // Custom widget detection for Fyndo components
-        // TODO: Uncomment when Fyndo design system is created
-        // isInteractiveWidget: (type) =>
-        //     type == FyndoButton ||
-        //     type == FyndoTextField ||
-        //     type == FyndoCard ||
-        //     type == FyndoIconButton,
-        //
-        // extractText: (widget) {
-        //   if (widget is FyndoText) return widget.data;
-        //   if (widget is FyndoTextField) return widget.controller?.text;
-        //   if (widget is FyndoButton) return widget.label;
-        //   return null;
-        // },
+        isInteractiveWidget: (type) =>
+            type == FyndoCard || type == FyndoListTile,
+
+        extractText: (widget) {
+          // Extract text from Fyndo custom widgets
+          if (widget is FyndoListTile) {
+            // Extract text from title widget
+            if (widget.title is Text) {
+              return (widget.title as Text).data;
+            }
+          }
+          // Let Marionette handle standard widgets
+          return null;
+        },
 
         // Screenshot configuration
         maxScreenshotSize: const Size(2000, 2000),

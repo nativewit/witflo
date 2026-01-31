@@ -5,6 +5,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:fyndo_app/core/agentic/fyndo_keys.dart';
 import 'package:fyndo_app/ui/theme/fyndo_theme.dart';
 
 /// Type of item being shared.
@@ -161,6 +162,7 @@ class _ShareDialogState extends State<ShareDialog> {
               children: [
                 Expanded(
                   child: TextField(
+                    key: FyndoKeys.inputShareEmail,
                     controller: _emailController,
                     decoration: const InputDecoration(
                       hintText: 'Enter email address',
@@ -175,6 +177,7 @@ class _ShareDialogState extends State<ShareDialog> {
                     border: Border.all(color: theme.dividerColor),
                   ),
                   child: DropdownButton<String>(
+                    key: FyndoKeys.dropdownShareRole,
                     value: _selectedRole,
                     underline: const SizedBox(),
                     padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -201,6 +204,7 @@ class _ShareDialogState extends State<ShareDialog> {
             Align(
               alignment: Alignment.centerRight,
               child: FilledButton.icon(
+                key: FyndoKeys.btnShareInvite,
                 onPressed: _isSharing ? null : _shareWithUser,
                 icon: _isSharing
                     ? const SizedBox(
@@ -237,6 +241,7 @@ class _ShareDialogState extends State<ShareDialog> {
                       ),
                     ),
                     IconButton(
+                      key: FyndoKeys.btnShareCopyLink,
                       icon: const Icon(Icons.copy, size: 18),
                       onPressed: _copyLink,
                       tooltip: 'Copy link',
@@ -246,6 +251,7 @@ class _ShareDialogState extends State<ShareDialog> {
               ),
             ] else ...[
               OutlinedButton.icon(
+                key: FyndoKeys.btnShareGenerateLink,
                 onPressed: _isGeneratingLink ? null : _generateLink,
                 icon: _isGeneratingLink
                     ? const SizedBox(
@@ -288,6 +294,7 @@ class _ShareDialogState extends State<ShareDialog> {
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
+                key: FyndoKeys.btnShareDone,
                 onPressed: () => Navigator.pop(context),
                 child: const Text('Done'),
               ),

@@ -207,6 +207,97 @@ class FyndoKeys {
   static const btnNotebookCreateConfirm = Key('btn_notebook_create_confirm');
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // VAULT CREATE DIALOG
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// Vault name input (create dialog)
+  static const inputVaultNameCreate = Key('input_vault_name_create');
+
+  /// Vault description input
+  static const inputVaultDescription = Key('input_vault_description');
+
+  /// Cancel vault creation button
+  static const btnVaultCancel = Key('btn_vault_cancel');
+
+  /// Confirm vault creation button
+  static const btnVaultCreateConfirm = Key('btn_vault_create_confirm');
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // NOTE SHARE DIALOG
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// Email input for sharing
+  static const inputShareEmail = Key('input_share_email');
+
+  /// Role dropdown (viewer/editor)
+  static const dropdownShareRole = Key('dropdown_share_role');
+
+  /// Invite user button
+  static const btnShareInvite = Key('btn_share_invite');
+
+  /// Generate share link button
+  static const btnShareGenerateLink = Key('btn_share_generate_link');
+
+  /// Copy share link button
+  static const btnShareCopyLink = Key('btn_share_copy_link');
+
+  /// Done button (close dialog)
+  static const btnShareDone = Key('btn_share_done');
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SETTINGS PAGE
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// Change master password button (settings)
+  static const btnSettingsChangePassword = Key('btn_settings_change_password');
+
+  /// Auto-lock timer button
+  static const btnAutoLockTimer = Key('btn_auto_lock_timer');
+
+  /// Lock on background switch
+  static const switchLockOnBackground = Key('switch_lock_on_background');
+
+  /// Lock workspace now button
+  static const btnLockWorkspaceNow = Key('btn_lock_workspace_now');
+
+  // Change Password Dialog (Settings)
+
+  /// Current password input
+  static const inputCurrentPassword = Key('input_current_password');
+
+  /// New password input
+  static const inputNewPassword = Key('input_new_password');
+
+  /// Confirm new password input
+  static const inputConfirmNewPassword = Key('input_confirm_new_password');
+
+  /// Cancel password change button
+  static const btnPasswordCancel = Key('btn_password_cancel');
+
+  /// Confirm password change button
+  static const btnPasswordConfirm = Key('btn_password_confirm');
+
+  // Auto-Lock Duration Dialog
+
+  /// Auto-lock disabled option
+  static const radioAutoLockDisabled = Key('radio_autolock_disabled');
+
+  /// Auto-lock 5 minutes option
+  static const radioAutoLock5Min = Key('radio_autolock_5min');
+
+  /// Auto-lock 15 minutes option
+  static const radioAutoLock15Min = Key('radio_autolock_15min');
+
+  /// Auto-lock 30 minutes option
+  static const radioAutoLock30Min = Key('radio_autolock_30min');
+
+  /// Auto-lock 60 minutes option
+  static const radioAutoLock60Min = Key('radio_autolock_60min');
+
+  /// Cancel auto-lock dialog button
+  static const btnAutoLockCancel = Key('btn_autolock_cancel');
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // HELPER METHODS
   // ═══════════════════════════════════════════════════════════════════════════
 
@@ -269,6 +360,41 @@ class FyndoKeys {
     inputNotebookDescription,
     btnNotebookCancel,
     btnNotebookCreateConfirm,
+
+    // Vault Create Dialog
+    inputVaultNameCreate,
+    inputVaultDescription,
+    btnVaultCancel,
+    btnVaultCreateConfirm,
+
+    // Note Share Dialog
+    inputShareEmail,
+    dropdownShareRole,
+    btnShareInvite,
+    btnShareGenerateLink,
+    btnShareCopyLink,
+    btnShareDone,
+
+    // Settings Page
+    btnSettingsChangePassword,
+    btnAutoLockTimer,
+    switchLockOnBackground,
+    btnLockWorkspaceNow,
+
+    // Change Password Dialog
+    inputCurrentPassword,
+    inputNewPassword,
+    inputConfirmNewPassword,
+    btnPasswordCancel,
+    btnPasswordConfirm,
+
+    // Auto-Lock Duration Dialog
+    radioAutoLockDisabled,
+    radioAutoLock5Min,
+    radioAutoLock15Min,
+    radioAutoLock30Min,
+    radioAutoLock60Min,
+    btnAutoLockCancel,
   ];
 
   /// Get count of all static keys

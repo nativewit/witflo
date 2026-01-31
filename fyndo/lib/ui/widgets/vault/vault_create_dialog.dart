@@ -12,6 +12,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 import 'package:flutter/material.dart';
+import 'package:fyndo_app/core/agentic/fyndo_keys.dart';
 import 'package:fyndo_app/ui/theme/fyndo_theme.dart';
 
 /// Dialog for creating a new vault.
@@ -136,6 +137,7 @@ class _VaultCreateDialogState extends State<VaultCreateDialog> {
               ),
               const SizedBox(height: 24),
               TextFormField(
+                key: FyndoKeys.inputVaultNameCreate,
                 controller: _nameController,
                 decoration: const InputDecoration(
                   labelText: 'Vault Name',
@@ -153,6 +155,7 @@ class _VaultCreateDialogState extends State<VaultCreateDialog> {
               ),
               const SizedBox(height: 16),
               TextFormField(
+                key: FyndoKeys.inputVaultDescription,
                 controller: _descriptionController,
                 decoration: const InputDecoration(
                   labelText: 'Description (optional)',
@@ -168,6 +171,7 @@ class _VaultCreateDialogState extends State<VaultCreateDialog> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   TextButton(
+                    key: FyndoKeys.btnVaultCancel,
                     onPressed: _isCreating
                         ? null
                         : () => Navigator.pop(context),
@@ -175,6 +179,7 @@ class _VaultCreateDialogState extends State<VaultCreateDialog> {
                   ),
                   const SizedBox(width: 12),
                   FilledButton(
+                    key: FyndoKeys.btnVaultCreateConfirm,
                     onPressed: _isCreating ? null : _createVault,
                     child: _isCreating
                         ? const SizedBox(
