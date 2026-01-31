@@ -157,6 +157,7 @@ class _NoWorkspaceView extends StatelessWidget {
               ),
               const SizedBox(height: 32),
               FilledButton.icon(
+                key: const Key('btn_get_started'),
                 icon: const Icon(Icons.start),
                 label: const Text('Get Started'),
                 onPressed: () => context.go('/onboarding'),
@@ -277,6 +278,7 @@ class _WorkspaceUnlockViewState extends ConsumerState<_WorkspaceUnlockView> {
 
                   // Password field
                   PasswordField(
+                    key: const Key('input_master_password'),
                     controller: _passwordController,
                     labelText: 'Master Password',
                     hintText: 'Enter your password',
@@ -290,6 +292,7 @@ class _WorkspaceUnlockViewState extends ConsumerState<_WorkspaceUnlockView> {
 
                   // Unlock button
                   FilledButton(
+                    key: const Key('btn_unlock_workspace'),
                     onPressed: _isUnlocking ? null : _unlock,
                     child: _isUnlocking
                         ? const SizedBox(
@@ -365,6 +368,7 @@ class _UnlockedWorkspaceView extends ConsumerWidget {
         title: const Text('Your Vaults'),
         actions: [
           IconButton(
+            key: const Key('btn_lock_workspace'),
             icon: const Icon(Icons.lock),
             tooltip: 'Lock Workspace',
             onPressed: () {
@@ -372,6 +376,7 @@ class _UnlockedWorkspaceView extends ConsumerWidget {
             },
           ),
           IconButton(
+            key: const Key('nav_settings'),
             icon: const Icon(Icons.settings),
             tooltip: 'Settings',
             onPressed: () => context.push('/settings'),
@@ -786,6 +791,7 @@ class _VaultListSection extends ConsumerWidget {
                   ),
                 ),
                 IconButton(
+                  key: const Key('btn_vault_create'),
                   icon: const Icon(Icons.add),
                   onPressed: () => _showCreateVaultDialog(context, ref),
                   tooltip: 'Create New Vault',
@@ -842,6 +848,7 @@ class _VaultListSection extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
           FilledButton.icon(
+            key: const Key('btn_vault_create_empty'),
             icon: const Icon(Icons.add),
             label: const Text('Create Vault'),
             onPressed: () => _showCreateVaultDialog(context, ref),
@@ -895,6 +902,7 @@ class _VaultListItem extends ConsumerWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
+        key: Key('vault_item_${vault.id}'),
         onTap: () => _openVault(context, ref),
         child: Container(
           padding: const EdgeInsets.all(FyndoTheme.padding),
