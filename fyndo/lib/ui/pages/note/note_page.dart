@@ -227,6 +227,7 @@ class _NotePageState extends ConsumerState<NotePage>
           ),
           actions: [
             IconButton(
+              key: const Key('btn_note_pin_toggle'),
               icon: Icon(
                 note.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
               ),
@@ -234,6 +235,7 @@ class _NotePageState extends ConsumerState<NotePage>
               tooltip: note.isPinned ? 'Unpin' : 'Pin',
             ),
             PopupMenuButton<String>(
+              key: const Key('menu_note_actions_standalone'),
               icon: const Icon(Icons.more_vert),
               onSelected: (value) => _handleMenuAction(context, value, note),
               itemBuilder: (context) => [
@@ -321,6 +323,7 @@ class _NotePageState extends ConsumerState<NotePage>
                               FyndoTheme.paddingSmall,
                             ),
                             child: TextField(
+                              key: const Key('input_note_title'),
                               controller: _titleController,
                               onChanged: _onTitleChanged,
                               style: theme.textTheme.headlineSmall?.copyWith(

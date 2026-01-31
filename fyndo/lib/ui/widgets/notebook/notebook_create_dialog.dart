@@ -117,6 +117,7 @@ class _NotebookCreateDialogState extends State<NotebookCreateDialog> {
               ),
               const SizedBox(height: 24),
               TextFormField(
+                key: const Key('input_notebook_name'),
                 controller: _nameController,
                 decoration: const InputDecoration(
                   labelText: 'Notebook Name',
@@ -134,6 +135,7 @@ class _NotebookCreateDialogState extends State<NotebookCreateDialog> {
               ),
               const SizedBox(height: 16),
               TextFormField(
+                key: const Key('input_notebook_description'),
                 controller: _descriptionController,
                 decoration: const InputDecoration(
                   labelText: 'Description (optional)',
@@ -217,11 +219,16 @@ class _NotebookCreateDialogState extends State<NotebookCreateDialog> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   TextButton(
+                    key: const Key('btn_notebook_cancel'),
                     onPressed: () => Navigator.pop(context),
                     child: const Text('Cancel'),
                   ),
                   const SizedBox(width: 12),
-                  FilledButton(onPressed: _create, child: const Text('Create')),
+                  FilledButton(
+                    key: const Key('btn_notebook_create_confirm'),
+                    onPressed: _create,
+                    child: const Text('Create'),
+                  ),
                 ],
               ),
             ],
