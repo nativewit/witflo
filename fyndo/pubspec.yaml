@@ -61,11 +61,15 @@ dependencies:
   intl: ^0.20.2                    # Internationalization (pinned for flutter_localizations)
   share_plus: ^10.1.4              # Platform sharing
   file_saver: ^0.2.14              # File export/download
+  file_selector: ^1.0.3            # Folder picker for desktop platforms
   google_fonts: ^6.2.1             # Google Fonts (Nunito)
   shared_preferences: ^2.5.4
+  marionette_flutter: ^0.3.0       # MCP server for runtime testing
 
 dev_dependencies:
   flutter_test:
+    sdk: flutter
+  integration_test:
     sdk: flutter
   flutter_lints: ^6.0.0
 
@@ -77,6 +81,8 @@ dev_dependencies:
 
   # Testing
   mocktail: ^1.0.3
+  golden_toolkit: ^0.15.0          # Visual regression testing
+  vm_service: ^15.0.2
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

@@ -8,11 +8,12 @@ import 'package:built_value/serializer.dart';
 import 'package:built_value/standard_json_plugin.dart';
 import 'package:fyndo_app/features/notes/models/note.dart';
 import 'package:fyndo_app/features/notes/models/notebook.dart';
+import 'package:fyndo_app/core/workspace/workspace_config.dart';
 
 part 'serializers.g.dart';
 
 /// Collection of serializers for all built_value types.
-@SerializersFor([Note, NoteMetadata, Notebook])
+@SerializersFor([Note, NoteMetadata, Notebook, WorkspaceConfig])
 final Serializers serializers = _$serializers;
 
 /// Serializers with StandardJsonPlugin for JSON compatibility.
