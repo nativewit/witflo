@@ -1,47 +1,51 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // FYNDO - Zero-Trust Notes OS
-// Vault Header - Plaintext Metadata for Vault Recovery
+// Vault Header - Minimal Plaintext Metadata
 // ═══════════════════════════════════════════════════════════════════════════
 //
+// UPDATED FOR WORKSPACE MASTER PASSWORD (v2):
+// With workspace-level master passwords, vault headers no longer store
+// cryptographic parameters (salt/KDF params). These are now in the workspace
+// keyring which is encrypted with the Master Unlock Key (MUK).
+//
 // SECURITY RATIONALE:
-// The vault header is the ONLY plaintext file in a vault.
-// It contains ONLY:
+// The vault header is now minimal and contains ONLY:
 // - Version information (for migrations)
-// - KDF parameters (to derive MUK from password)
-// - Salt (random, not secret)
+// - Vault identifier (for keyring lookup)
+// - Timestamps (created, modified)
 // - Feature flags (optional)
 //
 // It does NOT contain:
 // - Any user data
+// - Any cryptographic parameters (moved to workspace keyring)
 // - Any keys or encrypted keys
 // - Any metadata about note contents
 //
-// This allows vault recovery with just:
-// 1. vault.header (this file)
-// 2. vault.vk (encrypted vault key)
-// 3. User's master password
+// Vault keys are now:
+// 1. Generated randomly (not derived from password)
+// 2. Stored in workspace keyring (encrypted with MUK)
+// 3. Retrieved from UnlockedWorkspace after master password unlock
+//
+// Spec: docs/specs/spec-002-workspace-master-password.md (Section 3.3)
 // ═══════════════════════════════════════════════════════════════════════════
 
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:fyndo_app/core/crypto/primitives/primitives.dart';
-
 /// Vault header version for migrations.
-const int currentVaultVersion = 1;
+const int currentVaultVersion = 2;
 
-/// Vault header containing recovery information.
+/// Vault header containing minimal vault metadata.
 ///
 /// This is stored in plaintext at vault.header
+///
+/// Version 2 Changes:
+/// - Removed: salt (now in workspace metadata)
+/// - Removed: kdfParams (now in workspace metadata)
+/// - Vault keys are now retrieved from workspace keyring
 class VaultHeader {
   /// Schema version for future migrations
   final int version;
-
-  /// Salt for Argon2id key derivation
-  final Uint8List salt;
-
-  /// Argon2id parameters
-  final Argon2Params kdfParams;
 
   /// When the vault was created
   final DateTime createdAt;
@@ -49,7 +53,7 @@ class VaultHeader {
   /// When the vault was last modified
   final DateTime? modifiedAt;
 
-  /// Vault UUID
+  /// Vault UUID (must match keyring entry and vault directory name)
   final String vaultId;
 
   /// Optional feature flags
@@ -57,8 +61,6 @@ class VaultHeader {
 
   VaultHeader({
     required this.version,
-    required this.salt,
-    required this.kdfParams,
     required this.createdAt,
     required this.vaultId,
     this.modifiedAt,
@@ -66,15 +68,9 @@ class VaultHeader {
   });
 
   /// Creates a new vault header for vault creation.
-  factory VaultHeader.create({
-    required Uint8List salt,
-    required Argon2Params kdfParams,
-    required String vaultId,
-  }) {
+  factory VaultHeader.create({required String vaultId}) {
     return VaultHeader(
       version: currentVaultVersion,
-      salt: salt,
-      kdfParams: kdfParams,
       createdAt: DateTime.now().toUtc(),
       vaultId: vaultId,
     );
@@ -83,8 +79,6 @@ class VaultHeader {
   /// Serialize to JSON for storage.
   Map<String, dynamic> toJson() => {
     'version': version,
-    'salt': base64Encode(salt),
-    'kdf': kdfParams.toJson(),
     'created_at': createdAt.toIso8601String(),
     'modified_at': modifiedAt?.toIso8601String(),
     'vault_id': vaultId,
@@ -101,8 +95,6 @@ class VaultHeader {
   factory VaultHeader.fromJson(Map<String, dynamic> json) {
     return VaultHeader(
       version: json['version'] as int,
-      salt: base64Decode(json['salt'] as String),
-      kdfParams: Argon2Params.fromJson(json['kdf'] as Map<String, dynamic>),
       createdAt: DateTime.parse(json['created_at'] as String),
       modifiedAt: json['modified_at'] != null
           ? DateTime.parse(json['modified_at'] as String)
@@ -126,8 +118,6 @@ class VaultHeader {
   VaultHeader touch() {
     return VaultHeader(
       version: version,
-      salt: salt,
-      kdfParams: kdfParams,
       createdAt: createdAt,
       modifiedAt: DateTime.now().toUtc(),
       vaultId: vaultId,

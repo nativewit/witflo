@@ -8,14 +8,22 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fyndo_app/core/crypto/crypto.dart';
-import 'package:fyndo_app/providers/vault_providers.dart';
-import 'package:fyndo_app/ui/consumers/vault_consumer.dart';
+import 'package:fyndo_app/core/workspace/auto_lock_settings.dart';
+import 'package:fyndo_app/providers/auto_lock_settings_provider.dart';
+import 'package:fyndo_app/providers/crypto_providers.dart';
+import 'package:fyndo_app/providers/unlocked_workspace_provider.dart';
+import 'package:fyndo_app/providers/workspace_provider.dart';
 import 'package:fyndo_app/ui/theme/fyndo_theme.dart';
 import 'package:fyndo_app/ui/widgets/common/password_field.dart';
 
-/// Settings page for app configuration and vault management.
+/// Settings page for app configuration and workspace management.
 ///
-/// Spec: docs/specs/spec-001-workspace-management.md (Section 5.2.3)
+/// This page implements spec-002 workspace settings including:
+/// - Change master password (workspace-level, re-encrypts keyring)
+/// - Auto-lock settings (idle timeout, lock on background)
+/// - Lock workspace button
+///
+/// Spec: docs/specs/spec-002-workspace-master-password.md (Section 3.4)
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
 
@@ -75,34 +83,77 @@ class _SecuritySettingsSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final unlockedWorkspace = ref.watch(unlockedWorkspaceProvider);
+    final autoLockSettings = ref.watch(autoLockSettingsProvider);
+    final isUnlocked = unlockedWorkspace != null;
 
-    return VaultStatusConsumer(
-      builder: (context, status, _) {
-        final isUnlocked = status == VaultStatus.unlocked;
+    return Container(
+      decoration: BoxDecoration(border: Border.all(color: theme.dividerColor)),
+      child: Column(
+        children: [
+          // Change Master Password
+          _buildSettingTile(
+            context: context,
+            title: 'Change Master Password',
+            subtitle: isUnlocked
+                ? 'Update your workspace password'
+                : 'Unlock workspace to change password',
+            icon: Icons.key,
+            enabled: isUnlocked,
+            onTap: isUnlocked
+                ? () => _showChangePasswordDialog(context, ref)
+                : null,
+            theme: theme,
+          ),
+          Divider(height: 1, color: theme.dividerColor),
 
-        return Container(
-          decoration: BoxDecoration(
-            border: Border.all(color: theme.dividerColor),
+          // Auto-Lock Duration
+          _buildAutoLockDurationTile(
+            context: context,
+            theme: theme,
+            settings: autoLockSettings,
+            onChanged: (duration) {
+              ref.read(autoLockSettingsProvider.notifier).setDuration(duration);
+            },
           ),
-          child: Column(
-            children: [
-              _buildSettingTile(
-                context: context,
-                title: 'Change Master Password',
-                subtitle: isUnlocked
-                    ? 'Update your vault password'
-                    : 'Unlock vault to change password',
-                icon: Icons.key,
-                enabled: isUnlocked,
-                onTap: isUnlocked
-                    ? () => _showChangePasswordDialog(context, ref)
-                    : null,
-                theme: theme,
-              ),
-            ],
+          Divider(height: 1, color: theme.dividerColor),
+
+          // Lock on Background
+          _buildSwitchTile(
+            context: context,
+            title: 'Lock on Background',
+            subtitle: 'Automatically lock when app goes to background',
+            icon: Icons.phonelink_lock,
+            value: autoLockSettings.lockOnBackground,
+            onChanged: (value) {
+              ref
+                  .read(autoLockSettingsProvider.notifier)
+                  .setLockOnBackground(value);
+            },
+            theme: theme,
           ),
-        );
-      },
+          Divider(height: 1, color: theme.dividerColor),
+
+          // Lock Now
+          _buildSettingTile(
+            context: context,
+            title: 'Lock Workspace Now',
+            subtitle: 'Immediately lock workspace',
+            icon: Icons.lock,
+            enabled: isUnlocked,
+            onTap: isUnlocked
+                ? () {
+                    ref.read(unlockedWorkspaceProvider.notifier).lock();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Workspace locked')),
+                    );
+                    Navigator.of(context).pop();
+                  }
+                : null,
+            theme: theme,
+          ),
+        ],
+      ),
     );
   }
 
@@ -179,6 +230,170 @@ class _SecuritySettingsSection extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildAutoLockDurationTile({
+    required BuildContext context,
+    required ThemeData theme,
+    required AutoLockSettings settings,
+    required Function(int) onChanged,
+  }) {
+    final durationMinutes = settings.durationSeconds ~/ 60;
+    final durationText = settings.enabled
+        ? '${durationMinutes} minutes'
+        : 'Disabled';
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _showAutoLockDurationDialog(context, settings, onChanged),
+        child: Container(
+          padding: const EdgeInsets.all(FyndoTheme.padding),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primaryContainer.withValues(
+                    alpha: 0.3,
+                  ),
+                  border: Border.all(color: theme.colorScheme.primary),
+                ),
+                child: Icon(
+                  Icons.timer,
+                  color: theme.colorScheme.primary,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Auto-Lock Timer', style: theme.textTheme.titleSmall),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Lock after idle time: $durationText',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.arrow_forward_ios,
+                size: 16,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSwitchTile({
+    required BuildContext context,
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required bool value,
+    required Function(bool) onChanged,
+    required ThemeData theme,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => onChanged(!value),
+        child: Container(
+          padding: const EdgeInsets.all(FyndoTheme.padding),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primaryContainer.withValues(
+                    alpha: 0.3,
+                  ),
+                  border: Border.all(color: theme.colorScheme.primary),
+                ),
+                child: Icon(icon, color: theme.colorScheme.primary, size: 20),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: theme.textTheme.titleSmall),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Switch(value: value, onChanged: onChanged),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showAutoLockDurationDialog(
+    BuildContext context,
+    AutoLockSettings settings,
+    Function(int) onChanged,
+  ) {
+    final options = [
+      (0, 'Disabled'),
+      (5, '5 minutes'),
+      (15, '15 minutes'),
+      (30, '30 minutes'),
+      (60, '60 minutes'),
+    ];
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        final currentMinutes = settings.durationSeconds ~/ 60;
+
+        return AlertDialog(
+          title: const Text('Auto-Lock Timer'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: options.map((option) {
+              final (minutes, label) = option;
+              final isSelected =
+                  (minutes == 0 && !settings.enabled) ||
+                  (minutes == currentMinutes && settings.enabled);
+
+              return RadioListTile<int>(
+                title: Text(label),
+                value: minutes,
+                groupValue: isSelected ? minutes : -1,
+                onChanged: (_) {
+                  onChanged(minutes);
+                  Navigator.pop(context);
+                },
+              );
+            }).toList(),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -289,46 +504,50 @@ class _ChangePasswordDialogState extends ConsumerState<_ChangePasswordDialog> {
     });
 
     try {
-      // Get current vault state
-      final vaultState = ref.read(vaultProvider);
-      if (!vaultState.isUnlocked) {
-        throw Exception('No vault unlocked');
+      // Get workspace state and unlocked workspace
+      final workspaceState = ref.read(workspaceProvider).valueOrNull;
+      final unlockedWorkspace = ref.read(unlockedWorkspaceProvider);
+
+      if (workspaceState?.rootPath == null || unlockedWorkspace == null) {
+        throw Exception('No workspace unlocked');
       }
 
-      // Verify current password by attempting unlock
+      // Prepare passwords
       final currentPassword = SecureBytes.fromList(
         utf8.encode(_currentPasswordController.text),
       );
-
-      // Get vault service and try to unlock with current password to verify
-      final vaultService = ref.read(vaultServiceProvider);
-      await vaultService.unlockVault(
-        vaultPath: vaultState.vaultPath!,
-        password: currentPassword,
-      );
-
-      // If we got here, current password is correct
-      // Now change to new password
       final newPassword = SecureBytes.fromList(
         utf8.encode(_newPasswordController.text),
       );
 
-      await ref
-          .read(vaultProvider.notifier)
-          .changePassword(newPassword: newPassword);
+      // Change password (this will verify current password internally)
+      final workspaceService = ref.read(workspaceServiceProvider);
+      await workspaceService.changeMasterPassword(
+        workspace: unlockedWorkspace,
+        currentPassword: currentPassword,
+        newPassword: newPassword,
+      );
+
+      // Lock the current workspace so user must unlock with new password
+      ref.read(unlockedWorkspaceProvider.notifier).lock();
 
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Password changed successfully'),
+            content: Text(
+              'Password changed successfully. Please unlock with your new password.',
+            ),
             backgroundColor: Colors.green,
+            duration: Duration(seconds: 4),
           ),
         );
       }
     } catch (e) {
       setState(() {
-        _error = e.toString().contains('password')
+        _error =
+            e.toString().contains('password') ||
+                e.toString().contains('incorrect')
             ? 'Current password is incorrect'
             : 'Failed to change password: ${e.toString()}';
         _isChanging = false;

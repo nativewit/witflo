@@ -5,6 +5,7 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fyndo_app/core/crypto/crypto.dart';
+import 'package:fyndo_app/core/workspace/workspace_service.dart';
 
 /// Provider for the crypto service.
 /// Must be initialized at app startup before accessing.
@@ -51,4 +52,9 @@ final x25519Provider = Provider<X25519KeyExchange>((ref) {
 /// Provider for secure random.
 final secureRandomProvider = Provider<SecureRandom>((ref) {
   return ref.watch(cryptoServiceProvider).random;
+});
+
+/// Provider for workspace service.
+final workspaceServiceProvider = Provider<WorkspaceService>((ref) {
+  return WorkspaceService();
 });

@@ -9,12 +9,15 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fyndo_app/core/crypto/crypto.dart';
-import 'package:fyndo_app/providers/vault_providers.dart';
+import 'package:fyndo_app/core/workspace/workspace_config.dart';
+import 'package:fyndo_app/core/workspace/workspace_service.dart';
+import 'package:fyndo_app/providers/crypto_providers.dart';
 import 'package:fyndo_app/providers/vault_registry.dart';
 import 'package:fyndo_app/providers/workspace_provider.dart';
 import 'package:fyndo_app/ui/theme/fyndo_theme.dart';
 import 'package:fyndo_app/ui/widgets/common/password_field.dart';
 import 'package:go_router/go_router.dart';
+import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart';
 
 /// Onboarding wizard for new users.
@@ -357,34 +360,62 @@ class _OnboardingWizardState extends ConsumerState<OnboardingWizard> {
     });
 
     try {
-      // Step 1: Initialize workspace
-      await ref
-          .read(workspaceProvider.notifier)
-          .initializeWorkspace(_selectedWorkspacePath!);
+      // Spec-002 Section 3.1: Initialize workspace with master password
+      final masterPassword = SecureBytes.fromList(utf8.encode(_password));
+      final workspaceService = WorkspaceService();
+      final unlockedWorkspace = await workspaceService.initializeWorkspace(
+        rootPath: _selectedWorkspacePath!,
+        masterPassword: masterPassword,
+      );
 
-      // Step 2: Create vault path
+      // Spec-002 Section 3.3: Create vault with random key
+      final crypto = ref.read(cryptoServiceProvider);
+      final vaultKey = crypto.random.symmetricKey();
       final vaultId = const Uuid().v4();
-      final vaultPath = ref
-          .read(workspaceProvider.notifier)
-          .getNewVaultPath(vaultId);
 
-      // Step 3: Create vault
-      final password = SecureBytes.fromList(utf8.encode(_password));
-      await ref
-          .read(vaultProvider.notifier)
-          .createVault(path: vaultPath, password: password);
+      // Add vault to keyring
+      final vaultKeyBase64 = base64Encode(vaultKey.bytes);
+      unlockedWorkspace.keyring = unlockedWorkspace.keyring.addVault(
+        vaultId,
+        vaultKeyBase64,
+      );
 
-      // Step 4: Register vault
+      // Save updated keyring
+      await workspaceService.saveKeyring(unlockedWorkspace);
+
+      // Create vault directory structure
+      final vaultPath = p.join(_selectedWorkspacePath!, 'vaults', vaultId);
+      await Directory(vaultPath).create(recursive: true);
+      await Directory(p.join(vaultPath, 'notebooks')).create();
+      await Directory(p.join(vaultPath, 'objects')).create();
+
+      // Write vault metadata
+      final metadata = {
+        'version': 1,
+        'vaultId': vaultId,
+        'name': _vaultName,
+        'description': null,
+        'icon': '📓',
+        'color': '#3B82F6',
+        'createdAt': DateTime.now().toUtc().toIso8601String(),
+        'modifiedAt': DateTime.now().toUtc().toIso8601String(),
+      };
+      await File(
+        p.join(vaultPath, '.vault-meta.json'),
+      ).writeAsString(jsonEncode(metadata));
+
+      // Register vault in registry
       await ref
           .read(vaultRegistryProvider.notifier)
           .registerVault(name: _vaultName, path: vaultPath, setAsDefault: true);
 
-      // Step 5: Set path and unlock
-      await ref.read(vaultProvider.notifier).setVaultPath(vaultPath);
-      final unlockPassword = SecureBytes.fromList(utf8.encode(_password));
-      await ref.read(vaultProvider.notifier).unlock(unlockPassword);
+      // Save workspace config to preferences
+      final workspaceConfig = WorkspaceConfig.create(
+        rootPath: unlockedWorkspace.rootPath,
+      );
+      await workspaceService.saveWorkspaceConfig(workspaceConfig);
 
-      // Navigate to home
+      // Navigate to home (workspace is now initialized)
       if (mounted) {
         context.go('/home');
       }
@@ -625,6 +656,13 @@ class _Step2PasswordCreationState extends State<_Step2PasswordCreation> {
             ],
           ),
           const SizedBox(height: 16),
+          Text(
+            'This password unlocks your entire workspace. All vaults and notes will be encrypted with this password.',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 16),
 
           // Warning
           Container(
@@ -735,8 +773,8 @@ class _Step3VaultCreationState extends State<_Step3VaultCreation> {
           ),
           const SizedBox(height: 16),
           Text(
-            'Give your vault a name. You can create additional vaults later '
-            'to organize different types of notes.',
+            'Give your first vault a name. Your master password will unlock all vaults, '
+            'so you don\'t need to enter separate passwords for each vault.',
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),

@@ -3,33 +3,44 @@
 // Vault Service - Create, Unlock, and Manage Vaults
 // ═══════════════════════════════════════════════════════════════════════════
 //
-// VAULT LIFECYCLE:
-// 1. CREATE: password → MUK → generate VK → encrypt VK → save
-// 2. UNLOCK: password → MUK → decrypt VK → derive keys → ready
-// 3. LOCK: zeroize all keys → require password again
-// 4. CHANGE PASSWORD: derive new MUK → re-encrypt VK
+// UPDATED FOR WORKSPACE MASTER PASSWORD (v2):
+// Vaults no longer manage their own passwords. Instead:
+// 1. Workspace master password → MUK (in workspace service)
+// 2. MUK decrypts keyring → vault keys (random, not derived)
+// 3. Vault service receives vault key directly from keyring
+//
+// NEW VAULT LIFECYCLE:
+// 1. CREATE: workspace provides vault key → save metadata → save header
+// 2. UNLOCK: workspace provides vault key → derive content keys → ready
+// 3. LOCK: zeroize all keys → require workspace unlock
+// 4. PASSWORD CHANGE: handled at workspace level (no vault changes)
 //
 // KEY HIERARCHY:
-// Password (user input, never stored)
-//   ↓ Argon2id(salt)
-// Master Unlock Key (MUK) - memory only
-//   ↓ decrypts vault.vk
-// Vault Key (VK) - root of all content keys
+// Master Password (workspace-level)
+//   ↓ Argon2id(workspace salt)
+// Master Unlock Key (MUK) - workspace session
+//   ↓ decrypts workspace keyring
+// Vault Key (VK) - random 32 bytes per vault
 //   ↓ HKDF
 // ContentKey, NotebookKey, GroupKey, NoteShareKey
 //
 // SECURITY INVARIANTS:
-// - Password is zeroized immediately after MUK derivation
-// - MUK is zeroized immediately after VK decryption
+// - Vault keys are random (not password-derived)
+// - Vault keys provided by workspace keyring (after unlock)
 // - VK remains in memory only while vault is unlocked
 // - All derived keys are disposed after use
+//
+// Spec: docs/specs/spec-002-workspace-master-password.md (Section 3.3)
 // ═══════════════════════════════════════════════════════════════════════════
+
+import 'dart:convert';
 
 import 'package:fyndo_app/core/crypto/crypto.dart';
 import 'package:fyndo_app/core/vault/vault_filesystem.dart';
 import 'package:fyndo_app/core/vault/vault_header.dart';
+import 'package:fyndo_app/core/vault/vault_metadata.dart';
 import 'package:fyndo_app/platform/storage/storage_provider.dart';
-import 'package:uuid/uuid.dart';
+import 'package:path/path.dart' as p;
 
 /// Result of vault creation.
 class VaultCreationResult {
@@ -150,100 +161,84 @@ class VaultService {
 
   VaultService(this._crypto);
 
-  /// Creates a new vault with the given password.
+  /// Creates a new vault with the provided vault key from workspace keyring.
   ///
   /// [vaultPath] - Directory to create vault in
-  /// [password] - Master password (will be zeroized)
-  /// [kdfParams] - Optional Argon2id parameters (uses standard if not provided)
+  /// [vaultKey] - Random vault key from workspace keyring (NOT password-derived)
+  /// [vaultId] - UUID identifier for this vault (must match keyring entry)
+  /// [name] - User-visible vault name
+  /// [description] - Optional vault description
+  /// [icon] - Optional emoji icon
+  /// [color] - Optional hex color
   ///
   /// Returns [VaultCreationResult] with the created vault info.
+  ///
+  /// NOTE: This method does NOT generate or encrypt the vault key.
+  /// That is handled by the workspace service. This method only:
+  /// 1. Creates the vault directory structure
+  /// 2. Writes the vault header (plaintext)
+  /// 3. Writes the vault metadata (plaintext)
   Future<VaultCreationResult> createVault({
     required String vaultPath,
-    required SecureBytes password,
-    Argon2Params? kdfParams,
+    required VaultKey vaultKey,
+    required String vaultId,
+    required String name,
+    String? description,
+    String? icon,
+    String? color,
   }) async {
     final filesystem = VaultFilesystem(vaultPath);
 
     // Check if vault already exists
     if (await filesystem.exists()) {
-      password.dispose();
       throw VaultException(
         VaultError.vaultCorrupted,
         'Vault already exists at $vaultPath',
       );
     }
 
-    // Use standard params if not provided
-    final params = kdfParams ?? Argon2Params.standard;
+    // Create header (minimal, no crypto params)
+    final header = VaultHeader.create(vaultId: vaultId);
 
-    // Generate random salt
-    final salt = _crypto.argon2id.generateSalt();
-
-    // Generate vault ID
-    final vaultId = const Uuid().v4();
-
-    // Create header
-    final header = VaultHeader.create(
-      salt: salt,
-      kdfParams: params,
+    // Create metadata (plaintext user-visible info)
+    final metadata = VaultMetadata.create(
       vaultId: vaultId,
+      name: name,
+      description: description,
+      icon: icon,
+      color: color,
     );
 
-    // Derive MUK from password
-    final muk = await _crypto.argon2id.deriveKey(
-      password: password, // password is disposed by deriveKey
-      salt: salt,
-      params: params,
-    );
+    // Initialize filesystem
+    await filesystem.initialize();
 
-    try {
-      // Generate random Vault Key
-      final vkBytes = _crypto.random.symmetricKey();
-      final vaultKey = VaultKey(vkBytes);
+    // Write header (plaintext)
+    await filesystem.writeAtomic(filesystem.paths.header, header.toBytes());
 
-      try {
-        // Encrypt VK with MUK
-        final encryptedVk = _crypto.xchacha20.encrypt(
-          plaintext: vaultKey.material.copy(),
-          key: muk,
-        );
+    // Write metadata (plaintext)
+    await saveVaultMetadata(vaultPath, metadata);
 
-        // Initialize filesystem
-        await filesystem.initialize();
-
-        // Write header (plaintext)
-        await filesystem.writeAtomic(filesystem.paths.header, header.toBytes());
-
-        // Write encrypted VK
-        await filesystem.writeAtomic(
-          filesystem.paths.vaultKey,
-          encryptedVk.ciphertext,
-        );
-
-        return VaultCreationResult(header: header, vaultPath: vaultPath);
-      } finally {
-        vaultKey.dispose();
-      }
-    } finally {
-      muk.dispose();
-    }
+    return VaultCreationResult(header: header, vaultPath: vaultPath);
   }
 
-  /// Unlocks an existing vault with the given password.
+  /// Unlocks an existing vault with the provided vault key from workspace keyring.
   ///
   /// [vaultPath] - Directory containing the vault
-  /// [password] - Master password (will be zeroized)
+  /// [vaultKey] - Vault key from workspace keyring (after master password unlock)
   ///
   /// Returns [UnlockedVault] which must be disposed when locking.
+  ///
+  /// NOTE: This method does NOT derive the vault key from a password.
+  /// The vault key is retrieved from the workspace keyring after the user
+  /// unlocks the workspace with the master password.
   Future<UnlockedVault> unlockVault({
     required String vaultPath,
-    required SecureBytes password,
+    required VaultKey vaultKey,
   }) async {
     final filesystem = VaultFilesystem(vaultPath);
 
     // Check if vault exists
     if (!await filesystem.exists()) {
-      password.dispose();
       throw VaultException(
         VaultError.vaultNotFound,
         'No vault found at $vaultPath',
@@ -253,7 +248,6 @@ class VaultService {
     // Read header
     final headerBytes = await storageProvider.readFile(filesystem.paths.header);
     if (headerBytes == null) {
-      password.dispose();
       throw VaultException(
         VaultError.vaultCorrupted,
         'Could not read vault header',
@@ -263,129 +257,49 @@ class VaultService {
 
     // Check version compatibility
     if (header.version > currentVaultVersion) {
-      password.dispose();
       throw VaultException(
         VaultError.versionMismatch,
         'Vault version ${header.version} is newer than supported $currentVaultVersion',
       );
     }
 
-    // Derive MUK from password
-    final muk = await _crypto.argon2id.deriveKey(
-      password: password, // password is disposed by deriveKey
-      salt: header.salt,
-      params: header.kdfParams,
+    // Return unlocked vault with provided key
+    return UnlockedVault(
+      header: header,
+      filesystem: filesystem,
+      vaultKey: vaultKey,
+      crypto: _crypto,
     );
-
-    try {
-      // Read encrypted VK
-      final encryptedVkBytes = await storageProvider.readFile(
-        filesystem.paths.vaultKey,
-      );
-      if (encryptedVkBytes == null) {
-        throw VaultException(
-          VaultError.vaultCorrupted,
-          'Could not read vault key',
-        );
-      }
-
-      // Decrypt VK
-      SecureBytes vkBytes;
-      try {
-        vkBytes = _crypto.xchacha20.decrypt(
-          ciphertext: encryptedVkBytes,
-          key: muk,
-        );
-      } catch (e) {
-        throw VaultException(
-          VaultError.invalidPassword,
-          'Failed to decrypt vault key - incorrect password?',
-        );
-      }
-
-      final vaultKey = VaultKey(vkBytes);
-
-      return UnlockedVault(
-        header: header,
-        filesystem: filesystem,
-        vaultKey: vaultKey,
-        crypto: _crypto,
-      );
-    } finally {
-      muk.dispose();
-    }
   }
 
-  /// Changes the vault password.
+  /// Saves vault metadata to .vault-meta.json (plaintext).
   ///
-  /// [vault] - Currently unlocked vault
-  /// [newPassword] - New master password (will be zeroized)
-  /// [newKdfParams] - Optional new KDF parameters
-  Future<void> changePassword({
-    required UnlockedVault vault,
-    required SecureBytes newPassword,
-    Argon2Params? newKdfParams,
-  }) async {
-    final params = newKdfParams ?? vault.header.kdfParams;
-
-    // Generate new salt for new password
-    final newSalt = _crypto.argon2id.generateSalt();
-
-    // Derive new MUK
-    final newMuk = await _crypto.argon2id.deriveKey(
-      password: newPassword,
-      salt: newSalt,
-      params: params,
-    );
-
-    try {
-      // Re-encrypt VK with new MUK
-      final encryptedVk = _crypto.xchacha20.encrypt(
-        plaintext: vault.vaultKey.material.copy(),
-        key: newMuk,
-      );
-
-      // Create new header with updated params
-      final newHeader = VaultHeader(
-        version: vault.header.version,
-        salt: newSalt,
-        kdfParams: params,
-        createdAt: vault.header.createdAt,
-        modifiedAt: DateTime.now().toUtc(),
-        vaultId: vault.header.vaultId,
-        features: vault.header.features,
-      );
-
-      // Write new header
-      await vault.filesystem.writeAtomic(
-        vault.filesystem.paths.header,
-        newHeader.toBytes(),
-      );
-
-      // Write new encrypted VK
-      await vault.filesystem.writeAtomic(
-        vault.filesystem.paths.vaultKey,
-        encryptedVk.ciphertext,
-      );
-    } finally {
-      newMuk.dispose();
-    }
+  /// [vaultPath] - Directory containing the vault
+  /// [metadata] - Vault metadata to save
+  ///
+  /// The metadata is written atomically to prevent corruption.
+  Future<void> saveVaultMetadata(
+    String vaultPath,
+    VaultMetadata metadata,
+  ) async {
+    final metadataPath = p.join(vaultPath, '.vault-meta.json');
+    final json = jsonEncode(metadata.toJson());
+    final bytes = utf8.encode(json);
+    await storageProvider.writeAtomic(metadataPath, bytes);
   }
 
-  /// Verifies a password without fully unlocking the vault.
-  Future<bool> verifyPassword({
-    required String vaultPath,
-    required SecureBytes password,
-  }) async {
-    try {
-      final vault = await unlockVault(vaultPath: vaultPath, password: password);
-      vault.dispose();
-      return true;
-    } on VaultException catch (e) {
-      if (e.error == VaultError.invalidPassword) {
-        return false;
-      }
-      rethrow;
+  /// Loads vault metadata from .vault-meta.json.
+  ///
+  /// [vaultPath] - Directory containing the vault
+  ///
+  /// Returns the metadata if the file exists, null otherwise.
+  Future<VaultMetadata?> loadVaultMetadata(String vaultPath) async {
+    final metadataPath = p.join(vaultPath, '.vault-meta.json');
+    final bytes = await storageProvider.readFile(metadataPath);
+    if (bytes == null) {
+      return null;
     }
+    final json = jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
+    return VaultMetadata.fromJson(json);
   }
 }

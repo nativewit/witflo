@@ -1,23 +1,45 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // FYNDO - Zero-Trust Notes OS
-// Vault Create Dialog - Create New Vault Form
+// Vault Create Dialog - Create New Vault Form (spec-002 workspace master password)
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// CHANGES IN SPEC-002:
+// - Removed password fields (vault keys are random, not password-derived)
+// - Vault key is generated randomly and stored in workspace keyring
+// - Only metadata is collected: name, description, icon, color
+//
+// Spec: docs/specs/spec-002-workspace-master-password.md (Section 3.3)
 // ═══════════════════════════════════════════════════════════════════════════
 
 import 'package:flutter/material.dart';
 import 'package:fyndo_app/ui/theme/fyndo_theme.dart';
-import 'package:fyndo_app/ui/widgets/common/password_field.dart';
 
 /// Dialog for creating a new vault.
+///
+/// This dialog collects vault metadata (name, description, icon, color).
+/// The vault key is generated randomly by the caller, not derived from a password.
 class VaultCreateDialog extends StatefulWidget {
-  /// Callback when vault is created.
-  final void Function(String name, String password)? onCreateVault;
+  /// Callback when vault is created with name, description, icon, and color.
+  final void Function({
+    required String name,
+    String? description,
+    String? icon,
+    String? color,
+  })?
+  onCreateVault;
 
   const VaultCreateDialog({super.key, this.onCreateVault});
 
   /// Shows the create vault dialog.
   static Future<void> show(
     BuildContext context, {
-    void Function(String name, String password)? onCreateVault,
+    void Function({
+      required String name,
+      String? description,
+      String? icon,
+      String? color,
+    })?
+    onCreateVault,
   }) {
     return showDialog(
       context: context,
@@ -33,15 +55,17 @@ class VaultCreateDialog extends StatefulWidget {
 class _VaultCreateDialogState extends State<VaultCreateDialog> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _confirmController = TextEditingController();
+  final _descriptionController = TextEditingController();
   bool _isCreating = false;
+
+  // TODO: Add icon and color pickers in future iterations
+  String? _selectedIcon;
+  String? _selectedColor;
 
   @override
   void dispose() {
     _nameController.dispose();
-    _passwordController.dispose();
-    _confirmController.dispose();
+    _descriptionController.dispose();
     super.dispose();
   }
 
@@ -51,8 +75,12 @@ class _VaultCreateDialogState extends State<VaultCreateDialog> {
     setState(() => _isCreating = true);
 
     widget.onCreateVault?.call(
-      _nameController.text.trim(),
-      _passwordController.text,
+      name: _nameController.text.trim(),
+      description: _descriptionController.text.trim().isEmpty
+          ? null
+          : _descriptionController.text.trim(),
+      icon: _selectedIcon,
+      color: _selectedColor,
     );
 
     Navigator.of(context).pop();
@@ -98,8 +126,8 @@ class _VaultCreateDialogState extends State<VaultCreateDialog> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'Your vault will be encrypted with a master password. '
-                        'This password is NEVER stored anywhere.',
+                        'Your vault will be encrypted with a random key stored '
+                        'in your workspace keyring. No password required!',
                         style: theme.textTheme.bodySmall,
                       ),
                     ),
@@ -115,6 +143,7 @@ class _VaultCreateDialogState extends State<VaultCreateDialog> {
                   prefixIcon: Icon(Icons.folder),
                 ),
                 textInputAction: TextInputAction.next,
+                autofocus: true,
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
                     return 'Please enter a vault name';
@@ -123,27 +152,16 @@ class _VaultCreateDialogState extends State<VaultCreateDialog> {
                 },
               ),
               const SizedBox(height: 16),
-              PasswordField(
-                controller: _passwordController,
-                labelText: 'Master Password',
-                hintText: 'Enter a strong password',
-                textInputAction: TextInputAction.next,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter a password';
-                  }
-                  if (value.length < 8) {
-                    return 'Password must be at least 8 characters';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              ConfirmPasswordField(
-                controller: _confirmController,
-                passwordController: _passwordController,
-                labelText: 'Confirm Password',
+              TextFormField(
+                controller: _descriptionController,
+                decoration: const InputDecoration(
+                  labelText: 'Description (optional)',
+                  hintText: 'Personal notes and documents',
+                  prefixIcon: Icon(Icons.description),
+                ),
                 textInputAction: TextInputAction.done,
+                maxLines: 2,
+                onFieldSubmitted: (_) => _createVault(),
               ),
               const SizedBox(height: 24),
               Row(

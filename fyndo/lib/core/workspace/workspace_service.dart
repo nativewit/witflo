@@ -527,6 +527,66 @@ class WorkspaceService {
     workspace.dispose();
   }
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // WORKSPACE VERSION DETECTION (Migration Support)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// Gets the version of an existing workspace.
+  ///
+  /// Reads the .fyndo-workspace marker file and extracts the version number.
+  /// If the file doesn't exist or has no version field, assumes v1 (legacy).
+  ///
+  /// [rootPath] - Absolute path to workspace directory
+  ///
+  /// Returns version number:
+  /// - 1 = v1 (per-vault passwords, no workspace metadata)
+  /// - 2 = v2 (master password with encrypted keyring)
+  ///
+  /// Spec: docs/specs/spec-002-workspace-master-password.md (Section 4)
+  Future<int> getWorkspaceVersion(String rootPath) async {
+    final markerFile = File(p.join(rootPath, _workspaceMarkerFile));
+
+    // If marker file doesn't exist, assume v1 (legacy)
+    if (!await markerFile.exists()) {
+      return 1;
+    }
+
+    try {
+      final content = await markerFile.readAsString();
+
+      // Try to parse as JSON (v2 format)
+      try {
+        final json = jsonDecode(content) as Map<String, dynamic>;
+        final version = json['version'] as int?;
+
+        // If version field exists, use it
+        if (version != null) {
+          return version;
+        }
+
+        // If no version field but valid JSON, assume v2 (early format)
+        return 2;
+      } catch (_) {
+        // If JSON parse fails, it's the old plaintext format (v1)
+        return 1;
+      }
+    } catch (e) {
+      throw WorkspaceException('Failed to read workspace version', e);
+    }
+  }
+
+  /// Checks if a workspace is using v1 architecture (per-vault passwords).
+  ///
+  /// [rootPath] - Absolute path to workspace directory
+  ///
+  /// Returns true if workspace is v1, false if v2 or newer.
+  ///
+  /// This is useful for triggering migration prompts in the UI.
+  Future<bool> isV1Workspace(String rootPath) async {
+    final version = await getWorkspaceVersion(rootPath);
+    return version < 2;
+  }
+
   /// Changes the master password for a workspace.
   ///
   /// This verifies the current password, generates a new salt and Argon2id
@@ -673,7 +733,7 @@ class WorkspaceService {
   ///
   /// Throws:
   /// - [WorkspaceException] if save operation fails
-  Future<void> _saveKeyring(UnlockedWorkspace workspace) async {
+  Future<void> saveKeyring(UnlockedWorkspace workspace) async {
     try {
       // Read current nonce from metadata (we reuse same nonce for simplicity)
       // Note: In production, you might want to generate a new nonce each time
@@ -718,6 +778,7 @@ class WorkspaceService {
   ///
   /// Throws:
   /// - [WorkspaceException] if load or decryption fails
+  // ignore: unused_element
   Future<WorkspaceKeyring> _loadKeyring(
     String rootPath,
     MasterUnlockKey muk,

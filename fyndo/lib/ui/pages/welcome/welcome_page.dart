@@ -8,44 +8,56 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fyndo_app/core/crypto/crypto.dart';
-import 'package:fyndo_app/core/vault/vault_service.dart';
-import 'package:fyndo_app/platform/platform_init.dart';
-import 'package:fyndo_app/providers/vault_providers.dart';
+import 'package:fyndo_app/providers/crypto_providers.dart';
+import 'package:fyndo_app/providers/unlocked_workspace_provider.dart';
 import 'package:fyndo_app/providers/vault_registry.dart';
 import 'package:fyndo_app/providers/workspace_provider.dart';
-import 'package:fyndo_app/ui/consumers/vault_consumer.dart';
 import 'package:fyndo_app/ui/theme/fyndo_theme.dart';
 import 'package:fyndo_app/ui/widgets/common/password_field.dart';
 import 'package:fyndo_app/ui/widgets/common/security_badges.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-/// Welcome page for vault listing and management.
+/// Welcome page for vault listing and workspace unlock.
+///
+/// This page implements the spec-002 workspace master password flow:
+/// 1. User unlocks workspace with single master password
+/// 2. All vaults become accessible without individual passwords
+/// 3. Lock button allows re-locking workspace
+///
+/// Spec: docs/specs/spec-002-workspace-master-password.md (Section 3.2)
 class WelcomePage extends ConsumerWidget {
   const WelcomePage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return VaultStatusConsumer(
-      builder: (context, status, _) {
-        // If vault is unlocked, navigate to home
-        if (status == VaultStatus.unlocked) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            context.go('/home');
-          });
-          return const _LoadingView();
+    final workspaceAsync = ref.watch(workspaceProvider);
+    final unlockedWorkspace = ref.watch(unlockedWorkspaceProvider);
+
+    return workspaceAsync.when(
+      data: (workspaceState) {
+        // If workspace is unlocked, show vault list
+        if (unlockedWorkspace != null) {
+          return const _UnlockedWorkspaceView();
         }
 
-        // Show appropriate view based on status
-        if (status == VaultStatus.unlocking || status == VaultStatus.creating) {
-          return const _LoadingView();
+        // If workspace exists but is locked, show unlock screen
+        if (workspaceState.hasWorkspace) {
+          return const _WorkspaceUnlockView();
         }
 
-        return const _WelcomeView();
+        // No workspace configured
+        return const _NoWorkspaceView();
       },
+      loading: () => const _LoadingView(),
+      error: (error, _) => _ErrorView(error: error.toString()),
     );
   }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// View: Loading
+// ═══════════════════════════════════════════════════════════════════════════
 
 class _LoadingView extends StatelessWidget {
   const _LoadingView();
@@ -69,11 +81,163 @@ class _LoadingView extends StatelessWidget {
   }
 }
 
-class _WelcomeView extends ConsumerWidget {
-  const _WelcomeView();
+// ═══════════════════════════════════════════════════════════════════════════
+// View: Error
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _ErrorView extends StatelessWidget {
+  final String error;
+
+  const _ErrorView({required this.error});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Scaffold(
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(FyndoTheme.paddingLarge),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error, size: 64, color: theme.colorScheme.error),
+              const SizedBox(height: 24),
+              Text(
+                'Error Loading Workspace',
+                style: theme.textTheme.titleLarge,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                error,
+                style: theme.textTheme.bodyMedium,
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// View: No Workspace
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _NoWorkspaceView extends StatelessWidget {
+  const _NoWorkspaceView();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Scaffold(
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(FyndoTheme.paddingLarge),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.folder_off,
+                size: 64,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'No Workspace Configured',
+                style: theme.textTheme.titleLarge,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Please run the onboarding flow to set up your workspace.',
+                style: theme.textTheme.bodyMedium,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 32),
+              FilledButton.icon(
+                icon: const Icon(Icons.start),
+                label: const Text('Get Started'),
+                onPressed: () => context.go('/onboarding'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// View: Workspace Unlock (Locked workspace - enter master password)
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _WorkspaceUnlockView extends ConsumerStatefulWidget {
+  const _WorkspaceUnlockView();
+
+  @override
+  ConsumerState<_WorkspaceUnlockView> createState() =>
+      _WorkspaceUnlockViewState();
+}
+
+class _WorkspaceUnlockViewState extends ConsumerState<_WorkspaceUnlockView> {
+  final _passwordController = TextEditingController();
+  bool _isUnlocking = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _unlock() async {
+    if (_passwordController.text.isEmpty) {
+      setState(() => _error = 'Please enter your master password');
+      return;
+    }
+
+    setState(() {
+      _isUnlocking = true;
+      _error = null;
+    });
+
+    try {
+      final workspaceState = ref.read(workspaceProvider).valueOrNull;
+      if (workspaceState?.rootPath == null) {
+        throw Exception('No workspace configured');
+      }
+
+      final password = SecureBytes.fromList(
+        utf8.encode(_passwordController.text),
+      );
+
+      final workspaceService = ref.read(workspaceServiceProvider);
+      final unlockedWorkspace = await workspaceService.unlockWorkspace(
+        rootPath: workspaceState!.rootPath!,
+        masterPassword: password,
+      );
+
+      // Store unlocked workspace in provider
+      ref.read(unlockedWorkspaceProvider.notifier).unlock(unlockedWorkspace);
+
+      // Clear password field
+      _passwordController.clear();
+    } catch (e) {
+      setState(() {
+        _error =
+            e.toString().contains('password') ||
+                e.toString().contains('decrypt')
+            ? 'Incorrect password'
+            : 'Failed to unlock workspace: ${e.toString()}';
+        _isUnlocking = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final size = MediaQuery.of(context).size;
     final isWide = size.width > 600;
@@ -84,21 +248,60 @@ class _WelcomeView extends ConsumerWidget {
           child: SingleChildScrollView(
             padding: EdgeInsets.all(isWide ? 48 : 24),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 560),
+              constraints: const BoxConstraints(maxWidth: 460),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // Logo
                   _buildLogo(theme),
+                  const SizedBox(height: 48),
+
+                  // Unlock prompt
+                  Text(
+                    'Unlock Workspace',
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Enter your master password to access all vaults',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 32),
+
+                  // Password field
+                  PasswordField(
+                    controller: _passwordController,
+                    labelText: 'Master Password',
+                    hintText: 'Enter your password',
+                    errorText: _error,
+                    autofocus: true,
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: (_) => _unlock(),
+                    enabled: !_isUnlocking,
+                  ),
                   const SizedBox(height: 24),
 
-                  // Workspace info (if configured)
-                  const _WorkspaceInfoSection(),
-                  const SizedBox(height: 24),
-
-                  // Vault List Section
-                  const _VaultListSection(),
+                  // Unlock button
+                  FilledButton(
+                    onPressed: _isUnlocking ? null : _unlock,
+                    child: _isUnlocking
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text('Unlock'),
+                  ),
 
                   const SizedBox(height: 48),
 
@@ -141,6 +344,67 @@ class _WelcomeView extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// View: Unlocked Workspace (Show all vaults, no individual unlock needed)
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _UnlockedWorkspaceView extends ConsumerWidget {
+  const _UnlockedWorkspaceView();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final size = MediaQuery.of(context).size;
+    final isWide = size.width > 600;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Your Vaults'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.lock),
+            tooltip: 'Lock Workspace',
+            onPressed: () {
+              ref.read(unlockedWorkspaceProvider.notifier).lock();
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings),
+            tooltip: 'Settings',
+            onPressed: () => context.push('/settings'),
+          ),
+        ],
+      ),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.all(isWide ? 48 : 24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 560),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Workspace info
+                  const _WorkspaceInfoSection(),
+                  const SizedBox(height: 24),
+
+                  // Vault List Section
+                  const _VaultListSection(),
+
+                  const SizedBox(height: 48),
+
+                  // Security badges
+                  const SecurityBadges(),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -601,9 +865,19 @@ class _VaultListSection extends ConsumerWidget {
   }
 
   void _showCreateVaultDialog(BuildContext context, WidgetRef ref) {
-    showDialog(
-      context: context,
-      builder: (context) => const _CreateVaultDialog(),
+    // TODO: Implement vault creation with workspace keyring
+    // This should:
+    // 1. Show dialog for vault name/description/icon/color
+    // 2. Generate random vault key
+    // 3. Add to workspace keyring
+    // 4. Call vaultService.createVault(vaultKey, ...)
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Vault creation not yet implemented - need VaultCreateDialog update',
+        ),
+      ),
     );
   }
 }
@@ -621,7 +895,7 @@ class _VaultListItem extends ConsumerWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () => _showUnlockDialog(context, ref),
+        onTap: () => _openVault(context, ref),
         child: Container(
           padding: const EdgeInsets.all(FyndoTheme.padding),
           decoration: BoxDecoration(
@@ -643,7 +917,7 @@ class _VaultListItem extends ConsumerWidget {
                   ),
                 ),
                 child: Icon(
-                  Icons.lock,
+                  Icons.lock_open,
                   color: vault.isDefault
                       ? theme.colorScheme.primary
                       : theme.colorScheme.onSurfaceVariant,
@@ -698,48 +972,51 @@ class _VaultListItem extends ConsumerWidget {
                   ],
                 ),
               ),
-              PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert),
-                onSelected: (value) => _handleMenuAction(context, ref, value),
-                itemBuilder: (context) => [
-                  const PopupMenuItem(
-                    value: 'unlock',
-                    child: ListTile(
-                      leading: Icon(Icons.lock_open),
-                      title: Text('Unlock'),
-                      contentPadding: EdgeInsets.zero,
-                    ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.arrow_forward,
+                    size: 20,
+                    color: theme.colorScheme.onSurfaceVariant,
                   ),
-                  const PopupMenuItem(
-                    value: 'rename',
-                    child: ListTile(
-                      leading: Icon(Icons.edit),
-                      title: Text('Rename'),
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                  ),
-                  if (!vault.isDefault)
-                    const PopupMenuItem(
-                      value: 'setDefault',
-                      child: ListTile(
-                        leading: Icon(Icons.star_outline),
-                        title: Text('Set as Default'),
-                        contentPadding: EdgeInsets.zero,
+                  PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_vert),
+                    onSelected: (value) =>
+                        _handleMenuAction(context, ref, value),
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(
+                        value: 'rename',
+                        child: ListTile(
+                          leading: Icon(Icons.edit),
+                          title: Text('Rename'),
+                          contentPadding: EdgeInsets.zero,
+                        ),
                       ),
-                    ),
-                  PopupMenuItem(
-                    value: 'delete',
-                    child: ListTile(
-                      leading: Icon(
-                        Icons.delete,
-                        color: theme.colorScheme.error,
+                      if (!vault.isDefault)
+                        const PopupMenuItem(
+                          value: 'setDefault',
+                          child: ListTile(
+                            leading: Icon(Icons.star_outline),
+                            title: Text('Set as Default'),
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                        ),
+                      PopupMenuItem(
+                        value: 'delete',
+                        child: ListTile(
+                          leading: Icon(
+                            Icons.delete,
+                            color: theme.colorScheme.error,
+                          ),
+                          title: Text(
+                            'Delete',
+                            style: TextStyle(color: theme.colorScheme.error),
+                          ),
+                          contentPadding: EdgeInsets.zero,
+                        ),
                       ),
-                      title: Text(
-                        'Delete',
-                        style: TextStyle(color: theme.colorScheme.error),
-                      ),
-                      contentPadding: EdgeInsets.zero,
-                    ),
+                    ],
                   ),
                 ],
               ),
@@ -750,18 +1027,27 @@ class _VaultListItem extends ConsumerWidget {
     );
   }
 
-  void _showUnlockDialog(BuildContext context, WidgetRef ref) {
-    showDialog(
-      context: context,
-      builder: (context) => _UnlockVaultDialog(vault: vault),
-    );
+  Future<void> _openVault(BuildContext context, WidgetRef ref) async {
+    // TODO: Implement vault opening with keyring
+    // This should:
+    // 1. Get vault key from unlocked workspace keyring
+    // 2. Call vaultService.unlockVault(vaultPath, vaultKey)
+    // 3. Navigate to /home
+
+    // For now, show message that this is not yet implemented
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Vault opening not yet implemented - need VaultService integration',
+          ),
+        ),
+      );
+    }
   }
 
   void _handleMenuAction(BuildContext context, WidgetRef ref, String action) {
     switch (action) {
-      case 'unlock':
-        _showUnlockDialog(context, ref);
-        break;
       case 'rename':
         _showRenameDialog(context, ref);
         break;
@@ -873,348 +1159,6 @@ class _VaultListItem extends ConsumerWidget {
             child: const Text('Delete'),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _UnlockVaultDialog extends ConsumerStatefulWidget {
-  final VaultInfo vault;
-
-  const _UnlockVaultDialog({required this.vault});
-
-  @override
-  ConsumerState<_UnlockVaultDialog> createState() => _UnlockVaultDialogState();
-}
-
-class _UnlockVaultDialogState extends ConsumerState<_UnlockVaultDialog> {
-  final _passwordController = TextEditingController();
-  bool _isUnlocking = false;
-  String? _error;
-
-  @override
-  void dispose() {
-    _passwordController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _unlock() async {
-    if (_passwordController.text.isEmpty) {
-      setState(() => _error = 'Please enter your password');
-      return;
-    }
-
-    setState(() {
-      _isUnlocking = true;
-      _error = null;
-    });
-
-    try {
-      // Set the vault path first
-      await ref.read(vaultProvider.notifier).setVaultPath(widget.vault.path);
-
-      final password = SecureBytes.fromList(
-        utf8.encode(_passwordController.text),
-      );
-
-      await ref.read(vaultProvider.notifier).unlock(password);
-
-      // Record access time
-      await ref
-          .read(vaultRegistryProvider.notifier)
-          .recordAccess(widget.vault.id);
-
-      if (mounted) {
-        Navigator.pop(context);
-        context.go('/home');
-      }
-    } on VaultException catch (e) {
-      setState(() {
-        _error = e.message;
-        _isUnlocking = false;
-      });
-    } catch (e) {
-      setState(() {
-        _error = 'Failed to unlock vault';
-        _isUnlocking = false;
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Dialog(
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 400),
-        padding: const EdgeInsets.all(FyndoTheme.paddingLarge),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.lock_open, color: theme.colorScheme.primary),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Unlock Vault', style: theme.textTheme.titleLarge),
-                      Text(
-                        widget.vault.name,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            PasswordField(
-              controller: _passwordController,
-              labelText: 'Master Password',
-              hintText: 'Enter your password',
-              errorText: _error,
-              autofocus: true,
-              textInputAction: TextInputAction.done,
-              onSubmitted: (_) => _unlock(),
-              enabled: !_isUnlocking,
-            ),
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton(
-                  onPressed: _isUnlocking ? null : () => Navigator.pop(context),
-                  child: const Text('Cancel'),
-                ),
-                const SizedBox(width: 12),
-                FilledButton(
-                  onPressed: _isUnlocking ? null : _unlock,
-                  child: _isUnlocking
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Text('Unlock'),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CreateVaultDialog extends ConsumerStatefulWidget {
-  const _CreateVaultDialog();
-
-  @override
-  ConsumerState<_CreateVaultDialog> createState() => _CreateVaultDialogState();
-}
-
-class _CreateVaultDialogState extends ConsumerState<_CreateVaultDialog> {
-  final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController(text: 'My Vault');
-  final _passwordController = TextEditingController();
-  final _confirmController = TextEditingController();
-  bool _isCreating = false;
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _passwordController.dispose();
-    _confirmController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _createVault() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    setState(() => _isCreating = true);
-
-    try {
-      // Generate unique vault path
-      final basePath = await getAppDocumentsPath();
-      final vaultId = DateTime.now().millisecondsSinceEpoch.toString();
-      final vaultPath = '$basePath/vaults/$vaultId';
-
-      final password = SecureBytes.fromList(
-        utf8.encode(_passwordController.text),
-      );
-
-      // Create the vault
-      await ref
-          .read(vaultProvider.notifier)
-          .createVault(path: vaultPath, password: password);
-
-      // Register in vault registry
-      await ref
-          .read(vaultRegistryProvider.notifier)
-          .registerVault(
-            name: _nameController.text,
-            path: vaultPath,
-            setAsDefault: true,
-          );
-
-      // Set path and unlock
-      await ref.read(vaultProvider.notifier).setVaultPath(vaultPath);
-
-      final unlockPassword = SecureBytes.fromList(
-        utf8.encode(_passwordController.text),
-      );
-      await ref.read(vaultProvider.notifier).unlock(unlockPassword);
-
-      if (mounted) {
-        Navigator.of(context).pop();
-        context.go('/home');
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to create vault: $e')));
-      }
-      setState(() => _isCreating = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Dialog(
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 400),
-        padding: const EdgeInsets.all(FyndoTheme.paddingLarge),
-        child: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.add_box, color: theme.colorScheme.primary),
-                    const SizedBox(width: 12),
-                    Text('Create New Vault', style: theme.textTheme.titleLarge),
-                  ],
-                ),
-                const SizedBox(height: 24),
-
-                // Vault name
-                TextFormField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Vault Name',
-                    hintText: 'Enter a name for your vault',
-                    prefixIcon: Icon(Icons.folder_special),
-                  ),
-                  enabled: !_isCreating,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter a vault name';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                // Warning
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primaryContainer.withValues(
-                      alpha: 0.2,
-                    ),
-                    border: Border.all(color: theme.colorScheme.primary),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(
-                        Icons.info_outline,
-                        size: 20,
-                        color: theme.colorScheme.primary,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Your vault is encrypted with your master password. '
-                          'This password is NEVER stored. If you forget it, '
-                          'your data cannot be recovered.',
-                          style: theme.textTheme.bodySmall,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                PasswordField(
-                  controller: _passwordController,
-                  labelText: 'Master Password',
-                  hintText: 'Enter a strong password',
-                  textInputAction: TextInputAction.next,
-                  enabled: !_isCreating,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter a password';
-                    }
-                    if (value.length < 8) {
-                      return 'Password must be at least 8 characters';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                ConfirmPasswordField(
-                  controller: _confirmController,
-                  passwordController: _passwordController,
-                  labelText: 'Confirm Password',
-                  textInputAction: TextInputAction.done,
-                  enabled: !_isCreating,
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: _isCreating
-                          ? null
-                          : () => Navigator.pop(context),
-                      child: const Text('Cancel'),
-                    ),
-                    const SizedBox(width: 12),
-                    FilledButton(
-                      onPressed: _isCreating ? null : _createVault,
-                      child: _isCreating
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Text('Create'),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }
