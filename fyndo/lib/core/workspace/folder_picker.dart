@@ -3,6 +3,10 @@
 // FolderPicker - Platform-agnostic folder selection interface
 // ═══════════════════════════════════════════════════════════════════════════
 
+import 'dart:io' show Platform;
+import 'package:fyndo_app/core/workspace/folder_picker_desktop.dart';
+import 'package:fyndo_app/core/workspace/folder_picker_mobile.dart';
+
 /// Platform-agnostic interface for selecting workspace folders.
 ///
 /// Implementations:
@@ -57,11 +61,16 @@ abstract class FolderPicker {
   /// Throws:
   /// - [UnsupportedError] on Web (use different storage strategy)
   factory FolderPicker.create() {
-    // Implementation in folder_picker_desktop.dart and folder_picker_mobile.dart
-    // uses Platform.isXXX to determine which implementation to return
-    throw UnimplementedError(
-      'FolderPicker.create() must be implemented by platform-specific files',
-    );
+    if (Platform.isMacOS || Platform.isWindows || Platform.isLinux) {
+      return FolderPickerDesktop();
+    } else if (Platform.isIOS || Platform.isAndroid) {
+      return FolderPickerMobile();
+    } else {
+      throw UnsupportedError(
+        'FolderPicker is not supported on ${Platform.operatingSystem}. '
+        'Web platform requires a different storage strategy.',
+      );
+    }
   }
 }
 
