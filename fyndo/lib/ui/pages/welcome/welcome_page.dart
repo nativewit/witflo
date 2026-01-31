@@ -12,6 +12,7 @@ import 'package:fyndo_app/core/vault/vault_service.dart';
 import 'package:fyndo_app/platform/platform_init.dart';
 import 'package:fyndo_app/providers/vault_providers.dart';
 import 'package:fyndo_app/providers/vault_registry.dart';
+import 'package:fyndo_app/providers/workspace_provider.dart';
 import 'package:fyndo_app/ui/consumers/vault_consumer.dart';
 import 'package:fyndo_app/ui/theme/fyndo_theme.dart';
 import 'package:fyndo_app/ui/widgets/common/password_field.dart';
@@ -90,7 +91,11 @@ class _WelcomeView extends ConsumerWidget {
                 children: [
                   // Logo
                   _buildLogo(theme),
-                  const SizedBox(height: 48),
+                  const SizedBox(height: 24),
+
+                  // Workspace info (if configured)
+                  const _WorkspaceInfoSection(),
+                  const SizedBox(height: 24),
 
                   // Vault List Section
                   const _VaultListSection(),
@@ -136,6 +141,348 @@ class _WelcomeView extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _WorkspaceInfoSection extends ConsumerWidget {
+  const _WorkspaceInfoSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final workspaceAsync = ref.watch(workspaceProvider);
+
+    return workspaceAsync.when(
+      data: (workspaceState) {
+        if (!workspaceState.hasWorkspace) {
+          return const SizedBox.shrink();
+        }
+
+        return Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surfaceContainerHighest.withValues(
+              alpha: 0.3,
+            ),
+            border: Border.all(color: theme.dividerColor),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.folder_open,
+                size: 16,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Workspace',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    Text(
+                      workspaceState.rootPath ?? '',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        fontFamily: 'monospace',
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuButton<String>(
+                icon: Icon(
+                  Icons.more_vert,
+                  size: 16,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                onSelected: (value) =>
+                    _handleWorkspaceAction(context, ref, value),
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'switch',
+                    child: ListTile(
+                      leading: Icon(Icons.swap_horiz),
+                      title: Text('Switch Workspace'),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'info',
+                    child: ListTile(
+                      leading: Icon(Icons.info_outline),
+                      title: Text('Workspace Info'),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (error, stackTrace) => const SizedBox.shrink(),
+    );
+  }
+
+  void _handleWorkspaceAction(
+    BuildContext context,
+    WidgetRef ref,
+    String action,
+  ) {
+    switch (action) {
+      case 'switch':
+        _showWorkspaceSwitcherDialog(context, ref);
+        break;
+      case 'info':
+        _showWorkspaceInfoDialog(context, ref);
+        break;
+    }
+  }
+
+  void _showWorkspaceSwitcherDialog(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (context) => const _WorkspaceSwitcherDialog(),
+    );
+  }
+
+  void _showWorkspaceInfoDialog(BuildContext context, WidgetRef ref) {
+    final workspaceState = ref.read(workspaceProvider).valueOrNull;
+    if (workspaceState == null) return;
+
+    final theme = Theme.of(context);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.info_outline),
+            SizedBox(width: 12),
+            Text('Workspace Information'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Path:', style: theme.textTheme.labelSmall),
+            const SizedBox(height: 4),
+            Text(
+              workspaceState.rootPath ?? '',
+              style: theme.textTheme.bodySmall?.copyWith(
+                fontFamily: 'monospace',
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text('Vaults:', style: theme.textTheme.labelSmall),
+            const SizedBox(height: 4),
+            Text(
+              '${workspaceState.discoveredVaults?.length ?? 0} vault(s) found',
+              style: theme.textTheme.bodySmall,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _WorkspaceSwitcherDialog extends ConsumerStatefulWidget {
+  const _WorkspaceSwitcherDialog();
+
+  @override
+  ConsumerState<_WorkspaceSwitcherDialog> createState() =>
+      _WorkspaceSwitcherDialogState();
+}
+
+class _WorkspaceSwitcherDialogState
+    extends ConsumerState<_WorkspaceSwitcherDialog> {
+  bool _isSwitching = false;
+  String? _error;
+
+  Future<void> _switchToWorkspace(String path) async {
+    setState(() {
+      _isSwitching = true;
+      _error = null;
+    });
+
+    try {
+      await ref.read(workspaceProvider.notifier).switchWorkspace(path);
+
+      // Reload vaults from new workspace
+      final workspaceState = ref.read(workspaceProvider).valueOrNull;
+      if (workspaceState?.discoveredVaults != null) {
+        await ref
+            .read(vaultRegistryProvider.notifier)
+            .loadFromWorkspace(
+              workspaceState!.rootPath!,
+              workspaceState.discoveredVaults!,
+            );
+      }
+
+      if (mounted) {
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _isSwitching = false;
+      });
+    }
+  }
+
+  Future<void> _pickNewWorkspace() async {
+    final path = await ref
+        .read(workspaceProvider.notifier)
+        .pickWorkspaceFolder();
+    if (path != null) {
+      await _switchToWorkspace(path);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final workspaceState = ref.watch(workspaceProvider).valueOrNull;
+    final recentWorkspaces =
+        workspaceState?.config?.recentWorkspaces.toList() ?? [];
+
+    return Dialog(
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 500),
+        padding: const EdgeInsets.all(FyndoTheme.paddingLarge),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.swap_horiz, color: theme.colorScheme.primary),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Switch Workspace',
+                    style: theme.textTheme.titleLarge,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            if (_error != null) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.errorContainer.withValues(
+                    alpha: 0.3,
+                  ),
+                  border: Border.all(color: theme.colorScheme.error),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.error, color: theme.colorScheme.error, size: 20),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        _error!,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.error,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+
+            // Recent workspaces
+            if (recentWorkspaces.isNotEmpty) ...[
+              Text(
+                'Recent Workspaces',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 12),
+              ...recentWorkspaces.take(5).map((path) {
+                return Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: _isSwitching ? null : () => _switchToWorkspace(path),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      margin: const EdgeInsets.only(bottom: 8),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: theme.dividerColor),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.folder,
+                            size: 20,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              path,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                fontFamily: 'monospace',
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Icon(
+                            Icons.arrow_forward,
+                            size: 16,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }),
+              const SizedBox(height: 16),
+            ],
+
+            // Browse button
+            OutlinedButton.icon(
+              icon: const Icon(Icons.folder_open),
+              label: const Text('Browse for Workspace'),
+              onPressed: _isSwitching ? null : _pickNewWorkspace,
+            ),
+
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: _isSwitching ? null : () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
