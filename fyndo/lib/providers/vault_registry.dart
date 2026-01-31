@@ -328,7 +328,6 @@ class VaultRegistryNotifier extends AsyncNotifier<VaultRegistryState> {
         try {
           final headerFile = File(p.join(vaultPath, 'vault.header'));
           if (await headerFile.exists()) {
-            final header = await headerFile.readAsString();
             // Parse header for name (if we add that in the future)
             // For now, use vault ID as name
             vaultName = vaultId;

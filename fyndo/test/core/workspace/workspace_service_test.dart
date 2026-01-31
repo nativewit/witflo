@@ -63,8 +63,7 @@ void main() {
       final workspacePath = tempDir.path;
 
       // First initialization
-      final config1 = await service.initializeWorkspace(workspacePath);
-      final timestamp1 = config1.lastAccessedAt;
+      await service.initializeWorkspace(workspacePath);
 
       // Wait a bit
       await Future.delayed(const Duration(milliseconds: 10));

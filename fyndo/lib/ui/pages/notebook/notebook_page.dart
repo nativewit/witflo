@@ -186,7 +186,7 @@ class _NotebookPageContentState extends ConsumerState<_NotebookPageContent>
       '_selectNote: loaded note ${note?.id}, content length: ${note?.content.length ?? 0}',
     );
     debugPrint(
-      '_selectNote: content preview: ${note?.content.substring(0, (note?.content.length ?? 0).clamp(0, 100))}',
+      '_selectNote: content preview: ${note != null ? note.content.substring(0, note.content.length.clamp(0, 100)) : "null"}',
     );
     if (note != null && mounted) {
       setState(() {
@@ -570,9 +570,7 @@ class _NotebookPageContentState extends ConsumerState<_NotebookPageContent>
                   onPressed: () => ref
                       .read(noteOperationsProvider.notifier)
                       .togglePin(_currentNote!.id),
-                  tooltip: _currentNote!.isPinned
-                      ? 'Unpin note'
-                      : 'Pin note',
+                  tooltip: _currentNote!.isPinned ? 'Unpin note' : 'Pin note',
                   padding: const EdgeInsets.all(8),
                   constraints: const BoxConstraints(),
                 ),
@@ -581,8 +579,7 @@ class _NotebookPageContentState extends ConsumerState<_NotebookPageContent>
                 PopupMenuButton<String>(
                   icon: const Icon(Icons.more_vert, size: 20),
                   padding: const EdgeInsets.all(8),
-                  onSelected: (value) =>
-                      _handleNoteMenuAction(context, value),
+                  onSelected: (value) => _handleNoteMenuAction(context, value),
                   itemBuilder: (context) => [
                     const PopupMenuItem(
                       value: 'share',
@@ -625,9 +622,7 @@ class _NotebookPageContentState extends ConsumerState<_NotebookPageContent>
                         ),
                         title: Text(
                           'Move to Trash',
-                          style: TextStyle(
-                            color: theme.colorScheme.error,
-                          ),
+                          style: TextStyle(color: theme.colorScheme.error),
                         ),
                         contentPadding: EdgeInsets.zero,
                       ),
