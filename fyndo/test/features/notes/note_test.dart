@@ -158,23 +158,27 @@ void main() {
     late EncryptedNoteRepository repo;
 
     setUp(() async {
-      // Create and unlock a vault for testing
+      // Create and unlock a vault for testing (v2 API)
       final vaultPath = '${tempDir.path}/vault';
-      final password = SecureBytes.fromList(utf8.encode('password'));
+      final vaultId = 'test-vault-id';
+      final vaultKey = VaultKey(crypto.random.symmetricKey());
 
       await vaultService.createVault(
         vaultPath: vaultPath,
-        password: password,
-        kdfParams: Argon2Params.test,
+        vaultKey: vaultKey,
+        vaultId: vaultId,
+        name: 'Test Vault',
       );
 
-      final unlockPassword = SecureBytes.fromList(utf8.encode('password'));
       vault = await vaultService.unlockVault(
         vaultPath: vaultPath,
-        password: unlockPassword,
+        vaultKey: vaultKey,
       );
 
       repo = EncryptedNoteRepository(vault: vault, crypto: crypto);
+
+      // Clean up vault key (vault has its own copy)
+      vaultKey.dispose();
     });
 
     tearDown(() {
