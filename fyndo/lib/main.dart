@@ -96,7 +96,7 @@ class _FyndoAppState extends ConsumerState<FyndoApp> {
       title: 'Fyndo',
       debugShowCheckedModeBanner: false,
       theme: FyndoTheme.light(),
-      darkTheme: FyndoTheme.light(),
+      darkTheme: FyndoTheme.dark(),
       themeMode: ThemeMode.system,
       routerConfig: router,
       localizationsDelegates: [FlutterQuillLocalizations.delegate],
