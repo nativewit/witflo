@@ -36,6 +36,7 @@
 import 'dart:convert';
 
 import 'package:fyndo_app/core/crypto/types/secure_bytes.dart';
+import 'package:fyndo_app/core/crypto/types/key_types.dart';
 import 'package:fyndo_app/core/workspace/workspace_keyring.dart';
 
 /// Session state for an unlocked workspace.
@@ -92,7 +93,7 @@ class UnlockedWorkspace {
   /// - Verify password during password change
   ///
   /// **SECURITY:** This key is zeroized on dispose(). Never copy or leak.
-  final SecureBytes muk;
+  final MasterUnlockKey muk;
 
   /// Decrypted workspace keyring containing vault keys.
   ///
