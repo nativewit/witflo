@@ -3,6 +3,7 @@
 // Workspace Provider - Riverpod state management for workspace
 // ═══════════════════════════════════════════════════════════════════════════
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fyndo_app/core/workspace/workspace_config.dart';
 import 'package:fyndo_app/core/workspace/workspace_service.dart';
@@ -45,6 +46,14 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceState> {
 
   @override
   Future<WorkspaceState> build() async {
+    // Web platform doesn't support workspace management yet
+    // Return a mock workspace state to skip onboarding
+    if (kIsWeb) {
+      return WorkspaceState(
+        config: WorkspaceConfig.create(rootPath: '/web-storage'),
+      );
+    }
+
     _service = WorkspaceService();
     return await _loadWorkspace();
   }
