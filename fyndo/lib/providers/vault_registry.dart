@@ -4,8 +4,10 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path/path.dart' as p;
 import 'package:fyndo_app/platform/platform.dart';
 import 'package:fyndo_app/platform/platform_init.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -276,6 +278,79 @@ class VaultRegistryNotifier extends AsyncNotifier<VaultRegistryState> {
   Future<void> refresh() async {
     state = const AsyncValue.loading();
     state = AsyncValue.data(await _loadRegistry());
+  }
+
+  /// Loads vaults from a workspace directory.
+  ///
+  /// Discovers all vaults in the workspace's vaults/ subdirectory and
+  /// registers them in the vault registry. Existing vaults are preserved.
+  ///
+  /// [workspaceRoot] - Absolute path to the workspace root directory
+  /// [vaultPaths] - List of discovered vault paths from WorkspaceService
+  ///
+  /// Usage:
+  /// ```dart
+  /// final workspaceState = ref.read(workspaceProvider).value;
+  /// if (workspaceState?.discoveredVaults != null) {
+  ///   await ref.read(vaultRegistryProvider.notifier)
+  ///     .loadFromWorkspace(
+  ///       workspaceState.rootPath!,
+  ///       workspaceState.discoveredVaults!,
+  ///     );
+  /// }
+  /// ```
+  Future<void> loadFromWorkspace(
+    String workspaceRoot,
+    List<String> vaultPaths,
+  ) async {
+    final currentState = state.valueOrNull ?? const VaultRegistryState();
+    final existingVaults = Map.fromEntries(
+      currentState.vaults.map((v) => MapEntry(v.path, v)),
+    );
+
+    final updatedVaults = <VaultInfo>[];
+
+    // Add existing vaults that are still in the workspace
+    for (final vault in currentState.vaults) {
+      if (vaultPaths.contains(vault.path)) {
+        updatedVaults.add(vault);
+      }
+    }
+
+    // Add new vaults discovered in workspace
+    for (final vaultPath in vaultPaths) {
+      if (!existingVaults.containsKey(vaultPath)) {
+        // Extract vault ID from path (last component)
+        final vaultId = p.basename(vaultPath);
+
+        // Try to read vault name from vault.header
+        String vaultName = 'Vault';
+        try {
+          final headerFile = File(p.join(vaultPath, 'vault.header'));
+          if (await headerFile.exists()) {
+            final header = await headerFile.readAsString();
+            // Parse header for name (if we add that in the future)
+            // For now, use vault ID as name
+            vaultName = vaultId;
+          }
+        } catch (_) {
+          vaultName = vaultId;
+        }
+
+        final vault = VaultInfo(
+          id: vaultId,
+          name: vaultName,
+          path: vaultPath,
+          createdAt: DateTime.now(),
+          isDefault: updatedVaults.isEmpty, // First vault becomes default
+        );
+
+        updatedVaults.add(vault);
+      }
+    }
+
+    await _saveRegistry(updatedVaults);
+    state = AsyncValue.data(currentState.copyWith(vaults: updatedVaults));
   }
 }
 
