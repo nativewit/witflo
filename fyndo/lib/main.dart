@@ -30,10 +30,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fyndo_app/core/crypto/crypto.dart';
+import 'package:fyndo_app/core/mcp/fyndo_mcp_tools.dart';
 import 'package:fyndo_app/providers/workspace_provider.dart';
 import 'package:fyndo_app/ui/router/app_router.dart';
 import 'package:fyndo_app/ui/theme/fyndo_theme.dart';
 import 'package:marionette_flutter/marionette_flutter.dart';
+import 'package:mcp_toolkit/mcp_toolkit.dart';
 
 // Conditional imports for platform-specific code
 import 'platform/platform_init.dart'
@@ -61,6 +63,14 @@ Future<void> main() async {
         // maxScreenshotSize: Size(2000, 2000),
       ),
     );
+
+    // Initialize MCP Toolkit and custom Fyndo tools
+    MCPToolkitBinding.instance
+      ..initialize()
+      ..initializeFlutterToolkit();
+
+    // Register custom Fyndo MCP tools
+    initializeFyndoMCPTools();
   } else {
     WidgetsFlutterBinding.ensureInitialized();
   }

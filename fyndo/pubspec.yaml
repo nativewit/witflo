@@ -65,6 +65,7 @@ dependencies:
   google_fonts: ^6.2.1             # Google Fonts (Nunito)
   shared_preferences: ^2.5.4
   marionette_flutter: ^0.3.0       # MCP server for runtime testing
+  mcp_toolkit: ^0.4.0
 
 dev_dependencies:
   flutter_test:

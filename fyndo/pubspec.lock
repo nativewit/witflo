@@ -233,6 +233,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.0+7.7.0"
+  dart_mcp:
+    dependency: transitive
+    description:
+      name: dart_mcp
+      sha256: dda8a8a8ef613b63a6c4b6a8e00163a5b3360195ae6247946985f78fbd0779e4
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.4.1"
   dart_quill_delta:
     dependency: transitive
     description:
@@ -297,6 +305,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.2.7"
+  equatable:
+    dependency: transitive
+    description:
+      name: equatable
+      sha256: "3e0141505477fd8ad55d6eb4e7776d3fe8430be8e497ccb1521370c3f21a3e2b"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.8"
   fake_async:
     dependency: transitive
     description:
@@ -514,6 +530,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.4.4"
+  from_json_to_json:
+    dependency: transitive
+    description:
+      name: from_json_to_json
+      sha256: "792db26a52983c62da63b473629a4a65022da83dc69252162c5dccdd27b271ac"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.3.0"
   frontend_server_client:
     dependency: transitive
     description:
@@ -620,6 +644,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.5"
+  is_dart_empty_or_not:
+    dependency: transitive
+    description:
+      name: is_dart_empty_or_not
+      sha256: "31fef508da3e89ab8cd4634d7149f72a0a2e54c841c96b72f393dfc882fdde81"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.2.3"
   js:
     dependency: transitive
     description:
@@ -636,6 +668,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.9.0"
+  json_rpc_2:
+    dependency: transitive
+    description:
+      name: json_rpc_2
+      sha256: "3c46c2633aec07810c3d6a2eb08d575b5b4072980db08f1344e66aeb53d6e4a7"
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.0.0"
   leak_tracker:
     dependency: transitive
     description:
@@ -708,6 +748,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.11.1"
+  mcp_toolkit:
+    dependency: "direct main"
+    description:
+      name: mcp_toolkit
+      sha256: "3308da0a135d496ce927a69c9943aef22d4299b832cb78375f1677ba7136f67f"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.4.0"
   meta:
     dependency: "direct main"
     description:
@@ -1185,6 +1233,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.4.0"
+  universal_io:
+    dependency: transitive
+    description:
+      name: universal_io
+      sha256: f63cbc48103236abf48e345e07a03ce5757ea86285ed313a6a032596ed9301e2
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.3.1"
   url_launcher:
     dependency: transitive
     description:
