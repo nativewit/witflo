@@ -4,6 +4,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 import 'package:flutter/material.dart';
+import 'package:fyndo_app/core/agentic/fyndo_keys.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fyndo_app/providers/note_providers.dart';
 import 'package:fyndo_app/providers/notebook_providers.dart';
@@ -70,19 +71,19 @@ class _HomePageContent extends ConsumerWidget {
         leading: const SizedBox(width: 16),
         actions: [
           IconButton(
-            key: const Key('btn_search'),
+            key: FyndoKeys.btnSearch,
             icon: const Icon(Icons.search),
             onPressed: () => _showSearch(context),
             tooltip: 'Search',
           ),
           IconButton(
-            key: const Key('nav_settings'),
+            key: FyndoKeys.navSettings,
             icon: const Icon(Icons.settings),
             onPressed: () => context.push('/settings'),
             tooltip: 'Settings',
           ),
           PopupMenuButton<String>(
-            key: const Key('menu_more_actions'),
+            key: FyndoKeys.menuMoreActions,
             icon: const Icon(Icons.more_vert),
             onSelected: (value) => _handleMenuAction(context, ref, value),
             itemBuilder: (context) => [
@@ -110,7 +111,7 @@ class _HomePageContent extends ConsumerWidget {
           ? _buildWideLayout(context, ref)
           : _buildNarrowLayout(context, ref),
       floatingActionButton: FloatingActionButton(
-        key: const Key('btn_notebook_create'),
+        key: FyndoKeys.btnNotebookCreate,
         onPressed: () => _createNotebook(context, ref),
         tooltip: 'Create Notebook',
         child: const Icon(Icons.add),
@@ -151,19 +152,19 @@ class _HomePageContent extends ConsumerWidget {
           ),
         ),
         FyndoListTile(
-          key: const Key('nav_all_notes'),
+          key: FyndoKeys.navAllNotes,
           leading: const Icon(Icons.note, size: 20),
           title: const Text('All Notes'),
           onTap: () => context.push('/notes'),
         ),
         FyndoListTile(
-          key: const Key('nav_pinned'),
+          key: FyndoKeys.navPinned,
           leading: const Icon(Icons.push_pin, size: 20),
           title: const Text('Pinned'),
           onTap: () => context.push('/notes/pinned'),
         ),
         FyndoListTile(
-          key: const Key('nav_archived'),
+          key: FyndoKeys.navArchived,
           leading: const Icon(Icons.archive, size: 20),
           title: const Text('Archived'),
           onTap: () => context.push('/notes/archived'),
@@ -184,7 +185,7 @@ class _HomePageContent extends ConsumerWidget {
                 ),
               ),
               IconButton(
-                key: const Key('btn_notebook_create_sidebar'),
+                key: FyndoKeys.btnNotebookCreateSidebar,
                 icon: const Icon(Icons.add, size: 18),
                 onPressed: () => _createNotebook(context, ref),
                 tooltip: 'Create Notebook',
@@ -209,7 +210,7 @@ class _HomePageContent extends ConsumerWidget {
               }
 
               return ListView.builder(
-                key: const Key('list_notebooks_sidebar'),
+                key: FyndoKeys.listNotebooksSidebar,
                 itemCount: notebooks.length,
                 itemBuilder: (context, index) {
                   final notebook = notebooks[index];
@@ -264,7 +265,7 @@ class _HomePageContent extends ConsumerWidget {
                   child: Text('Notebooks', style: theme.textTheme.titleMedium),
                 ),
                 TextButton.icon(
-                  key: const Key('btn_notebook_create_header'),
+                  key: FyndoKeys.btnNotebookCreateHeader,
                   onPressed: () => _createNotebook(context, ref),
                   icon: const Icon(Icons.add, size: 18),
                   label: const Text('New'),
@@ -465,7 +466,7 @@ class _NotebookListTile extends ConsumerWidget {
     final noteCount = noteCountAsync.valueOrNull ?? 0;
 
     return FyndoListTile(
-      key: Key('notebook_item_${notebook.id}'),
+      key: FyndoKeys.notebookItem(notebook.id),
       leading: Icon(
         Icons.book,
         size: 20,
@@ -501,7 +502,7 @@ class _NotebookGridCard extends ConsumerWidget {
         : theme.colorScheme.primary;
 
     return InkWell(
-      key: Key('notebook_card_${notebook.id}'),
+      key: FyndoKeys.notebookCard(notebook.id),
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(

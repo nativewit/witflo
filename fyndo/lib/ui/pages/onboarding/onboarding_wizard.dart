@@ -7,6 +7,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:fyndo_app/core/agentic/fyndo_keys.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fyndo_app/core/crypto/crypto.dart';
 import 'package:fyndo_app/core/workspace/workspace_config.dart';
@@ -285,7 +286,7 @@ class _OnboardingWizardState extends ConsumerState<OnboardingWizard> {
       children: [
         if (_currentStep > 0)
           TextButton.icon(
-            key: const Key('btn_onboarding_back'),
+            key: FyndoKeys.btnOnboardingBack,
             icon: const Icon(Icons.arrow_back),
             label: const Text('Back'),
             onPressed: _isProcessing
@@ -300,7 +301,7 @@ class _OnboardingWizardState extends ConsumerState<OnboardingWizard> {
         else
           const SizedBox.shrink(),
         FilledButton.icon(
-          key: const Key('btn_onboarding_next'),
+          key: FyndoKeys.btnOnboardingNext,
           icon: Icon(_currentStep == 2 ? Icons.check : Icons.arrow_forward),
           label: Text(_currentStep == 2 ? 'Finish' : 'Next'),
           onPressed: _isProcessing ? null : _handleNext,
@@ -570,7 +571,7 @@ class _Step1WorkspaceSelectionState
             if (isDesktop) ...[
               const SizedBox(height: 12),
               TextButton.icon(
-                key: const Key('btn_workspace_change'),
+                key: FyndoKeys.btnWorkspaceChange,
                 icon: const Icon(Icons.folder_open),
                 label: const Text('Choose Different Folder'),
                 onPressed: _pickWorkspaceFolder,
@@ -578,7 +579,7 @@ class _Step1WorkspaceSelectionState
             ],
           ] else if (isDesktop) ...[
             OutlinedButton.icon(
-              key: const Key('btn_workspace_choose'),
+              key: FyndoKeys.btnWorkspaceChoose,
               icon: const Icon(Icons.folder_open),
               label: const Text('Choose Folder'),
               onPressed: _pickWorkspaceFolder,
@@ -588,7 +589,7 @@ class _Step1WorkspaceSelectionState
             ),
             const SizedBox(height: 12),
             TextButton.icon(
-              key: const Key('btn_workspace_default'),
+              key: FyndoKeys.btnWorkspaceDefault,
               icon: const Icon(Icons.home),
               label: const Text('Use Default Location'),
               onPressed: _selectDefaultWorkspace,
@@ -700,7 +701,7 @@ class _Step2PasswordCreationState extends State<_Step2PasswordCreation> {
           const SizedBox(height: 24),
 
           PasswordField(
-            key: const Key('input_master_password_create'),
+            key: FyndoKeys.inputMasterPasswordCreate,
             controller: _passwordController,
             labelText: 'Master Password',
             hintText: 'Enter a strong password (min 8 characters)',
@@ -708,7 +709,7 @@ class _Step2PasswordCreationState extends State<_Step2PasswordCreation> {
           ),
           const SizedBox(height: 16),
           ConfirmPasswordField(
-            key: const Key('input_master_password_confirm'),
+            key: FyndoKeys.inputMasterPasswordConfirm,
             controller: _confirmController,
             passwordController: _passwordController,
             labelText: 'Confirm Password',
@@ -788,7 +789,7 @@ class _Step3VaultCreationState extends State<_Step3VaultCreation> {
           ),
           const SizedBox(height: 24),
           TextField(
-            key: const Key('input_vault_name'),
+            key: FyndoKeys.inputVaultName,
             controller: _nameController,
             decoration: const InputDecoration(
               labelText: 'Vault Name',

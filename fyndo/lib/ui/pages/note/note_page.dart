@@ -6,6 +6,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:fyndo_app/core/agentic/fyndo_keys.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fyndo_app/features/notes/models/note.dart';
 import 'package:fyndo_app/providers/note_providers.dart';
@@ -227,7 +228,7 @@ class _NotePageState extends ConsumerState<NotePage>
           ),
           actions: [
             IconButton(
-              key: const Key('btn_note_pin_toggle'),
+              key: FyndoKeys.btnNotePinToggle,
               icon: Icon(
                 note.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
               ),
@@ -235,7 +236,7 @@ class _NotePageState extends ConsumerState<NotePage>
               tooltip: note.isPinned ? 'Unpin' : 'Pin',
             ),
             PopupMenuButton<String>(
-              key: const Key('menu_note_actions_standalone'),
+              key: FyndoKeys.menuNoteActionsStandalone,
               icon: const Icon(Icons.more_vert),
               onSelected: (value) => _handleMenuAction(context, value, note),
               itemBuilder: (context) => [
@@ -323,7 +324,7 @@ class _NotePageState extends ConsumerState<NotePage>
                               FyndoTheme.paddingSmall,
                             ),
                             child: TextField(
-                              key: const Key('input_note_title'),
+                              key: FyndoKeys.inputNoteTitle,
                               controller: _titleController,
                               onChanged: _onTitleChanged,
                               style: theme.textTheme.headlineSmall?.copyWith(

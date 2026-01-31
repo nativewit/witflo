@@ -4,6 +4,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:fyndo_app/core/agentic/fyndo_keys.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fyndo_app/features/notes/models/note.dart';
 import 'package:fyndo_app/providers/note_providers.dart';
@@ -359,13 +360,13 @@ class _NotebookPageContentState extends ConsumerState<_NotebookPageContent>
         ),
         actions: [
           IconButton(
-            key: const Key('btn_note_create'),
+            key: FyndoKeys.btnNoteCreate,
             icon: const Icon(Icons.add),
             onPressed: _createNote,
             tooltip: 'New Note',
           ),
           PopupMenuButton<String>(
-            key: const Key('menu_notebook_actions'),
+            key: FyndoKeys.menuNotebookActions,
             icon: const Icon(Icons.more_vert),
             onSelected: (value) => _handleMenuAction(context, ref, value),
             itemBuilder: (context) => [
@@ -428,7 +429,7 @@ class _NotebookPageContentState extends ConsumerState<_NotebookPageContent>
             child: Row(
               children: [
                 IconButton(
-                  key: const Key('btn_back_to_notes'),
+                  key: FyndoKeys.btnBackToNotes,
                   icon: const Icon(Icons.arrow_back),
                   onPressed: () {
                     if (_hasChanges) _saveNote();
@@ -468,7 +469,7 @@ class _NotebookPageContentState extends ConsumerState<_NotebookPageContent>
             final regularNotes = notes.where((n) => !n.isPinned).toList();
 
             return ListView(
-              key: const Key('list_notes'),
+              key: FyndoKeys.listNotes,
               padding: const EdgeInsets.symmetric(vertical: 8),
               children: [
                 if (pinnedNotes.isNotEmpty) ...[
@@ -565,7 +566,7 @@ class _NotebookPageContentState extends ConsumerState<_NotebookPageContent>
                 const Spacer(),
                 // Pin button
                 IconButton(
-                  key: const Key('btn_note_pin'),
+                  key: FyndoKeys.btnNotePin,
                   icon: Icon(
                     _currentNote!.isPinned
                         ? Icons.push_pin
@@ -582,7 +583,7 @@ class _NotebookPageContentState extends ConsumerState<_NotebookPageContent>
                 const SizedBox(width: 4),
                 // More options menu
                 PopupMenuButton<String>(
-                  key: const Key('menu_note_actions'),
+                  key: FyndoKeys.menuNoteActions,
                   icon: const Icon(Icons.more_vert, size: 20),
                   padding: const EdgeInsets.all(8),
                   onSelected: (value) => _handleNoteMenuAction(context, value),
@@ -932,7 +933,7 @@ class _NoteListItem extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Material(
-      key: Key('note_item_${note.id}'),
+      key: FyndoKeys.noteItem(note.id),
       color: isSelected
           ? theme.colorScheme.primaryContainer.withValues(alpha: 0.3)
           : Colors.transparent,

@@ -4,6 +4,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 import 'package:flutter/material.dart';
+import 'package:fyndo_app/core/agentic/fyndo_keys.dart';
 import 'package:fyndo_app/ui/theme/fyndo_colors.dart';
 import 'package:fyndo_app/ui/theme/fyndo_theme.dart';
 
@@ -117,7 +118,7 @@ class _NotebookCreateDialogState extends State<NotebookCreateDialog> {
               ),
               const SizedBox(height: 24),
               TextFormField(
-                key: const Key('input_notebook_name'),
+                key: FyndoKeys.inputNotebookName,
                 controller: _nameController,
                 decoration: const InputDecoration(
                   labelText: 'Notebook Name',
@@ -135,7 +136,7 @@ class _NotebookCreateDialogState extends State<NotebookCreateDialog> {
               ),
               const SizedBox(height: 16),
               TextFormField(
-                key: const Key('input_notebook_description'),
+                key: FyndoKeys.inputNotebookDescription,
                 controller: _descriptionController,
                 decoration: const InputDecoration(
                   labelText: 'Description (optional)',
@@ -219,13 +220,13 @@ class _NotebookCreateDialogState extends State<NotebookCreateDialog> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   TextButton(
-                    key: const Key('btn_notebook_cancel'),
+                    key: FyndoKeys.btnNotebookCancel,
                     onPressed: () => Navigator.pop(context),
                     child: const Text('Cancel'),
                   ),
                   const SizedBox(width: 12),
                   FilledButton(
-                    key: const Key('btn_notebook_create_confirm'),
+                    key: FyndoKeys.btnNotebookCreateConfirm,
                     onPressed: _create,
                     child: const Text('Create'),
                   ),

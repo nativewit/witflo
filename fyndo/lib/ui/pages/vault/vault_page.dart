@@ -4,6 +4,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 import 'package:flutter/material.dart';
+import 'package:fyndo_app/core/agentic/fyndo_keys.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fyndo_app/providers/vault_providers.dart';
 import 'package:fyndo_app/ui/consumers/vault_consumer.dart';
@@ -52,7 +53,7 @@ class _VaultPageContent extends ConsumerWidget {
         title: const FyndoAppBarTitle('Vault Settings'),
         actions: [
           PopupMenuButton<String>(
-            key: const Key('menu_vault_actions'),
+            key: FyndoKeys.menuVaultActions,
             icon: const Icon(Icons.more_vert),
             onSelected: (value) => _handleMenuAction(context, ref, value),
             itemBuilder: (context) => [
@@ -148,7 +149,7 @@ class _VaultPageContent extends ConsumerWidget {
             child: Column(
               children: [
                 ListTile(
-                  key: const Key('btn_change_password'),
+                  key: FyndoKeys.btnChangePassword,
                   leading: const Icon(Icons.lock_reset),
                   title: const Text('Change Password'),
                   subtitle: const Text('Update your master password'),
@@ -157,7 +158,7 @@ class _VaultPageContent extends ConsumerWidget {
                 ),
                 const Divider(height: 1),
                 ListTile(
-                  key: const Key('btn_recovery_options'),
+                  key: FyndoKeys.btnRecoveryOptions,
                   leading: const Icon(Icons.restore),
                   title: const Text('Recovery Options'),
                   subtitle: const Text('Set up recovery key'),
@@ -166,7 +167,7 @@ class _VaultPageContent extends ConsumerWidget {
                 ),
                 const Divider(height: 1),
                 ListTile(
-                  key: const Key('btn_linked_devices'),
+                  key: FyndoKeys.btnLinkedDevices,
                   leading: const Icon(Icons.devices),
                   title: const Text('Linked Devices'),
                   subtitle: const Text('Manage device access'),
@@ -186,7 +187,7 @@ class _VaultPageContent extends ConsumerWidget {
             child: Column(
               children: [
                 SwitchListTile(
-                  key: const Key('switch_enable_sync'),
+                  key: FyndoKeys.switchEnableSync,
                   title: const Text('Enable Sync'),
                   subtitle: const Text('Sync encrypted data across devices'),
                   value: false,
@@ -196,7 +197,7 @@ class _VaultPageContent extends ConsumerWidget {
                 ),
                 const Divider(height: 1),
                 ListTile(
-                  key: const Key('btn_backup_cloud'),
+                  key: FyndoKeys.btnBackupCloud,
                   leading: const Icon(Icons.cloud_upload),
                   title: const Text('Backup to Cloud'),
                   subtitle: const Text('Not configured'),
@@ -221,7 +222,7 @@ class _VaultPageContent extends ConsumerWidget {
             child: Column(
               children: [
                 ListTile(
-                  key: const Key('btn_delete_vault'),
+                  key: FyndoKeys.btnDeleteVault,
                   leading: Icon(
                     Icons.delete_forever,
                     color: theme.colorScheme.error,
