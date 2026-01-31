@@ -37,16 +37,13 @@ class UserIdentity {
   /// X25519 key pair for encryption/key exchange
   final X25519KeyPair encryptionKey;
 
-  UserIdentity({
-    required this.signingKey,
-    required this.encryptionKey,
-  });
+  UserIdentity({required this.signingKey, required this.encryptionKey});
 
   /// Public portion (safe to share).
   UserPublicIdentity get publicIdentity => UserPublicIdentity(
-        signingPublicKey: signingKey.publicKey,
-        encryptionPublicKey: encryptionKey.publicKey,
-      );
+    signingPublicKey: signingKey.publicKey,
+    encryptionPublicKey: encryptionKey.publicKey,
+  );
 
   /// Fingerprint for identity verification.
   String get fingerprint {
@@ -99,8 +96,8 @@ class UserPublicIdentity {
 
   /// Parses from shareable string.
   factory UserPublicIdentity.fromShareableString(String encoded) {
-    final json = jsonDecode(utf8.decode(base64Decode(encoded)))
-        as Map<String, dynamic>;
+    final json =
+        jsonDecode(utf8.decode(base64Decode(encoded))) as Map<String, dynamic>;
 
     if (json['type'] != 'fyndo_identity') {
       throw FormatException('Invalid identity format');
@@ -113,15 +110,16 @@ class UserPublicIdentity {
   }
 
   Map<String, dynamic> toJson() => {
-        'signing_public_key': base64Encode(signingPublicKey),
-        'encryption_public_key': base64Encode(encryptionPublicKey),
-      };
+    'signing_public_key': base64Encode(signingPublicKey),
+    'encryption_public_key': base64Encode(encryptionPublicKey),
+  };
 
   factory UserPublicIdentity.fromJson(Map<String, dynamic> json) {
     return UserPublicIdentity(
       signingPublicKey: base64Decode(json['signing_public_key'] as String),
-      encryptionPublicKey:
-          base64Decode(json['encryption_public_key'] as String),
+      encryptionPublicKey: base64Decode(
+        json['encryption_public_key'] as String,
+      ),
     );
   }
 }
@@ -160,10 +158,7 @@ class UserIdentityService {
 
     encryptionSeed.dispose();
 
-    return UserIdentity(
-      signingKey: signingKey,
-      encryptionKey: encryptionKey,
-    );
+    return UserIdentity(signingKey: signingKey, encryptionKey: encryptionKey);
   }
 
   /// Wraps a key for a user (for sharing).
@@ -189,14 +184,8 @@ class UserIdentityService {
   }
 
   /// Signs content with user identity.
-  Signature sign({
-    required Uint8List content,
-    required UserIdentity identity,
-  }) {
-    return _crypto.ed25519.sign(
-      message: content,
-      keyPair: identity.signingKey,
-    );
+  Signature sign({required Uint8List content, required UserIdentity identity}) {
+    return _crypto.ed25519.sign(message: content, keyPair: identity.signingKey);
   }
 
   /// Verifies a signature from a user.
@@ -212,4 +201,3 @@ class UserIdentityService {
     );
   }
 }
-

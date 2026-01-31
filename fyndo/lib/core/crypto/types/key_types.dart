@@ -199,7 +199,7 @@ class NotebookKey extends CryptoKey {
   final String notebookId;
 
   NotebookKey(SecureBytes material, {required this.notebookId})
-      : super(material) {
+    : super(material) {
     if (material.length != KeySizes.symmetricKey) {
       throw ArgumentError(
         'NotebookKey must be ${KeySizes.symmetricKey} bytes, '
@@ -242,7 +242,7 @@ class NoteShareKey extends CryptoKey {
   final String shareId;
 
   NoteShareKey(SecureBytes material, {required this.shareId})
-      : super(material) {
+    : super(material) {
     if (material.length != KeySizes.symmetricKey) {
       throw ArgumentError(
         'NoteShareKey must be ${KeySizes.symmetricKey} bytes, '
@@ -267,10 +267,8 @@ class NoteShareKey extends CryptoKey {
 class Ed25519KeyPair extends CryptoKey {
   final Uint8List publicKey;
 
-  Ed25519KeyPair({
-    required SecureBytes secretKey,
-    required this.publicKey,
-  }) : super(secretKey) {
+  Ed25519KeyPair({required SecureBytes secretKey, required this.publicKey})
+    : super(secretKey) {
     if (secretKey.length != KeySizes.ed25519SecretKey) {
       throw ArgumentError(
         'Ed25519 secret key must be ${KeySizes.ed25519SecretKey} bytes',
@@ -298,10 +296,8 @@ class Ed25519KeyPair extends CryptoKey {
 class X25519KeyPair extends CryptoKey {
   final Uint8List publicKey;
 
-  X25519KeyPair({
-    required SecureBytes secretKey,
-    required this.publicKey,
-  }) : super(secretKey) {
+  X25519KeyPair({required SecureBytes secretKey, required this.publicKey})
+    : super(secretKey) {
     if (secretKey.length != KeySizes.x25519SecretKey) {
       throw ArgumentError(
         'X25519 secret key must be ${KeySizes.x25519SecretKey} bytes',
@@ -366,4 +362,3 @@ class EncryptedKey {
     );
   }
 }
-

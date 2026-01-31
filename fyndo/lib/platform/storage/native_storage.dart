@@ -109,10 +109,7 @@ class NativeStorageProvider implements StorageProvider {
     }
 
     final entities = await dir.list().toList();
-    return entities
-        .whereType<File>()
-        .map((e) => e.path)
-        .toList();
+    return entities.whereType<File>().map((e) => e.path).toList();
   }
 
   @override
@@ -129,4 +126,3 @@ class NativeStorageProvider implements StorageProvider {
     await file.rename(to);
   }
 }
-

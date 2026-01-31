@@ -5,4 +5,3 @@
 
 export 'device_identity.dart';
 export 'user_identity.dart';
-

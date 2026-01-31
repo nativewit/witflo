@@ -62,12 +62,12 @@ class DeviceIdentity {
 
   /// Public portion of device identity (safe to share/store).
   DevicePublicIdentity get publicIdentity => DevicePublicIdentity(
-        deviceId: deviceId,
-        deviceName: deviceName,
-        signingPublicKey: signingKey.publicKey,
-        encryptionPublicKey: encryptionKey.publicKey,
-        registeredAt: registeredAt,
-      );
+    deviceId: deviceId,
+    deviceName: deviceName,
+    signingPublicKey: signingKey.publicKey,
+    encryptionPublicKey: encryptionKey.publicKey,
+    registeredAt: registeredAt,
+  );
 
   /// Disposes secret keys.
   void dispose() {
@@ -93,20 +93,21 @@ class DevicePublicIdentity {
   });
 
   Map<String, dynamic> toJson() => {
-        'device_id': deviceId,
-        'device_name': deviceName,
-        'signing_public_key': base64Encode(signingPublicKey),
-        'encryption_public_key': base64Encode(encryptionPublicKey),
-        'registered_at': registeredAt.toIso8601String(),
-      };
+    'device_id': deviceId,
+    'device_name': deviceName,
+    'signing_public_key': base64Encode(signingPublicKey),
+    'encryption_public_key': base64Encode(encryptionPublicKey),
+    'registered_at': registeredAt.toIso8601String(),
+  };
 
   factory DevicePublicIdentity.fromJson(Map<String, dynamic> json) {
     return DevicePublicIdentity(
       deviceId: json['device_id'] as String,
       deviceName: json['device_name'] as String,
       signingPublicKey: base64Decode(json['signing_public_key'] as String),
-      encryptionPublicKey:
-          base64Decode(json['encryption_public_key'] as String),
+      encryptionPublicKey: base64Decode(
+        json['encryption_public_key'] as String,
+      ),
       registeredAt: DateTime.parse(json['registered_at'] as String),
     );
   }
@@ -151,8 +152,7 @@ class DeviceWrappedVaultKey {
     final metadataBytes = bytes.sublist(4, 4 + metadataLen);
     final wrappedBytes = bytes.sublist(4 + metadataLen);
 
-    final json =
-        jsonDecode(utf8.decode(metadataBytes)) as Map<String, dynamic>;
+    final json = jsonDecode(utf8.decode(metadataBytes)) as Map<String, dynamic>;
     final wrappedKey = WrappedKey.fromBytes(Uint8List.fromList(wrappedBytes));
 
     return DeviceWrappedVaultKey(
@@ -170,9 +170,7 @@ class DeviceIdentityService {
   DeviceIdentityService(this._crypto);
 
   /// Generates a new device identity.
-  DeviceIdentity generateIdentity({
-    required String deviceName,
-  }) {
+  DeviceIdentity generateIdentity({required String deviceName}) {
     final deviceId = const Uuid().v4();
     final signingKey = _crypto.ed25519.generateKeyPair();
     final encryptionKey = _crypto.x25519.generateKeyPair();
@@ -225,10 +223,7 @@ class DeviceIdentityService {
     required Uint8List data,
     required DeviceIdentity device,
   }) {
-    return _crypto.ed25519.sign(
-      message: data,
-      keyPair: device.signingKey,
-    );
+    return _crypto.ed25519.sign(message: data, keyPair: device.signingKey);
   }
 
   /// Verifies a signature from a device.
@@ -244,4 +239,3 @@ class DeviceIdentityService {
     );
   }
 }
-

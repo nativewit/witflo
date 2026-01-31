@@ -68,11 +68,7 @@ class DbResult {
   final int? insertId;
   final int affectedRows;
 
-  DbResult({
-    this.rows = const [],
-    this.insertId,
-    this.affectedRows = 0,
-  });
+  DbResult({this.rows = const [], this.insertId, this.affectedRows = 0});
 
   bool get isEmpty => rows.isEmpty;
   bool get isNotEmpty => rows.isNotEmpty;
@@ -107,7 +103,7 @@ abstract class DatabaseProvider {
     int version = 1,
     Future<void> Function(DatabaseProvider db, int version)? onCreate,
     Future<void> Function(DatabaseProvider db, int oldVersion, int newVersion)?
-        onUpgrade,
+    onUpgrade,
   });
 
   /// Close the database.
@@ -144,18 +140,13 @@ abstract class DatabaseProvider {
   });
 
   /// Delete rows from a table.
-  Future<int> delete(
-    String table, {
-    String? where,
-    List<dynamic>? whereArgs,
-  });
+  Future<int> delete(String table, {String? where, List<dynamic>? whereArgs});
 
   /// Execute multiple statements in a transaction.
   Future<T> transaction<T>(Future<T> Function(DatabaseProvider txn) action);
 
   /// Execute a batch of operations.
-  Future<List<dynamic>> batch(
-      void Function(DatabaseBatch batch) operations);
+  Future<List<dynamic>> batch(void Function(DatabaseBatch batch) operations);
 }
 
 /// Batch operations interface.
@@ -172,11 +163,7 @@ abstract class DatabaseBatch {
   });
 
   /// Add a delete to the batch.
-  void delete(
-    String table, {
-    String? where,
-    List<dynamic>? whereArgs,
-  });
+  void delete(String table, {String? where, List<dynamic>? whereArgs});
 
   /// Add a raw SQL statement to the batch.
   void execute(String sql, [List<dynamic>? arguments]);
@@ -189,7 +176,8 @@ DatabaseProvider? _databaseProvider;
 DatabaseProvider get databaseProvider {
   if (_databaseProvider == null) {
     throw StateError(
-        'DatabaseProvider not initialized. Call setDatabaseProvider() first.');
+      'DatabaseProvider not initialized. Call setDatabaseProvider() first.',
+    );
   }
   return _databaseProvider!;
 }
@@ -206,4 +194,3 @@ bool get isDatabaseInitialized => _databaseProvider != null;
 void clearDatabaseProvider() {
   _databaseProvider = null;
 }
-

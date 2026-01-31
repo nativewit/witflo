@@ -174,4 +174,3 @@ class VaultFilesystem {
     return 0;
   }
 }
-

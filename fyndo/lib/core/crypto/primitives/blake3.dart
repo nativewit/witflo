@@ -155,4 +155,3 @@ class StreamingHash {
     return ContentHash(result);
   }
 }
-

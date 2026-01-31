@@ -82,14 +82,14 @@ class VaultHeader {
 
   /// Serialize to JSON for storage.
   Map<String, dynamic> toJson() => {
-        'version': version,
-        'salt': base64Encode(salt),
-        'kdf': kdfParams.toJson(),
-        'created_at': createdAt.toIso8601String(),
-        'modified_at': modifiedAt?.toIso8601String(),
-        'vault_id': vaultId,
-        'features': features,
-      };
+    'version': version,
+    'salt': base64Encode(salt),
+    'kdf': kdfParams.toJson(),
+    'created_at': createdAt.toIso8601String(),
+    'modified_at': modifiedAt?.toIso8601String(),
+    'vault_id': vaultId,
+    'features': features,
+  };
 
   /// Serialize to bytes for file storage.
   Uint8List toBytes() {
@@ -108,8 +108,10 @@ class VaultHeader {
           ? DateTime.parse(json['modified_at'] as String)
           : null,
       vaultId: json['vault_id'] as String,
-      features: (json['features'] as Map<String, dynamic>?)
-              ?.map((k, v) => MapEntry(k, v as bool)) ??
+      features:
+          (json['features'] as Map<String, dynamic>?)?.map(
+            (k, v) => MapEntry(k, v as bool),
+          ) ??
           {},
     );
   }
@@ -137,4 +139,3 @@ class VaultHeader {
   String toString() =>
       'VaultHeader(v$version, vault=$vaultId, created=$createdAt)';
 }
-

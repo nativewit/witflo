@@ -151,18 +151,18 @@ class Share {
   bool get isUsable => isActive && !isExpired;
 
   Map<String, dynamic> toJson() => {
-        'share_id': shareId,
-        'type': type.name,
-        'resource_id': resourceId,
-        'resource_name': resourceName,
-        'role': role.name,
-        'sharer_public_key_hash': sharerPublicKeyHash,
-        'recipient_public_key_hash': recipientPublicKeyHash,
-        'wrapped_key': base64Encode(wrappedKey.toBytes()),
-        'created_at': createdAt.toIso8601String(),
-        'expires_at': expiresAt?.toIso8601String(),
-        'is_active': isActive,
-      };
+    'share_id': shareId,
+    'type': type.name,
+    'resource_id': resourceId,
+    'resource_name': resourceName,
+    'role': role.name,
+    'sharer_public_key_hash': sharerPublicKeyHash,
+    'recipient_public_key_hash': recipientPublicKeyHash,
+    'wrapped_key': base64Encode(wrappedKey.toBytes()),
+    'created_at': createdAt.toIso8601String(),
+    'expires_at': expiresAt?.toIso8601String(),
+    'is_active': isActive,
+  };
 
   factory Share.fromJson(Map<String, dynamic> json) {
     return Share(
@@ -318,8 +318,9 @@ class NotebookKeyRotation {
 
     // Create new shares for remaining members
     final newShares = <Share>[];
-    final sharerKeyHash = SharingService(_crypto)
-        .publicKeyHash(sharer.encryptionKey.publicKey);
+    final sharerKeyHash = SharingService(
+      _crypto,
+    ).publicKeyHash(sharer.encryptionKey.publicKey);
 
     for (final oldShare in existingShares) {
       // Skip the revoked recipient
@@ -338,14 +339,16 @@ class NotebookKeyRotation {
         recipientPublicKey: oldShare.wrappedKey.recipientPublicKey,
       );
 
-      newShares.add(Share.create(
-        type: ShareType.notebook,
-        resourceId: notebookId,
-        role: oldShare.role,
-        sharerPublicKeyHash: sharerKeyHash,
-        recipientPublicKeyHash: oldShare.recipientPublicKeyHash,
-        wrappedKey: wrappedKey,
-      ));
+      newShares.add(
+        Share.create(
+          type: ShareType.notebook,
+          resourceId: notebookId,
+          role: oldShare.role,
+          sharerPublicKeyHash: sharerKeyHash,
+          recipientPublicKeyHash: oldShare.recipientPublicKeyHash,
+          wrappedKey: wrappedKey,
+        ),
+      );
     }
 
     return NotebookKeyRotationResult(
@@ -371,4 +374,3 @@ class NotebookKeyRotationResult {
     required this.revokedShareIds,
   });
 }
-

@@ -212,8 +212,9 @@ void main() {
         kdfParams: Argon2Params.test,
       );
 
-      final unlockPassword =
-          SecureBytes.fromList(utf8.encode('correct-password'));
+      final unlockPassword = SecureBytes.fromList(
+        utf8.encode('correct-password'),
+      );
       final vault = await vaultService.unlockVault(
         vaultPath: vaultPath,
         password: unlockPassword,
@@ -242,11 +243,13 @@ void main() {
           vaultPath: vaultPath,
           password: wrongPassword,
         ),
-        throwsA(isA<VaultException>().having(
-          (e) => e.error,
-          'error',
-          VaultError.invalidPassword,
-        )),
+        throwsA(
+          isA<VaultException>().having(
+            (e) => e.error,
+            'error',
+            VaultError.invalidPassword,
+          ),
+        ),
       );
     });
 
@@ -255,15 +258,15 @@ void main() {
       final password = SecureBytes.fromList(utf8.encode('password'));
 
       expect(
-        () => vaultService.unlockVault(
-          vaultPath: vaultPath,
-          password: password,
+        () =>
+            vaultService.unlockVault(vaultPath: vaultPath, password: password),
+        throwsA(
+          isA<VaultException>().having(
+            (e) => e.error,
+            'error',
+            VaultError.vaultNotFound,
+          ),
         ),
-        throwsA(isA<VaultException>().having(
-          (e) => e.error,
-          'error',
-          VaultError.vaultNotFound,
-        )),
       );
     });
   });
@@ -340,20 +343,14 @@ void main() {
 
       // Change password
       final newPassword = SecureBytes.fromList(utf8.encode('new-password'));
-      await vaultService.changePassword(
-        vault: vault,
-        newPassword: newPassword,
-      );
+      await vaultService.changePassword(vault: vault, newPassword: newPassword);
 
       vault.dispose();
 
       // Should fail with old password
       final tryOld = SecureBytes.fromList(utf8.encode('old-password'));
       expect(
-        () => vaultService.unlockVault(
-          vaultPath: vaultPath,
-          password: tryOld,
-        ),
+        () => vaultService.unlockVault(vaultPath: vaultPath, password: tryOld),
         throwsA(isA<VaultException>()),
       );
 
@@ -438,4 +435,3 @@ void main() {
     });
   });
 }
-

@@ -37,12 +37,29 @@ See [fyndo/README.md](fyndo/README.md) for more details.
 
 ## Development
 
+### For AI Agents
+
+**📖 Start Here:** [`docs/README.md`](docs/README.md) - Complete documentation index
+
+**Quick Links:**
+- **Connect to running app:** [`docs/flutter-ai-agent-guide.md`](docs/flutter-ai-agent-guide.md)
+- **Coding patterns:** [`.opencode/skills/flutter-patterns/SKILL.md`](.opencode/skills/flutter-patterns/SKILL.md)
+- **MCP Quick Reference:** [`docs/flutter-ai-mcp-reference.md`](docs/flutter-ai-mcp-reference.md)
+
+**AI-First Development Features:**
+- ✅ Marionette MCP for runtime UI testing
+- ✅ Screenshot capture (1600x1200 PNG)
+- ✅ Interactive element inspection
+- ✅ UI interaction simulation (tap, scroll, text)
+- ✅ Application log monitoring
+
 ### Prerequisites
 
 - [Flutter](https://flutter.dev/docs/get-started/install) (3.38.7+)
-- [FVM](https://fvm.app/) - Flutter Version Management (recommended)
+- [FVM](https://fvm.app/) - Flutter Version Management (**required**)
 - Xcode (for iOS/macOS)
 - Android Studio (for Android)
+- Marionette MCP (for AI development) - auto-installed via `dart pub global activate marionette_mcp`
 
 ### Quick Start
 

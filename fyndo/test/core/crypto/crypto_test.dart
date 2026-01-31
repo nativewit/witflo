@@ -89,10 +89,7 @@ void main() {
     test('should throw on invalid key size', () {
       final invalidBytes = SecureBytes(Uint8List(16)); // Too small
 
-      expect(
-        () => MasterUnlockKey(invalidBytes),
-        throwsArgumentError,
-      );
+      expect(() => MasterUnlockKey(invalidBytes), throwsArgumentError);
     });
 
     test('ContentKey should store context', () {
@@ -300,10 +297,7 @@ void main() {
     test('should derive content key from vault key', () {
       final vk = VaultKey(crypto.random.symmetricKey());
 
-      final ck = crypto.hkdf.deriveContentKey(
-        vaultKey: vk,
-        noteId: 'note-123',
-      );
+      final ck = crypto.hkdf.deriveContentKey(vaultKey: vk, noteId: 'note-123');
 
       expect(ck.material.length, equals(32));
       expect(ck.context, contains('note-123'));
@@ -421,10 +415,7 @@ void main() {
       final keyPair = crypto.ed25519.generateKeyPair();
       final message = Uint8List.fromList(utf8.encode('Sign this'));
 
-      final signature = crypto.ed25519.sign(
-        message: message,
-        keyPair: keyPair,
-      );
+      final signature = crypto.ed25519.sign(message: message, keyPair: keyPair);
 
       expect(signature.bytes.length, equals(64));
 
@@ -444,10 +435,7 @@ void main() {
       final message = Uint8List.fromList(utf8.encode('Original'));
       final wrongMessage = Uint8List.fromList(utf8.encode('Tampered'));
 
-      final signature = crypto.ed25519.sign(
-        message: message,
-        keyPair: keyPair,
-      );
+      final signature = crypto.ed25519.sign(message: message, keyPair: keyPair);
 
       final valid = crypto.ed25519.verify(
         message: wrongMessage,
@@ -612,4 +600,3 @@ void main() {
     });
   });
 }
-

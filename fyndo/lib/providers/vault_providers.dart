@@ -84,15 +84,9 @@ class VaultNotifier extends Notifier<VaultState> {
         kdfParams: kdfParams,
       );
 
-      state = state.copyWith(
-        status: VaultStatus.locked,
-        vaultPath: path,
-      );
+      state = state.copyWith(status: VaultStatus.locked, vaultPath: path);
     } catch (e) {
-      state = state.copyWith(
-        status: VaultStatus.error,
-        error: e.toString(),
-      );
+      state = state.copyWith(status: VaultStatus.error, error: e.toString());
       rethrow;
     }
   }
@@ -111,15 +105,9 @@ class VaultNotifier extends Notifier<VaultState> {
         password: password,
       );
 
-      state = state.copyWith(
-        status: VaultStatus.unlocked,
-        vault: vault,
-      );
+      state = state.copyWith(status: VaultStatus.unlocked, vault: vault);
     } on VaultException catch (e) {
-      state = state.copyWith(
-        status: VaultStatus.error,
-        error: e.message,
-      );
+      state = state.copyWith(status: VaultStatus.error, error: e.message);
       rethrow;
     }
   }
@@ -127,10 +115,7 @@ class VaultNotifier extends Notifier<VaultState> {
   /// Locks the vault.
   void lock() {
     state.vault?.dispose();
-    state = state.copyWith(
-      status: VaultStatus.locked,
-      vault: null,
-    );
+    state = state.copyWith(status: VaultStatus.locked, vault: null);
   }
 
   /// Changes the vault password.
@@ -168,4 +153,3 @@ final unlockedVaultProvider = Provider<UnlockedVault>((ref) {
   }
   return vaultState.vault!;
 });
-

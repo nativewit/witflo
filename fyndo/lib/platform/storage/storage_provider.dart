@@ -67,7 +67,9 @@ StorageProvider? _storageProvider;
 
 StorageProvider get storageProvider {
   if (_storageProvider == null) {
-    throw StateError('StorageProvider not initialized. Call initializeStorage() first.');
+    throw StateError(
+      'StorageProvider not initialized. Call initializeStorage() first.',
+    );
   }
   return _storageProvider!;
 }
@@ -79,4 +81,3 @@ void setStorageProvider(StorageProvider provider) {
 
 /// Check if storage is initialized.
 bool get isStorageInitialized => _storageProvider != null;
-

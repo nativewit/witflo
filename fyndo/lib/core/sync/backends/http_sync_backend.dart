@@ -60,20 +60,21 @@ class HttpSyncConfig implements SyncBackendConfig {
 
   @override
   Map<String, dynamic> toJson() => {
-        'type': backendType,
-        'base_url': baseUrl,
-        'auth_token': authToken,
-        'custom_headers': customHeaders,
-        'timeout_seconds': timeoutSeconds,
-      };
+    'type': backendType,
+    'base_url': baseUrl,
+    'auth_token': authToken,
+    'custom_headers': customHeaders,
+    'timeout_seconds': timeoutSeconds,
+  };
 
   factory HttpSyncConfig.fromJson(Map<String, dynamic> json) {
     return HttpSyncConfig(
       baseUrl: json['base_url'] as String,
       authToken: json['auth_token'] as String?,
       customHeaders:
-          (json['custom_headers'] as Map<String, dynamic>?)?.cast<String, String>() ??
-              {},
+          (json['custom_headers'] as Map<String, dynamic>?)
+              ?.cast<String, String>() ??
+          {},
       timeoutSeconds: json['timeout_seconds'] as int? ?? 30,
     );
   }
@@ -104,7 +105,7 @@ class HttpSyncBackend implements SyncBackend {
   bool _isConnected = false;
 
   HttpSyncBackend(this._config, {http.Client? client})
-      : _client = client ?? http.Client();
+    : _client = client ?? http.Client();
 
   @override
   SyncBackendConfig get config => _config;
@@ -140,10 +141,7 @@ class HttpSyncBackend implements SyncBackend {
     // Test connection by checking server health
     try {
       final response = await _client
-          .get(
-            _buildUrl('/health'),
-            headers: _headers,
-          )
+          .get(_buildUrl('/health'), headers: _headers)
           .timeout(Duration(seconds: _config.timeoutSeconds));
 
       _isConnected = response.statusCode == 200;
@@ -202,9 +200,7 @@ class HttpSyncBackend implements SyncBackend {
     int limit = 100,
   }) async {
     try {
-      final queryParams = <String, String>{
-        'limit': limit.toString(),
-      };
+      final queryParams = <String, String>{'limit': limit.toString()};
       if (cursor != null) {
         queryParams['cursor'] = cursor;
       }
@@ -221,8 +217,10 @@ class HttpSyncBackend implements SyncBackend {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
         final opsJson = json['operations'] as List<dynamic>;
         final operations = opsJson
-            .map((op) => EncryptedSyncOp.fromFirestoreDoc(
-                op as Map<String, dynamic>))
+            .map(
+              (op) =>
+                  EncryptedSyncOp.fromFirestoreDoc(op as Map<String, dynamic>),
+            )
             .toList();
         final newCursor = json['cursor'] as String?;
 
@@ -248,10 +246,7 @@ class HttpSyncBackend implements SyncBackend {
       final response = await _client
           .post(
             _buildUrl('/vaults/$vaultId/blobs/$blobId'),
-            headers: {
-              ..._headers,
-              'Content-Type': 'application/octet-stream',
-            },
+            headers: {..._headers, 'Content-Type': 'application/octet-stream'},
             body: data,
           )
           .timeout(Duration(seconds: _config.timeoutSeconds * 2));
@@ -275,10 +270,7 @@ class HttpSyncBackend implements SyncBackend {
   }) async {
     try {
       final response = await _client
-          .get(
-            _buildUrl('/vaults/$vaultId/blobs/$blobId'),
-            headers: _headers,
-          )
+          .get(_buildUrl('/vaults/$vaultId/blobs/$blobId'), headers: _headers)
           .timeout(Duration(seconds: _config.timeoutSeconds * 2));
 
       if (response.statusCode == 200) {
@@ -299,10 +291,7 @@ class HttpSyncBackend implements SyncBackend {
   }) async {
     try {
       final response = await _client
-          .head(
-            _buildUrl('/vaults/$vaultId/blobs/$blobId'),
-            headers: _headers,
-          )
+          .head(_buildUrl('/vaults/$vaultId/blobs/$blobId'), headers: _headers)
           .timeout(Duration(seconds: _config.timeoutSeconds));
 
       _isConnected = true;
@@ -338,10 +327,7 @@ class HttpSyncBackend implements SyncBackend {
   Future<SyncBackendStatus> getStatus() async {
     try {
       final response = await _client
-          .get(
-            _buildUrl('/health'),
-            headers: _headers,
-          )
+          .get(_buildUrl('/health'), headers: _headers)
           .timeout(Duration(seconds: _config.timeoutSeconds));
 
       if (response.statusCode == 200) {
@@ -359,4 +345,3 @@ class HttpSyncBackend implements SyncBackend {
     }
   }
 }
-

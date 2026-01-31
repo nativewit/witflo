@@ -57,4 +57,3 @@ class SecureRandom {
     return _sodium.randombytes.uniform(upperBound);
   }
 }
-

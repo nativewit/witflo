@@ -62,7 +62,9 @@ class Ed25519Signing {
   Ed25519KeyPair generateKeyPair() {
     final keyPair = _sodium.crypto.sign.keyPair();
     return Ed25519KeyPair(
-      secretKey: SecureBytes(Uint8List.fromList(keyPair.secretKey.extractBytes())),
+      secretKey: SecureBytes(
+        Uint8List.fromList(keyPair.secretKey.extractBytes()),
+      ),
       publicKey: Uint8List.fromList(keyPair.publicKey),
     );
   }
@@ -80,7 +82,9 @@ class Ed25519Signing {
     final keyPair = _sodium.crypto.sign.seedKeyPair(secureKeySeed);
 
     return Ed25519KeyPair(
-      secretKey: SecureBytes(Uint8List.fromList(keyPair.secretKey.extractBytes())),
+      secretKey: SecureBytes(
+        Uint8List.fromList(keyPair.secretKey.extractBytes()),
+      ),
       publicKey: Uint8List.fromList(keyPair.publicKey),
     );
   }
@@ -98,7 +102,10 @@ class Ed25519Signing {
     required Ed25519KeyPair keyPair,
   }) {
     // Create SecureKey from the secret key bytes
-    final secretKey = SecureKey.fromList(_sodium, keyPair.secretKey.unsafeBytes);
+    final secretKey = SecureKey.fromList(
+      _sodium,
+      keyPair.secretKey.unsafeBytes,
+    );
     try {
       final signature = _sodium.crypto.sign.detached(
         message: message,
@@ -149,9 +156,6 @@ class Ed25519Signing {
     }
 
     // Ed25519 secret key contains public key in last 32 bytes
-    return Uint8List.fromList(
-      secretKey.unsafeBytes.sublist(32, 64),
-    );
+    return Uint8List.fromList(secretKey.unsafeBytes.sublist(32, 64));
   }
 }
-

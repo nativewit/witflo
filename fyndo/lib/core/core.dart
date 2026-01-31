@@ -20,4 +20,3 @@ export 'sync/sync.dart';
 
 // Vault
 export 'vault/vault.dart';
-

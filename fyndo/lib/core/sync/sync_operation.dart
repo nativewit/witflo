@@ -107,15 +107,15 @@ class SyncOperation {
 
   /// Serializes the operation for signing/encryption.
   Map<String, dynamic> toJson() => {
-        'op_id': opId,
-        'type': type.name,
-        'target_id': targetId,
-        'timestamp': timestamp,
-        'device_id': deviceId,
-        'created_at': createdAt.toIso8601String(),
-        'payload': payload,
-        'signature': signature?.hex,
-      };
+    'op_id': opId,
+    'type': type.name,
+    'target_id': targetId,
+    'timestamp': timestamp,
+    'device_id': deviceId,
+    'created_at': createdAt.toIso8601String(),
+    'payload': payload,
+    'signature': signature?.hex,
+  };
 
   /// Serializes to bytes for signing.
   Uint8List toBytesForSigning() {
@@ -183,11 +183,11 @@ class EncryptedSyncOp {
   });
 
   Map<String, dynamic> toFirestoreDoc() => {
-        'op_id': opId,
-        'ciphertext': base64Encode(ciphertext),
-        'content_hash': contentHash,
-        'timestamp': timestamp,
-      };
+    'op_id': opId,
+    'ciphertext': base64Encode(ciphertext),
+    'content_hash': contentHash,
+    'timestamp': timestamp,
+  };
 
   factory EncryptedSyncOp.fromFirestoreDoc(Map<String, dynamic> doc) {
     return EncryptedSyncOp(
@@ -221,15 +221,12 @@ class SyncCursor {
   });
 
   factory SyncCursor.initial() => SyncCursor(
-        lastTimestamp: 0,
-        syncedCount: 0,
-        updatedAt: DateTime.now().toUtc(),
-      );
+    lastTimestamp: 0,
+    syncedCount: 0,
+    updatedAt: DateTime.now().toUtc(),
+  );
 
-  SyncCursor advance({
-    required int timestamp,
-    required String opId,
-  }) {
+  SyncCursor advance({required int timestamp, required String opId}) {
     return SyncCursor(
       lastTimestamp: timestamp,
       lastOpId: opId,
@@ -239,11 +236,11 @@ class SyncCursor {
   }
 
   Map<String, dynamic> toJson() => {
-        'last_timestamp': lastTimestamp,
-        'last_op_id': lastOpId,
-        'synced_count': syncedCount,
-        'updated_at': updatedAt.toIso8601String(),
-      };
+    'last_timestamp': lastTimestamp,
+    'last_op_id': lastOpId,
+    'synced_count': syncedCount,
+    'updated_at': updatedAt.toIso8601String(),
+  };
 
   factory SyncCursor.fromJson(Map<String, dynamic> json) {
     return SyncCursor(
@@ -263,4 +260,3 @@ Uint8List _hexToBytes(String hex) {
   }
   return result;
 }
-

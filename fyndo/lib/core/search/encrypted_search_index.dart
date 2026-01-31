@@ -42,15 +42,12 @@ class SearchIndexEntry {
   final String hashedToken;
   final Set<String> noteIds;
 
-  SearchIndexEntry({
-    required this.hashedToken,
-    required this.noteIds,
-  });
+  SearchIndexEntry({required this.hashedToken, required this.noteIds});
 
   Map<String, dynamic> toJson() => {
-        'hash': hashedToken,
-        'notes': noteIds.toList(),
-      };
+    'hash': hashedToken,
+    'notes': noteIds.toList(),
+  };
 
   factory SearchIndexEntry.fromJson(Map<String, dynamic> json) {
     return SearchIndexEntry(
@@ -76,8 +73,8 @@ class EncryptedSearchIndex {
   EncryptedSearchIndex({
     required UnlockedVault vault,
     required CryptoService crypto,
-  })  : _vault = vault,
-        _crypto = crypto;
+  }) : _vault = vault,
+       _crypto = crypto;
 
   /// Derives the search key from vault key.
   ContentKey _deriveSearchKey() {
@@ -218,10 +215,11 @@ class EncryptedSearchIndex {
         );
 
         try {
-          final json = jsonDecode(utf8.decode(plaintext.unsafeBytes))
-              as Map<String, dynamic>;
-          final entries =
-              (json['entries'] as List<dynamic>).cast<Map<String, dynamic>>();
+          final json =
+              jsonDecode(utf8.decode(plaintext.unsafeBytes))
+                  as Map<String, dynamic>;
+          final entries = (json['entries'] as List<dynamic>)
+              .cast<Map<String, dynamic>>();
 
           for (final entryJson in entries) {
             final entry = SearchIndexEntry.fromJson(entryJson);
@@ -241,10 +239,10 @@ class EncryptedSearchIndex {
   /// Persists index to disk.
   Future<void> _persist() async {
     final entries = _index.entries
-        .map((e) => SearchIndexEntry(
-              hashedToken: e.key,
-              noteIds: e.value,
-            ).toJson())
+        .map(
+          (e) =>
+              SearchIndexEntry(hashedToken: e.key, noteIds: e.value).toJson(),
+        )
         .toList();
 
     final json = {'entries': entries};
@@ -328,9 +326,5 @@ class SearchIndexStats {
   final int tokenCount;
   final int noteCount;
 
-  SearchIndexStats({
-    required this.tokenCount,
-    required this.noteCount,
-  });
+  SearchIndexStats({required this.tokenCount, required this.noteCount});
 }
-

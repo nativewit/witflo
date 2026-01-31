@@ -91,9 +91,7 @@ class WebStorageProvider implements StorageProvider {
   @override
   Future<List<String>> listDirectory(String path) async {
     final prefix = path.endsWith('/') ? path : '$path/';
-    return _storage.keys
-        .where((key) => key.startsWith(prefix))
-        .toList();
+    return _storage.keys.where((key) => key.startsWith(prefix)).toList();
   }
 
   @override

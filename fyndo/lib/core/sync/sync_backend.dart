@@ -39,16 +39,11 @@ class SyncPushResult {
     this.failedOpIds = const [],
   });
 
-  factory SyncPushResult.success(int count) => SyncPushResult(
-        success: true,
-        pushedCount: count,
-      );
+  factory SyncPushResult.success(int count) =>
+      SyncPushResult(success: true, pushedCount: count);
 
-  factory SyncPushResult.failure(String error) => SyncPushResult(
-        success: false,
-        pushedCount: 0,
-        error: error,
-      );
+  factory SyncPushResult.failure(String error) =>
+      SyncPushResult(success: false, pushedCount: 0, error: error);
 }
 
 /// Result of a sync pull operation.
@@ -65,21 +60,11 @@ class SyncPullResult {
     this.error,
   });
 
-  factory SyncPullResult.success(
-    List<EncryptedSyncOp> ops, {
-    String? cursor,
-  }) =>
-      SyncPullResult(
-        success: true,
-        operations: ops,
-        newCursor: cursor,
-      );
+  factory SyncPullResult.success(List<EncryptedSyncOp> ops, {String? cursor}) =>
+      SyncPullResult(success: true, operations: ops, newCursor: cursor);
 
-  factory SyncPullResult.failure(String error) => SyncPullResult(
-        success: false,
-        operations: [],
-        error: error,
-      );
+  factory SyncPullResult.failure(String error) =>
+      SyncPullResult(success: false, operations: [], error: error);
 }
 
 /// Configuration for a sync backend.
@@ -163,16 +148,10 @@ abstract class SyncBackend {
   });
 
   /// Check if a blob exists on the remote.
-  Future<bool> blobExists({
-    required String vaultId,
-    required String blobId,
-  });
+  Future<bool> blobExists({required String vaultId, required String blobId});
 
   /// Delete a blob from the remote.
-  Future<bool> deleteBlob({
-    required String vaultId,
-    required String blobId,
-  });
+  Future<bool> deleteBlob({required String vaultId, required String blobId});
 
   /// Get sync status/statistics.
   Future<SyncBackendStatus> getStatus();
@@ -196,14 +175,9 @@ class SyncBackendStatus {
     this.error,
   });
 
-  factory SyncBackendStatus.disconnected() => const SyncBackendStatus(
-        isConnected: false,
-        isAuthenticated: false,
-      );
+  factory SyncBackendStatus.disconnected() =>
+      const SyncBackendStatus(isConnected: false, isAuthenticated: false);
 
-  factory SyncBackendStatus.connected() => const SyncBackendStatus(
-        isConnected: true,
-        isAuthenticated: true,
-      );
+  factory SyncBackendStatus.connected() =>
+      const SyncBackendStatus(isConnected: true, isAuthenticated: true);
 }
-

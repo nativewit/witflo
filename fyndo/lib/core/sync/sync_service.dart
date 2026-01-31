@@ -37,12 +37,7 @@ import 'package:fyndo_app/core/vault/vault.dart';
 import 'package:fyndo_app/platform/storage/storage_provider.dart';
 
 /// Sync state for a vault.
-enum SyncState {
-  idle,
-  syncing,
-  error,
-  offline,
-}
+enum SyncState { idle, syncing, error, offline }
 
 /// Result of a sync operation.
 class SyncResult {
@@ -91,10 +86,10 @@ class SyncService {
     required CryptoService crypto,
     required DeviceIdentity deviceIdentity,
     SyncBackend? backend,
-  })  : _vault = vault,
-        _crypto = crypto,
-        _deviceIdentity = deviceIdentity,
-        _backend = backend ?? LocalOnlySyncBackend();
+  }) : _vault = vault,
+       _crypto = crypto,
+       _deviceIdentity = deviceIdentity,
+       _backend = backend ?? LocalOnlySyncBackend();
 
   /// Gets the current backend.
   SyncBackend get backend => _backend;
@@ -190,10 +185,7 @@ class SyncService {
         for (final encryptedOp in pullResult.operations) {
           final op = await _decryptOperation(encryptedOp);
           // TODO: Apply operation to local state
-          await advanceCursor(
-            timestamp: op.timestamp,
-            opId: op.opId,
-          );
+          await advanceCursor(timestamp: op.timestamp, opId: op.opId);
         }
       }
 
@@ -265,7 +257,8 @@ class SyncService {
 
       try {
         final json =
-            jsonDecode(utf8.decode(plaintext.unsafeBytes)) as Map<String, dynamic>;
+            jsonDecode(utf8.decode(plaintext.unsafeBytes))
+                as Map<String, dynamic>;
         return SyncOperation.fromJson(json);
       } finally {
         plaintext.dispose();
@@ -289,7 +282,9 @@ class SyncService {
   /// Queues an operation for upload.
   Future<void> _queueOperation(EncryptedSyncOp op) async {
     final path = _vault.filesystem.paths.pendingOpPath(op.opId);
-    final data = Uint8List.fromList(utf8.encode(jsonEncode(op.toFirestoreDoc())));
+    final data = Uint8List.fromList(
+      utf8.encode(jsonEncode(op.toFirestoreDoc())),
+    );
     await _vault.filesystem.writeAtomic(path, data);
   }
 
@@ -335,8 +330,9 @@ class SyncService {
           key: syncKey,
         );
         try {
-          final json = jsonDecode(utf8.decode(plaintext.unsafeBytes))
-              as Map<String, dynamic>;
+          final json =
+              jsonDecode(utf8.decode(plaintext.unsafeBytes))
+                  as Map<String, dynamic>;
           _cursor = SyncCursor.fromJson(json);
         } finally {
           plaintext.dispose();

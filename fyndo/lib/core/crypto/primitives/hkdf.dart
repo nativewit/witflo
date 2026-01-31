@@ -51,8 +51,7 @@ abstract class HkdfContext {
   static String groupKey(String groupId) => 'fyndo.group.$groupId.$version';
 
   /// Context for deriving Note Share Keys
-  static String noteShareKey(String shareId) =>
-      'fyndo.share.$shareId.$version';
+  static String noteShareKey(String shareId) => 'fyndo.share.$shareId.$version';
 
   /// Context for deriving search index encryption key
   static String searchIndexKey() => 'fyndo.search.index.$version';
@@ -104,11 +103,7 @@ class HkdfSha256 {
     );
 
     // Step 2: Expand - Derive output key material
-    final okm = _hkdfExpand(
-      prk: prk,
-      info: infoBytes,
-      length: outputLength,
-    );
+    final okm = _hkdfExpand(prk: prk, info: infoBytes, length: outputLength);
 
     // Zeroize intermediate PRK
     prk.zeroize();
@@ -165,9 +160,7 @@ class HkdfSha256 {
   }
 
   /// Derives a key for search index encryption.
-  ContentKey deriveSearchIndexKey({
-    required VaultKey vaultKey,
-  }) {
+  ContentKey deriveSearchIndexKey({required VaultKey vaultKey}) {
     final derived = deriveKey(
       inputKey: vaultKey,
       info: HkdfContext.searchIndexKey(),
@@ -176,10 +169,7 @@ class HkdfSha256 {
   }
 
   /// HMAC-SHA256 using libsodium's auth primitive.
-  Uint8List _hmacSha256({
-    required Uint8List key,
-    required Uint8List message,
-  }) {
+  Uint8List _hmacSha256({required Uint8List key, required Uint8List message}) {
     // libsodium's crypto_auth uses HMAC-SHA512-256, but we need SHA256
     // Use the generic hash with key for HMAC-like behavior
     // Note: For production, consider using a dedicated HMAC-SHA256
@@ -222,7 +212,11 @@ class HkdfSha256 {
       // T(i) = HMAC-Hash(PRK, T(i-1) | info | i)
       final input = Uint8List(previousBlock.length + info.length + 1);
       input.setRange(0, previousBlock.length, previousBlock);
-      input.setRange(previousBlock.length, previousBlock.length + info.length, info);
+      input.setRange(
+        previousBlock.length,
+        previousBlock.length + info.length,
+        info,
+      );
       input[input.length - 1] = i;
 
       final block = _hmacSha256(key: prk, message: input);
@@ -234,4 +228,3 @@ class HkdfSha256 {
     return Uint8List.fromList(okm.sublist(0, length));
   }
 }
-

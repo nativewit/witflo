@@ -29,9 +29,7 @@ class LocalOnlySyncConfig implements SyncBackendConfig {
   bool get isAvailable => true;
 
   @override
-  Map<String, dynamic> toJson() => {
-        'type': backendType,
-      };
+  Map<String, dynamic> toJson() => {'type': backendType};
 
   factory LocalOnlySyncConfig.fromJson(Map<String, dynamic> json) {
     return const LocalOnlySyncConfig();
@@ -46,7 +44,7 @@ class LocalOnlySyncBackend implements SyncBackend {
   final LocalOnlySyncConfig _config;
 
   LocalOnlySyncBackend([LocalOnlySyncConfig? config])
-      : _config = config ?? const LocalOnlySyncConfig();
+    : _config = config ?? const LocalOnlySyncConfig();
 
   @override
   SyncBackendConfig get config => _config;
@@ -125,4 +123,3 @@ class LocalOnlySyncBackend implements SyncBackend {
     return SyncBackendStatus.connected();
   }
 }
-
