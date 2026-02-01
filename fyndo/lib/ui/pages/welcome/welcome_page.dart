@@ -195,6 +195,7 @@ class _WorkspaceUnlockViewState extends ConsumerState<_WorkspaceUnlockView> {
   }
 
   Future<void> _unlock() async {
+    print('[WelcomePage] DEBUG: _unlock() called');
     if (_passwordController.text.isEmpty) {
       setState(() => _error = 'Please enter your master password');
       return;
@@ -206,27 +207,51 @@ class _WorkspaceUnlockViewState extends ConsumerState<_WorkspaceUnlockView> {
     });
 
     try {
+      print('[WelcomePage] DEBUG: Getting workspace state...');
       final workspaceState = ref.read(workspaceProvider).valueOrNull;
       if (workspaceState?.rootPath == null) {
         throw Exception('No workspace configured');
       }
+      print('[WelcomePage] DEBUG: Workspace path: ${workspaceState!.rootPath}');
 
       final password = SecureBytes.fromList(
         utf8.encode(_passwordController.text),
       );
+      print(
+        '[WelcomePage] DEBUG: Password created, calling unlockWorkspace...',
+      );
 
       final workspaceService = ref.read(workspaceServiceProvider);
       final unlockedWorkspace = await workspaceService.unlockWorkspace(
-        rootPath: workspaceState!.rootPath!,
+        rootPath: workspaceState.rootPath!,
         masterPassword: password,
       );
+      print('[WelcomePage] DEBUG: unlockWorkspace() succeeded!');
 
       // Store unlocked workspace in provider
+      print('[WelcomePage] DEBUG: Updating unlockedWorkspaceProvider...');
       ref.read(unlockedWorkspaceProvider.notifier).unlock(unlockedWorkspace);
+      print('[WelcomePage] DEBUG: Provider updated!');
+
+      // Check if provider state is set
+      final updatedState = ref.read(unlockedWorkspaceProvider);
+      print(
+        '[WelcomePage] DEBUG: Provider state after unlock: ${updatedState != null ? "UNLOCKED" : "STILL LOCKED"}',
+      );
 
       // Clear password field
       _passwordController.clear();
+
+      // Reset unlocking state on success - this will trigger a rebuild
+      // which should cause the router to redirect to /home
+      if (mounted) {
+        setState(() {
+          _isUnlocking = false;
+        });
+      }
+      print('[WelcomePage] DEBUG: _unlock() completed successfully');
     } catch (e) {
+      print('[WelcomePage] DEBUG: _unlock() error: $e');
       setState(() {
         _error =
             e.toString().contains('password') ||
@@ -601,7 +626,7 @@ class _WorkspaceSwitcherDialogState
             .read(vaultRegistryProvider.notifier)
             .loadFromWorkspace(
               workspaceState!.rootPath!,
-              workspaceState.discoveredVaults!,
+              workspaceState.discoveredVaults!.toList(),
             );
       }
 

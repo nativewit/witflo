@@ -3,38 +3,45 @@
 // Workspace Provider - Riverpod state management for workspace
 // ═══════════════════════════════════════════════════════════════════════════
 
+import 'package:built_collection/built_collection.dart';
+import 'package:built_value/built_value.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fyndo_app/core/workspace/workspace_config.dart';
 import 'package:fyndo_app/core/workspace/workspace_service.dart';
 
+part 'workspace_provider.g.dart';
+
 /// State for the workspace.
-class WorkspaceState {
-  final WorkspaceConfig? config;
-  final bool isLoading;
-  final String? error;
-  final List<String>? discoveredVaults; // Vault paths in current workspace
+///
+/// Uses built_value for immutability and type safety (spec-003 compliance).
+abstract class WorkspaceState
+    implements Built<WorkspaceState, WorkspaceStateBuilder> {
+  @BuiltValueField(wireName: 'config')
+  WorkspaceConfig? get config;
 
-  const WorkspaceState({
-    this.config,
-    this.isLoading = false,
-    this.error,
-    this.discoveredVaults,
-  });
+  @BuiltValueField(wireName: 'isLoading')
+  bool get isLoading;
 
-  WorkspaceState copyWith({
-    WorkspaceConfig? config,
-    bool? isLoading,
-    String? error,
-    List<String>? discoveredVaults,
-  }) {
-    return WorkspaceState(
-      config: config ?? this.config,
-      isLoading: isLoading ?? this.isLoading,
-      error: error,
-      discoveredVaults: discoveredVaults ?? this.discoveredVaults,
-    );
-  }
+  @BuiltValueField(wireName: 'error')
+  String? get error;
+
+  /// Vault paths in current workspace.
+  @BuiltValueField(wireName: 'discoveredVaults')
+  BuiltList<String>? get discoveredVaults;
+
+  WorkspaceState._();
+  factory WorkspaceState([void Function(WorkspaceStateBuilder) updates]) =
+      _$WorkspaceState;
+
+  /// Creates initial workspace state (no workspace configured).
+  factory WorkspaceState.initial() => WorkspaceState(
+    (b) => b
+      ..config = null
+      ..isLoading = false
+      ..error = null
+      ..discoveredVaults = null,
+  );
 
   bool get hasWorkspace => config != null;
   String? get rootPath => config?.rootPath;
@@ -42,7 +49,7 @@ class WorkspaceState {
 
 /// Notifier for workspace management.
 class WorkspaceNotifier extends AsyncNotifier<WorkspaceState> {
-  late final WorkspaceService _service;
+  WorkspaceService? _service;
 
   @override
   Future<WorkspaceState> build() async {
@@ -50,41 +57,57 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceState> {
     // Return a mock workspace state to skip onboarding
     if (kIsWeb) {
       return WorkspaceState(
-        config: WorkspaceConfig.create(rootPath: '/web-storage'),
+        (b) => b
+          ..config = WorkspaceConfig.create(
+            rootPath: '/web-storage',
+          ).toBuilder()
+          ..isLoading = false,
       );
     }
 
-    _service = WorkspaceService();
+    _service ??= WorkspaceService();
     return await _loadWorkspace();
   }
 
   Future<WorkspaceState> _loadWorkspace() async {
     try {
-      final config = await _service.loadWorkspaceConfig();
+      final config = await _service!.loadWorkspaceConfig();
 
       if (config == null) {
         // No workspace configured yet
-        return const WorkspaceState();
+        return WorkspaceState.initial();
       }
 
       // Validate that workspace still exists
-      if (!await _service.isValidWorkspace(config.rootPath)) {
+      if (!await _service!.isValidWorkspace(config.rootPath)) {
         // Workspace no longer valid (folder deleted, etc.)
         return WorkspaceState(
-          error: 'Workspace directory no longer accessible: ${config.rootPath}',
+          (b) => b
+            ..isLoading = false
+            ..error =
+                'Workspace directory no longer accessible: ${config.rootPath}',
         );
       }
 
       // Discover vaults in the workspace
-      final vaults = await _service.discoverVaults(config.rootPath);
+      final vaults = await _service!.discoverVaults(config.rootPath);
 
       // Update last accessed timestamp
       final updatedConfig = config.touch();
-      await _service.saveWorkspaceConfig(updatedConfig);
+      await _service!.saveWorkspaceConfig(updatedConfig);
 
-      return WorkspaceState(config: updatedConfig, discoveredVaults: vaults);
+      return WorkspaceState(
+        (b) => b
+          ..config = updatedConfig.toBuilder()
+          ..isLoading = false
+          ..discoveredVaults = BuiltList<String>(vaults).toBuilder(),
+      );
     } catch (e) {
-      return WorkspaceState(error: e.toString());
+      return WorkspaceState(
+        (b) => b
+          ..isLoading = false
+          ..error = e.toString(),
+      );
     }
   }
 
@@ -117,17 +140,28 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceState> {
   ///
   /// Validates workspace and adds current to recent workspaces.
   Future<void> switchWorkspace(String newRootPath) async {
-    state = const AsyncValue.data(WorkspaceState(isLoading: true));
+    state = AsyncValue.data(WorkspaceState((b) => b..isLoading = true));
 
     try {
-      final config = await _service.switchWorkspace(newRootPath);
-      final vaults = await _service.discoverVaults(newRootPath);
+      final config = await _service!.switchWorkspace(newRootPath);
+      final vaults = await _service!.discoverVaults(newRootPath);
 
       state = AsyncValue.data(
-        WorkspaceState(config: config, discoveredVaults: vaults),
+        WorkspaceState(
+          (b) => b
+            ..config = config.toBuilder()
+            ..isLoading = false
+            ..discoveredVaults = BuiltList<String>(vaults).toBuilder(),
+        ),
       );
     } catch (e) {
-      state = AsyncValue.data(WorkspaceState(error: e.toString()));
+      state = AsyncValue.data(
+        WorkspaceState(
+          (b) => b
+            ..isLoading = false
+            ..error = e.toString(),
+        ),
+      );
       rethrow;
     }
   }
@@ -140,24 +174,30 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceState> {
     }
 
     try {
-      final vaults = await _service.discoverVaults(
+      final vaults = await _service!.discoverVaults(
         currentState!.config!.rootPath,
       );
 
-      state = AsyncValue.data(currentState.copyWith(discoveredVaults: vaults));
+      state = AsyncValue.data(
+        currentState.rebuild(
+          (b) => b..discoveredVaults = BuiltList<String>(vaults).toBuilder(),
+        ),
+      );
     } catch (e) {
-      state = AsyncValue.data(currentState!.copyWith(error: e.toString()));
+      state = AsyncValue.data(
+        currentState!.rebuild((b) => b..error = e.toString()),
+      );
     }
   }
 
   /// Opens folder picker and returns selected path (or null if cancelled).
   Future<String?> pickWorkspaceFolder() async {
-    return await _service.pickWorkspaceFolder();
+    return await _service!.pickWorkspaceFolder();
   }
 
   /// Returns the default workspace directory for the current platform.
   Future<String> getDefaultWorkspaceDirectory() async {
-    return await _service.getDefaultWorkspaceDirectory();
+    return await _service!.getDefaultWorkspaceDirectory();
   }
 
   /// Returns the path where a new vault should be created.
@@ -167,7 +207,7 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceState> {
       throw WorkspaceException('No workspace configured');
     }
 
-    return _service.getNewVaultPath(currentState!.config!.rootPath, vaultId);
+    return _service!.getNewVaultPath(currentState!.config!.rootPath, vaultId);
   }
 }
 

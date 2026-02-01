@@ -114,9 +114,9 @@ class VaultFilesystem {
   }
 
   /// Checks if a vault exists at this path.
+  /// Only checks for vault.header since vault keys are managed by workspace keyring.
   Future<bool> exists() async {
-    return await _storage.exists(paths.header) &&
-        await _storage.exists(paths.vaultKey);
+    return await _storage.exists(paths.header);
   }
 
   /// Checks if vault is locked (no device key for fast unlock).

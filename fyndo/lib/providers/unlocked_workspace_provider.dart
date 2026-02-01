@@ -85,16 +85,27 @@ class UnlockedWorkspaceNotifier extends StateNotifier<UnlockedWorkspace?>
   ///
   /// [workspace] - The unlocked workspace (must not be disposed)
   void unlock(UnlockedWorkspace workspace) {
+    print('[UnlockedWorkspaceProvider] DEBUG: unlock() called');
     // Lock any existing workspace first
     if (state != null) {
+      print(
+        '[UnlockedWorkspaceProvider] DEBUG: Locking existing workspace first',
+      );
       lock();
     }
 
+    print(
+      '[UnlockedWorkspaceProvider] DEBUG: Setting state to unlocked workspace',
+    );
     state = workspace;
     _lastActivityTime = DateTime.now();
+    print(
+      '[UnlockedWorkspaceProvider] DEBUG: State set! state is now: ${state != null ? "NOT NULL" : "NULL"}',
+    );
 
     // Start idle timer if auto-lock is enabled
     _startIdleTimer();
+    print('[UnlockedWorkspaceProvider] DEBUG: unlock() completed');
   }
 
   /// Locks the workspace by disposing all cryptographic material.

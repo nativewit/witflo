@@ -33,6 +33,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:fyndo_app/core/crypto/crypto.dart';
+import 'package:fyndo_app/core/identity/device_identity_service_interface.dart';
 import 'package:uuid/uuid.dart';
 
 /// Device identity containing signing and encryption keys.
@@ -164,12 +165,13 @@ class DeviceWrappedVaultKey {
 }
 
 /// Service for managing device identity.
-class DeviceIdentityService {
+class DeviceIdentityService implements IDeviceIdentityService {
   final CryptoService _crypto;
 
   DeviceIdentityService(this._crypto);
 
   /// Generates a new device identity.
+  @override
   DeviceIdentity generateIdentity({required String deviceName}) {
     final deviceId = const Uuid().v4();
     final signingKey = _crypto.ed25519.generateKeyPair();
@@ -185,6 +187,7 @@ class DeviceIdentityService {
   }
 
   /// Wraps a vault key for device-based unlock.
+  @override
   DeviceWrappedVaultKey wrapVaultKeyForDevice({
     required VaultKey vaultKey,
     required DevicePublicIdentity device,
@@ -202,6 +205,7 @@ class DeviceIdentityService {
   }
 
   /// Unwraps a vault key using device's secret key.
+  @override
   VaultKey unwrapVaultKey({
     required DeviceWrappedVaultKey wrapped,
     required DeviceIdentity device,
@@ -219,6 +223,7 @@ class DeviceIdentityService {
   }
 
   /// Signs data with device's signing key.
+  @override
   Signature signWithDevice({
     required Uint8List data,
     required DeviceIdentity device,
@@ -227,6 +232,7 @@ class DeviceIdentityService {
   }
 
   /// Verifies a signature from a device.
+  @override
   bool verifyDeviceSignature({
     required Uint8List data,
     required Signature signature,

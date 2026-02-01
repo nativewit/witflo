@@ -3,54 +3,68 @@
 // Notebook Providers
 // ═══════════════════════════════════════════════════════════════════════════
 
+import 'package:built_collection/built_collection.dart';
+import 'package:built_value/built_value.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fyndo_app/features/notes/models/notebook.dart';
 import 'package:fyndo_app/providers/vault_providers.dart';
 
 export 'package:fyndo_app/features/notes/models/notebook.dart';
 
+part 'notebook_providers.g.dart';
+
 /// State for notebooks.
-class NotebooksState {
-  final List<Notebook> notebooks;
-  final bool isLoading;
-  final String? error;
+///
+/// Uses built_value for immutability and type safety (spec-003 compliance).
+abstract class NotebooksState
+    implements Built<NotebooksState, NotebooksStateBuilder> {
+  /// List of notebooks (uses BuiltList for immutability).
+  BuiltList<Notebook> get notebooks;
 
-  const NotebooksState({
-    this.notebooks = const [],
-    this.isLoading = false,
-    this.error,
-  });
+  /// Whether notebooks are currently loading.
+  bool get isLoading;
 
-  NotebooksState copyWith({
-    List<Notebook>? notebooks,
-    bool? isLoading,
-    String? error,
-  }) {
-    return NotebooksState(
-      notebooks: notebooks ?? this.notebooks,
-      isLoading: isLoading ?? this.isLoading,
-      error: error,
-    );
-  }
+  /// Error message if loading failed.
+  String? get error;
+
+  NotebooksState._();
+  factory NotebooksState([void Function(NotebooksStateBuilder) updates]) =
+      _$NotebooksState;
+
+  /// Creates initial notebooks state (empty, not loading).
+  factory NotebooksState.initial() => NotebooksState(
+    (b) => b
+      ..notebooks = ListBuilder<Notebook>()
+      ..isLoading = false
+      ..error = null,
+  );
 }
 
 /// Notifier for notebooks.
 class NotebooksNotifier extends Notifier<NotebooksState> {
   @override
   NotebooksState build() {
-    return const NotebooksState();
+    return NotebooksState.initial();
   }
 
   /// Loads notebooks from storage.
   Future<void> loadNotebooks() async {
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.rebuild(
+      (b) => b
+        ..isLoading = true
+        ..error = null,
+    );
 
     try {
       // TODO: Load from encrypted storage
       // For now, using in-memory storage
-      state = state.copyWith(isLoading: false);
+      state = state.rebuild((b) => b..isLoading = false);
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      state = state.rebuild(
+        (b) => b
+          ..isLoading = false
+          ..error = e.toString(),
+      );
     }
   }
 
@@ -72,7 +86,7 @@ class NotebooksNotifier extends Notifier<NotebooksState> {
       icon: icon,
     );
 
-    state = state.copyWith(notebooks: [...state.notebooks, notebook]);
+    state = state.rebuild((b) => b..notebooks.add(notebook));
 
     // TODO: Persist to encrypted storage
     return notebook;
@@ -84,20 +98,21 @@ class NotebooksNotifier extends Notifier<NotebooksState> {
       (b) => b..modifiedAt = DateTime.now().toUtc(),
     );
 
-    state = state.copyWith(
-      notebooks: state.notebooks
-          .map((n) => n.id == notebook.id ? updated : n)
-          .toList(),
-    );
+    state = state.rebuild((b) {
+      final index = b.notebooks.build().indexWhere((n) => n.id == notebook.id);
+      if (index >= 0) {
+        b.notebooks[index] = updated;
+      }
+    });
 
     // TODO: Persist to encrypted storage
   }
 
   /// Deletes a notebook.
   Future<void> deleteNotebook(String notebookId) async {
-    state = state.copyWith(
-      notebooks: state.notebooks.where((n) => n.id != notebookId).toList(),
-    );
+    state = state.rebuild((b) {
+      b.notebooks.removeWhere((n) => n.id == notebookId);
+    });
 
     // TODO: Delete from encrypted storage
   }

@@ -32,6 +32,7 @@ import 'package:fyndo_app/core/crypto/crypto.dart';
 import 'package:fyndo_app/core/identity/identity.dart';
 import 'package:fyndo_app/core/sync/sync_backend.dart';
 import 'package:fyndo_app/core/sync/sync_operation.dart';
+import 'package:fyndo_app/core/sync/sync_service_interface.dart';
 import 'package:fyndo_app/core/sync/backends/local_only_backend.dart';
 import 'package:fyndo_app/core/vault/vault.dart';
 import 'package:fyndo_app/platform/storage/storage_provider.dart';
@@ -75,10 +76,12 @@ class SyncService {
   // Current sync state
   // ignore: prefer_final_fields
   SyncState _state = SyncState.idle;
+  @override
   SyncState get state => _state;
 
   // Sync cursor
   SyncCursor _cursor = SyncCursor.initial();
+  @override
   SyncCursor get cursor => _cursor;
 
   SyncService({
@@ -92,9 +95,11 @@ class SyncService {
        _backend = backend ?? LocalOnlySyncBackend();
 
   /// Gets the current backend.
+  @override
   SyncBackend get backend => _backend;
 
   /// Sets a new sync backend.
+  @override
   Future<void> setBackend(SyncBackend backend) async {
     await _backend.dispose();
     _backend = backend;

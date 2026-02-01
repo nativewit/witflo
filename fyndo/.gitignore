@@ -1,0 +1,31 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.buildlog/
+.history
+.svn/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# Build artifacts
+build/
+
+# Coverage
+coverage/
+*.lcov
+
+# Backup files
+*.bak
+*.bak[0-9]*
+
+# Test files
+test_*.dart

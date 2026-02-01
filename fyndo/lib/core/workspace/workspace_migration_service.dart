@@ -29,6 +29,7 @@ import 'package:fyndo_app/core/crypto/crypto.dart';
 import 'package:fyndo_app/core/vault/vault_service.dart';
 import 'package:fyndo_app/core/workspace/workspace_service.dart';
 import 'package:fyndo_app/core/workspace/workspace_metadata.dart';
+import 'package:fyndo_app/core/workspace/workspace_migration_service_interface.dart';
 
 /// Service for migrating v1 workspaces (per-vault passwords) to v2 (master password).
 ///
@@ -59,7 +60,7 @@ import 'package:fyndo_app/core/workspace/workspace_metadata.dart';
 ///   vaultPasswords: vaultPasswords,
 /// );
 /// ```
-class WorkspaceMigrationService {
+class WorkspaceMigrationService implements IWorkspaceMigrationService {
   static const String _workspaceMarkerFile = '.fyndo-workspace';
   static const String _vaultsSubdir = 'vaults';
 
@@ -97,6 +98,7 @@ class WorkspaceMigrationService {
   /// - [MigrationException] if workspace is already v2
   ///
   /// Spec: docs/specs/spec-002-workspace-master-password.md (Section 4)
+  @override
   Future<void> migrateWorkspaceV1ToV2({
     required String rootPath,
     required SecureBytes newMasterPassword,
@@ -200,6 +202,7 @@ class WorkspaceMigrationService {
   /// [rootPath] - Absolute path to workspace directory
   ///
   /// Returns list of absolute paths to vault directories.
+  @override
   Future<List<String>> discoverV1Vaults(String rootPath) async {
     final vaultsDir = Directory(p.join(rootPath, _vaultsSubdir));
 
@@ -235,6 +238,7 @@ class WorkspaceMigrationService {
   ///
   /// Throws:
   /// - [MigrationException] if update fails
+  @override
   Future<void> updateWorkspaceVersion(String rootPath, int version) async {
     final markerFile = File(p.join(rootPath, _workspaceMarkerFile));
 

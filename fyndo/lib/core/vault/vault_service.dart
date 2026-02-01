@@ -39,6 +39,7 @@ import 'package:fyndo_app/core/crypto/crypto.dart';
 import 'package:fyndo_app/core/vault/vault_filesystem.dart';
 import 'package:fyndo_app/core/vault/vault_header.dart';
 import 'package:fyndo_app/core/vault/vault_metadata.dart';
+import 'package:fyndo_app/core/vault/vault_service_interface.dart';
 import 'package:fyndo_app/platform/storage/storage_provider.dart';
 import 'package:path/path.dart' as p;
 
@@ -156,7 +157,10 @@ class UnlockedVault {
 }
 
 /// Main vault management service.
-class VaultService {
+///
+/// Implements [IVaultService] for SOLID compliance (Dependency Inversion Principle).
+/// Consumers should depend on the interface, not this concrete implementation.
+class VaultService implements IVaultService {
   final CryptoService _crypto;
 
   VaultService(this._crypto);
@@ -178,6 +182,7 @@ class VaultService {
   /// 1. Creates the vault directory structure
   /// 2. Writes the vault header (plaintext)
   /// 3. Writes the vault metadata (plaintext)
+  @override
   Future<VaultCreationResult> createVault({
     required String vaultPath,
     required VaultKey vaultKey,
@@ -231,6 +236,7 @@ class VaultService {
   /// NOTE: This method does NOT derive the vault key from a password.
   /// The vault key is retrieved from the workspace keyring after the user
   /// unlocks the workspace with the master password.
+  @override
   Future<UnlockedVault> unlockVault({
     required String vaultPath,
     required VaultKey vaultKey,
@@ -278,6 +284,7 @@ class VaultService {
   /// [metadata] - Vault metadata to save
   ///
   /// The metadata is written atomically to prevent corruption.
+  @override
   Future<void> saveVaultMetadata(
     String vaultPath,
     VaultMetadata metadata,
@@ -293,6 +300,7 @@ class VaultService {
   /// [vaultPath] - Directory containing the vault
   ///
   /// Returns the metadata if the file exists, null otherwise.
+  @override
   Future<VaultMetadata?> loadVaultMetadata(String vaultPath) async {
     final metadataPath = p.join(vaultPath, '.vault-meta.json');
     final bytes = await storageProvider.readFile(metadataPath);

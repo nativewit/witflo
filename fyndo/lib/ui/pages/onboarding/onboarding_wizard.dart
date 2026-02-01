@@ -13,6 +13,8 @@ import 'package:fyndo_app/core/crypto/crypto.dart';
 import 'package:fyndo_app/core/workspace/workspace_config.dart';
 import 'package:fyndo_app/core/workspace/workspace_service.dart';
 import 'package:fyndo_app/providers/crypto_providers.dart';
+import 'package:fyndo_app/providers/unlocked_workspace_provider.dart';
+import 'package:fyndo_app/providers/vault_providers.dart';
 import 'package:fyndo_app/providers/vault_registry.dart';
 import 'package:fyndo_app/providers/workspace_provider.dart';
 import 'package:fyndo_app/ui/theme/fyndo_theme.dart';
@@ -373,11 +375,12 @@ class _OnboardingWizardState extends ConsumerState<OnboardingWizard> {
 
       // Spec-002 Section 3.3: Create vault with random key
       final crypto = ref.read(cryptoServiceProvider);
-      final vaultKey = crypto.random.symmetricKey();
+      final vaultKeyBytes = crypto.random.symmetricKey();
+      final vaultKey = VaultKey(vaultKeyBytes);
       final vaultId = const Uuid().v4();
 
       // Add vault to keyring
-      final vaultKeyBase64 = base64Encode(vaultKey.bytes);
+      final vaultKeyBase64 = base64Encode(vaultKeyBytes.bytes);
       unlockedWorkspace.keyring = unlockedWorkspace.keyring.addVault(
         vaultId,
         vaultKeyBase64,
@@ -386,26 +389,18 @@ class _OnboardingWizardState extends ConsumerState<OnboardingWizard> {
       // Save updated keyring
       await workspaceService.saveKeyring(unlockedWorkspace);
 
-      // Create vault directory structure
+      // Create vault using vault service (spec-002 compliant)
       final vaultPath = p.join(_selectedWorkspacePath!, 'vaults', vaultId);
-      await Directory(vaultPath).create(recursive: true);
-      await Directory(p.join(vaultPath, 'notebooks')).create();
-      await Directory(p.join(vaultPath, 'objects')).create();
-
-      // Write vault metadata
-      final metadata = {
-        'version': 1,
-        'vaultId': vaultId,
-        'name': _vaultName,
-        'description': null,
-        'icon': '📓',
-        'color': '#3B82F6',
-        'createdAt': DateTime.now().toUtc().toIso8601String(),
-        'modifiedAt': DateTime.now().toUtc().toIso8601String(),
-      };
-      await File(
-        p.join(vaultPath, '.vault-meta.json'),
-      ).writeAsString(jsonEncode(metadata));
+      final vaultService = ref.read(vaultServiceProvider);
+      await vaultService.createVault(
+        vaultPath: vaultPath,
+        vaultKey: vaultKey,
+        vaultId: vaultId,
+        name: _vaultName,
+        description: null,
+        icon: '📓',
+        color: '#3B82F6',
+      );
 
       // Register vault in registry
       await ref
@@ -417,6 +412,19 @@ class _OnboardingWizardState extends ConsumerState<OnboardingWizard> {
         rootPath: unlockedWorkspace.rootPath,
       );
       await workspaceService.saveWorkspaceConfig(workspaceConfig);
+
+      // Force workspaceProvider to reload from preferences
+      // This is critical - without invalidation, the router will still see
+      // hasWorkspace=false and redirect back to onboarding
+      ref.invalidate(workspaceProvider);
+
+      // Wait for workspaceProvider to finish rebuilding with the new config
+      // The provider's build() method is async, so we need to wait for it
+      await ref.read(workspaceProvider.future);
+
+      // Store unlocked workspace in provider (CRITICAL!)
+      // Without this, the router will redirect back to unlock screen
+      ref.read(unlockedWorkspaceProvider.notifier).unlock(unlockedWorkspace);
 
       // Navigate to home (workspace is now initialized)
       if (mounted) {

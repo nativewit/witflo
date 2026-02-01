@@ -20,7 +20,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fyndo_app/features/notes/models/note.dart';
 import 'package:fyndo_app/providers/note_providers.dart';
-import 'package:fyndo_app/providers/vault_providers.dart';
+import 'package:fyndo_app/providers/unlocked_workspace_provider.dart';
 import 'package:fyndo_app/ui/consumers/note_consumer.dart';
 import 'package:fyndo_app/ui/pages/pages.dart';
 import 'package:fyndo_app/ui/pages/onboarding/onboarding_wizard.dart';
@@ -40,11 +40,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     debugLogDiagnostics: true,
     refreshListenable: _RouterRefreshNotifier(ref),
     redirect: (context, state) {
-      final vaultState = ref.read(vaultProvider);
+      final unlockedWorkspace = ref.read(unlockedWorkspaceProvider);
       final workspaceAsync = ref.read(workspaceProvider);
 
       final isOnWelcome = state.matchedLocation == '/';
       final isOnOnboarding = state.matchedLocation == '/onboarding';
+
+      print(
+        '[AppRouter] DEBUG: Redirect check - location: ${state.matchedLocation}',
+      );
+      print(
+        '[AppRouter] DEBUG: unlockedWorkspace: ${unlockedWorkspace != null ? "UNLOCKED" : "LOCKED"}',
+      );
 
       // Check if workspace is configured
       final hasWorkspace = workspaceAsync.when(
@@ -52,25 +59,30 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         loading: () => false,
         error: (error, stackTrace) => false,
       );
+      print('[AppRouter] DEBUG: hasWorkspace: $hasWorkspace');
 
       // If no workspace configured and not on onboarding, redirect to onboarding
       if (!hasWorkspace && !isOnOnboarding) {
+        print('[AppRouter] DEBUG: Redirecting to /onboarding (no workspace)');
         return '/onboarding';
       }
 
-      // If workspace configured but vault not unlocked and not on welcome/onboarding
+      // If workspace configured but not unlocked and not on welcome/onboarding
       if (hasWorkspace &&
-          !vaultState.isUnlocked &&
+          unlockedWorkspace == null &&
           !isOnWelcome &&
           !isOnOnboarding) {
+        print('[AppRouter] DEBUG: Redirecting to / (workspace locked)');
         return '/';
       }
 
-      // If vault is unlocked and on welcome, redirect to home
-      if (vaultState.isUnlocked && isOnWelcome) {
+      // If workspace is unlocked and on welcome, redirect to home
+      if (unlockedWorkspace != null && isOnWelcome) {
+        print('[AppRouter] DEBUG: Redirecting to /home (workspace unlocked)');
         return '/home';
       }
 
+      print('[AppRouter] DEBUG: No redirect');
       return null;
     },
     routes: [
@@ -184,10 +196,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   );
 });
 
-/// Router refresh notifier that listens to vault and workspace state changes.
+/// Router refresh notifier that listens to workspace state changes.
 class _RouterRefreshNotifier extends ChangeNotifier {
   _RouterRefreshNotifier(this._ref) {
-    _ref.listen(vaultProvider.select((s) => s.status), (previous, next) {
+    _ref.listen(unlockedWorkspaceProvider, (previous, next) {
       notifyListeners();
     });
     _ref.listen(workspaceProvider, (previous, next) {

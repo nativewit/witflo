@@ -181,7 +181,9 @@ abstract class WorkspaceKeyring
   Map<String, dynamic> toJson() {
     return {
       'version': version,
-      'vaults': vaults.map((key, value) => MapEntry(key, value.toJson())),
+      'vaults': Map.fromEntries(
+        vaults.entries.map((e) => MapEntry(e.key, e.value.toJson())),
+      ),
       'modified_at': modifiedAt.toIso8601String(),
     };
   }

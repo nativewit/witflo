@@ -12,13 +12,15 @@ import 'package:fyndo_app/core/vault/vault.dart';
 import 'package:fyndo_app/features/notes/data/note_repository.dart';
 import 'package:fyndo_app/features/notes/models/note.dart';
 
+import '../../helpers/crypto_test_helper.dart';
+
 void main() {
   late CryptoService crypto;
   late VaultService vaultService;
   late Directory tempDir;
 
   setUpAll(() async {
-    crypto = await CryptoService.initialize();
+    crypto = await initializeCryptoForTests();
     vaultService = VaultService(crypto);
   });
 

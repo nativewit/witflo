@@ -11,6 +11,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fyndo_app/core/crypto/crypto.dart';
 import 'package:fyndo_app/platform/database/drift/database_providers.dart';
 import 'package:fyndo_app/providers/workspace_provider.dart';
+import 'package:fyndo_app/core/mcp/logger_mcp_tool.dart';
+import 'package:fyndo_app/core/mcp/widget_inspector_mcp_tool.dart';
 
 // Global container to access Riverpod providers
 // Will be set from main.dart after ProviderScope is created
@@ -386,6 +388,70 @@ void initializeFyndoMCPTools() {
         },
       ),
 
+      // Logger Tool - Get Logs
+      MCPCallEntry.tool(
+        definition: MCPToolDefinition(
+          name: 'get_logs',
+          description: 'Query application logs with filtering (for debugging)',
+          inputSchema: ObjectSchema(
+            properties: {
+              'since': StringSchema(
+                description: 'ISO 8601 timestamp to filter logs after',
+              ),
+              'minLevel': StringSchema(
+                description:
+                    'Minimum log level: verbose, debug, info, warning, error, fatal',
+              ),
+              'tag': StringSchema(
+                description: 'Filter by logger tag (contains match)',
+              ),
+              'search': StringSchema(
+                description: 'Search term in message or error',
+              ),
+              'limit': NumberSchema(
+                description: 'Maximum number of logs to return (default: 100)',
+              ),
+            },
+          ),
+        ),
+        handler: (params) async {
+          return MCPCallResult(
+            message: 'Logs retrieved',
+            parameters: await LoggerMcpTool.getLogs(params),
+          );
+        },
+      ),
+
+      // Logger Tool - Get Stats
+      MCPCallEntry.tool(
+        definition: MCPToolDefinition(
+          name: 'get_log_stats',
+          description: 'Get logging statistics and distribution',
+          inputSchema: ObjectSchema(properties: {}),
+        ),
+        handler: (params) async {
+          return MCPCallResult(
+            message: 'Log stats retrieved',
+            parameters: await LoggerMcpTool.getStats(params),
+          );
+        },
+      ),
+
+      // Logger Tool - Clear Logs
+      MCPCallEntry.tool(
+        definition: MCPToolDefinition(
+          name: 'clear_logs',
+          description: 'Clear all stored application logs',
+          inputSchema: ObjectSchema(properties: {}),
+        ),
+        handler: (params) async {
+          return MCPCallResult(
+            message: 'Logs cleared',
+            parameters: await LoggerMcpTool.clearLogs(params),
+          );
+        },
+      ),
+
       // Database Stats Tool
       MCPCallEntry.tool(
         definition: MCPToolDefinition(
@@ -491,6 +557,78 @@ void initializeFyndoMCPTools() {
               parameters: {'success': false, 'error': e.toString()},
             );
           }
+        },
+      ),
+
+      // Widget Inspector Tool - Get Widget Tree
+      MCPCallEntry.tool(
+        definition: MCPToolDefinition(
+          name: 'get_widget_tree',
+          description:
+              'Get the complete Flutter widget tree with properties for UI debugging',
+          inputSchema: ObjectSchema(
+            properties: {
+              'subtreeDepth': NumberSchema(
+                description: 'How many levels deep to inspect (default: 10)',
+              ),
+              'withProperties': BooleanSchema(
+                description:
+                    'Include detailed widget properties (default: true)',
+              ),
+            },
+          ),
+        ),
+        handler: (params) async {
+          return MCPCallResult(
+            message: 'Widget tree retrieved',
+            parameters: await WidgetInspectorMcpTool.getWidgetTree(params),
+          );
+        },
+      ),
+
+      // Widget Inspector Tool - Find Widgets
+      MCPCallEntry.tool(
+        definition: MCPToolDefinition(
+          name: 'find_widgets',
+          description:
+              'Find widgets by key, type, or text content for UI debugging',
+          inputSchema: ObjectSchema(
+            properties: {
+              'key': StringSchema(description: 'ValueKey string to search for'),
+              'type': StringSchema(
+                description:
+                    'Widget type name (e.g., "TextField", "ElevatedButton")',
+              ),
+              'text': StringSchema(description: 'Text content to search for'),
+            },
+          ),
+        ),
+        handler: (params) async {
+          return MCPCallResult(
+            message: 'Widget search completed',
+            parameters: await WidgetInspectorMcpTool.findWidgets(params),
+          );
+        },
+      ),
+
+      // Widget Inspector Tool - Get Widget Properties
+      MCPCallEntry.tool(
+        definition: MCPToolDefinition(
+          name: 'get_widget_properties',
+          description: 'Get detailed properties of a specific widget by key',
+          inputSchema: ObjectSchema(
+            properties: {
+              'key': StringSchema(description: 'ValueKey string of the widget'),
+            },
+          ),
+        ),
+        handler: (params) async {
+          return MCPCallResult(
+            message: 'Widget properties retrieved',
+            parameters: await WidgetInspectorMcpTool.getWidgetProperties(
+              params,
+            ),
+          );
         },
       ),
     },

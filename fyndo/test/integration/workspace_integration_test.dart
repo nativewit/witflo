@@ -10,15 +10,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:fyndo_app/core/crypto/crypto.dart';
 import 'package:fyndo_app/core/workspace/workspace_service.dart';
 
-void main() {
-  TestWidgetsFlutterBinding.ensureInitialized();
+import '../helpers/crypto_test_helper.dart';
 
+void main() {
   late CryptoService crypto;
   late WorkspaceService workspaceService;
   late Directory tempDir;
 
   setUpAll(() async {
-    crypto = await CryptoService.initialize();
+    crypto = await initializeCryptoForTests();
   });
 
   setUp(() async {

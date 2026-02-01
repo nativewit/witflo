@@ -19,9 +19,12 @@
 // Spec: docs/specs/spec-002-workspace-master-password.md
 // ═══════════════════════════════════════════════════════════════════════════
 
+import 'package:built_value/built_value.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fyndo_app/core/core.dart';
 import 'package:fyndo_app/providers/crypto_providers.dart';
+
+part 'vault_providers.g.dart';
 
 /// Vault state.
 enum VaultStatus {
@@ -34,34 +37,39 @@ enum VaultStatus {
 }
 
 /// State for the vault.
-class VaultState {
-  final VaultStatus status;
-  final UnlockedVault? vault;
-  final String? vaultPath;
-  final String? error;
+///
+/// Uses built_value for immutability and type safety (spec-003 compliance).
+abstract class VaultState implements Built<VaultState, VaultStateBuilder> {
+  /// Current vault status.
+  @BuiltValueField(wireName: 'status')
+  VaultStatus get status;
 
-  const VaultState({
-    this.status = VaultStatus.uninitialized,
-    this.vault,
-    this.vaultPath,
-    this.error,
-  });
+  /// The unlocked vault instance (null if not unlocked).
+  @BuiltValueField(wireName: 'vault')
+  UnlockedVault? get vault;
 
-  VaultState copyWith({
-    VaultStatus? status,
-    UnlockedVault? vault,
-    String? vaultPath,
-    String? error,
-  }) {
-    return VaultState(
-      status: status ?? this.status,
-      vault: vault ?? this.vault,
-      vaultPath: vaultPath ?? this.vaultPath,
-      error: error,
-    );
-  }
+  /// Path to the vault directory.
+  @BuiltValueField(wireName: 'vaultPath')
+  String? get vaultPath;
 
+  /// Error message if status is error.
+  @BuiltValueField(wireName: 'error')
+  String? get error;
+
+  /// Whether the vault is currently unlocked.
   bool get isUnlocked => status == VaultStatus.unlocked && vault != null;
+
+  VaultState._();
+  factory VaultState([void Function(VaultStateBuilder) updates]) = _$VaultState;
+
+  /// Creates initial vault state (uninitialized).
+  factory VaultState.initial() => VaultState(
+    (b) => b
+      ..status = VaultStatus.uninitialized
+      ..vault = null
+      ..vaultPath = null
+      ..error = null,
+  );
 }
 
 /// Notifier for vault state management.
@@ -72,7 +80,7 @@ class VaultState {
 class VaultNotifier extends Notifier<VaultState> {
   @override
   VaultState build() {
-    return const VaultState();
+    return VaultState.initial();
   }
 
   /// Sets the vault path for an existing vault.
@@ -80,9 +88,10 @@ class VaultNotifier extends Notifier<VaultState> {
     final filesystem = VaultFilesystem(path);
     final exists = await filesystem.exists();
 
-    state = state.copyWith(
-      status: exists ? VaultStatus.locked : VaultStatus.uninitialized,
-      vaultPath: path,
+    state = state.rebuild(
+      (b) => b
+        ..status = exists ? VaultStatus.locked : VaultStatus.uninitialized
+        ..vaultPath = path,
     );
   }
 
@@ -129,7 +138,11 @@ class VaultNotifier extends Notifier<VaultState> {
   /// Locks the vault.
   void lock() {
     state.vault?.dispose();
-    state = state.copyWith(status: VaultStatus.locked, vault: null);
+    state = state.rebuild(
+      (b) => b
+        ..status = VaultStatus.locked
+        ..vault = null,
+    );
   }
 
   /// Changes the vault password.
@@ -158,7 +171,10 @@ final vaultProvider = NotifierProvider<VaultNotifier, VaultState>(
 );
 
 /// Provider for vault service.
-final vaultServiceProvider = Provider<VaultService>((ref) {
+///
+/// Returns [IVaultService] interface for SOLID compliance (spec-003).
+/// This allows easy mocking in tests and flexibility in implementation.
+final vaultServiceProvider = Provider<IVaultService>((ref) {
   return VaultService(ref.watch(cryptoServiceProvider));
 });
 

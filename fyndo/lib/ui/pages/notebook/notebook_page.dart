@@ -5,6 +5,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:fyndo_app/core/agentic/fyndo_keys.dart';
+import 'package:fyndo_app/core/logging/app_logger.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fyndo_app/features/notes/models/note.dart';
 import 'package:fyndo_app/providers/note_providers.dart';
@@ -59,6 +60,8 @@ class _NotebookPageContent extends ConsumerStatefulWidget {
 
 class _NotebookPageContentState extends ConsumerState<_NotebookPageContent>
     with WidgetsBindingObserver {
+  static final _log = AppLogger.get('NotebookPage');
+
   String? _selectedNoteId;
   Note? _currentNote;
   final _titleController = TextEditingController();
@@ -120,12 +123,11 @@ class _NotebookPageContentState extends ConsumerState<_NotebookPageContent>
 
     try {
       final content = _editorKey?.currentState?.getContent() ?? '';
-      debugPrint('_saveNote: saving note ${_currentNote!.id}');
-      debugPrint(
-        '_saveNote: title="${_titleController.text}", content length=${content.length}',
-      );
-      debugPrint(
-        '_saveNote: content preview: ${content.substring(0, content.length.clamp(0, 100))}',
+      _log.debug(
+        'Saving note ${_currentNote!.id}: '
+        'title="${_titleController.text}", '
+        'content length=${content.length}, '
+        'preview: ${content.substring(0, content.length.clamp(0, 100))}',
       );
       final updatedNote = _currentNote!.copyWith(
         title: _titleController.text,
@@ -183,11 +185,10 @@ class _NotebookPageContentState extends ConsumerState<_NotebookPageContent>
     // Invalidate to ensure we get fresh data from the repository
     ref.invalidate(noteProvider(noteId));
     final note = await ref.read(noteProvider(noteId).future);
-    debugPrint(
-      '_selectNote: loaded note ${note?.id}, content length: ${note?.content.length ?? 0}',
-    );
-    debugPrint(
-      '_selectNote: content preview: ${note != null ? note.content.substring(0, note.content.length.clamp(0, 100)) : "null"}',
+    _log.debug(
+      'Selected note ${note?.id}: '
+      'content length=${note?.content.length ?? 0}, '
+      'preview: ${note != null ? note.content.substring(0, note.content.length.clamp(0, 100)) : "null"}',
     );
     if (note != null && mounted) {
       setState(() {

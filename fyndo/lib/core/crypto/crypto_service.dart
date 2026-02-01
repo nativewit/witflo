@@ -18,6 +18,7 @@
 // pwhash (Argon2id). This requires the sumo variant of sodium.js for web.
 // ═══════════════════════════════════════════════════════════════════════════
 
+import 'package:fyndo_app/core/crypto/crypto_service_interface.dart';
 import 'package:fyndo_app/core/crypto/primitives/primitives.dart';
 import 'package:fyndo_app/core/crypto/types/types.dart';
 import 'package:sodium_libs/sodium_libs_sumo.dart';
@@ -25,7 +26,7 @@ import 'package:sodium_libs/sodium_libs_sumo.dart';
 /// Central cryptography service for Fyndo.
 ///
 /// Must be initialized before use via [CryptoService.initialize()].
-class CryptoService {
+class CryptoService implements ICryptoService {
   static CryptoService? _instance;
   static SodiumSumo? _sodium;
 
@@ -80,19 +81,51 @@ class CryptoService {
   }
 
   /// Access to raw libsodium (for advanced use only).
+  @override
   SodiumSumo get sodium {
     if (_sodium == null) {
       throw StateError('CryptoService not initialized');
     }
     return _sodium!;
   }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CONVENIENCE METHODS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// Encrypts data with a key, returning the ciphertext.
+  @override
+  EncryptionResult encryptBytes({
+    required SecureBytes plaintext,
+    required CryptoKey key,
+  }) {
+    return xchacha20.encrypt(plaintext: plaintext, key: key);
+  }
+
+  /// Decrypts ciphertext with a key, returning the plaintext.
+  @override
+  SecureBytes decryptBytes({
+    required EncryptionResult ciphertext,
+    required CryptoKey key,
+  }) {
+    return xchacha20.decrypt(ciphertext: ciphertext.ciphertext, key: key);
+  }
+
+  /// Hashes data and returns a content address.
+  @override
+  ContentHash hashContent(EncryptionResult encrypted) {
+    return blake3.hash(encrypted.ciphertext);
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// CONVENIENCE EXTENSIONS
+// DEPRECATED EXTENSIONS (kept for backwards compatibility)
 // ═══════════════════════════════════════════════════════════════════════════
 
 /// Extension for easy access to crypto service from anywhere.
+///
+/// DEPRECATED: Use the methods directly on ICryptoService instead.
+@Deprecated('Use methods directly on ICryptoService')
 extension CryptoExtensions on CryptoService {
   /// Encrypts data with a key, returning the ciphertext.
   EncryptionResult encryptBytes({

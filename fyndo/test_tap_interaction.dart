@@ -1,8 +1,15 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:vm_service/vm_service.dart';
+import 'package:vm_service/vm_service_io.dart';
 
-void main() async {
-  final vmServiceUrl = 'ws://127.0.0.1:52651/_Ixd14vJOg4=/ws';
+void main(List<String> args) async {
+  if (args.isEmpty) {
+    print('Usage: dart test_tap_interaction.dart <vm_service_uri>');
+    exit(1);
+  }
+
+  final vmServiceUrl = args[0];
 
   print('🎯 MARIONETTE UI INTERACTION TEST\n');
   print('━' * 70);

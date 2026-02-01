@@ -28,6 +28,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:fyndo_app/core/crypto/crypto.dart';
+import 'package:fyndo_app/core/identity/user_identity_service_interface.dart';
 
 /// User identity derived from vault key.
 class UserIdentity {
@@ -125,7 +126,7 @@ class UserPublicIdentity {
 }
 
 /// Service for user identity management.
-class UserIdentityService {
+class UserIdentityService implements IUserIdentityService {
   final CryptoService _crypto;
 
   UserIdentityService(this._crypto);
@@ -133,6 +134,7 @@ class UserIdentityService {
   /// Derives user identity from vault key.
   ///
   /// This is deterministic - same VK always produces same identity.
+  @override
   UserIdentity deriveFromVaultKey(VaultKey vaultKey) {
     // Derive signing key seed
     final signingSeed = _crypto.hkdf.deriveKey(
@@ -162,6 +164,7 @@ class UserIdentityService {
   }
 
   /// Wraps a key for a user (for sharing).
+  @override
   WrappedKey wrapKeyForUser({
     required CryptoKey keyToWrap,
     required UserPublicIdentity recipient,
@@ -173,6 +176,7 @@ class UserIdentityService {
   }
 
   /// Unwraps a key received from another user.
+  @override
   SecureBytes unwrapKey({
     required WrappedKey wrappedKey,
     required UserIdentity ourIdentity,

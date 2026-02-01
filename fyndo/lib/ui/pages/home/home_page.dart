@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fyndo_app/providers/note_providers.dart';
 import 'package:fyndo_app/providers/notebook_providers.dart';
 import 'package:fyndo_app/providers/vault_providers.dart';
+import 'package:fyndo_app/providers/unlocked_workspace_provider.dart';
 import 'package:fyndo_app/ui/consumers/notebook_consumer.dart';
 import 'package:fyndo_app/ui/consumers/vault_consumer.dart';
 import 'package:fyndo_app/ui/theme/fyndo_theme.dart';
@@ -39,21 +40,18 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return VaultConsumer(
-      builder: (context, vaultState, _) {
-        // If not unlocked, redirect to welcome
-        if (!vaultState.isUnlocked) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            context.go('/');
-          });
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
+    // Check if workspace is unlocked using the new spec-002 architecture
+    final unlockedWorkspace = ref.watch(unlockedWorkspaceProvider);
 
-        return const _HomePageContent();
-      },
-    );
+    // If workspace is not unlocked, redirect to welcome
+    if (unlockedWorkspace == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        context.go('/');
+      });
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    return const _HomePageContent();
   }
 }
 

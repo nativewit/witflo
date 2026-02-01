@@ -32,6 +32,7 @@ import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fyndo_app/core/agentic/agentic_coding_tools.dart';
 import 'package:fyndo_app/core/crypto/crypto.dart';
+import 'package:fyndo_app/core/logging/app_logger.dart';
 import 'package:fyndo_app/providers/workspace_provider.dart';
 import 'package:fyndo_app/ui/router/app_router.dart';
 import 'package:fyndo_app/ui/theme/fyndo_theme.dart';
@@ -45,13 +46,24 @@ Future<void> main() async {
   // Initialize agentic coding tools (debug mode only)
   await AgenticCodingTools.initialize();
 
+  // Initialize logging system
+  await AppLogger.initialize(
+    minLevel: LogLevel.debug, // verbose in debug mode, info in production
+  );
+
+  final log = AppLogger.get('Main');
+  log.info('Fyndo starting up...');
+
   // Initialize platform-specific dependencies
   await initializePlatform();
+  log.debug('Platform initialized');
 
   // Initialize cryptography (REQUIRED before any crypto operations)
   await CryptoService.initialize();
+  log.debug('Cryptography initialized');
 
   // Run the app with centralized AI tooling wrapper
+  log.info('Launching Fyndo app');
   runApp(const AgenticCodingTools(child: ProviderScope(child: FyndoApp())));
 }
 

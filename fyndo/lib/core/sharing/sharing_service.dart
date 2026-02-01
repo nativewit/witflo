@@ -34,6 +34,7 @@ import 'dart:typed_data';
 
 import 'package:fyndo_app/core/crypto/crypto.dart';
 import 'package:fyndo_app/core/identity/identity.dart';
+import 'package:fyndo_app/core/sharing/sharing_service_interface.dart';
 import 'package:uuid/uuid.dart';
 
 /// Role in a shared resource.
@@ -186,18 +187,20 @@ class Share {
 }
 
 /// Service for managing sharing.
-class SharingService {
+class SharingService implements ISharingService {
   final CryptoService _crypto;
 
   SharingService(this._crypto);
 
   /// Computes a hash of a public key for identification.
+  @override
   String publicKeyHash(Uint8List publicKey) {
     final hash = _crypto.blake3.hash(publicKey);
     return hash.hex;
   }
 
   /// Creates a share for a notebook.
+  @override
   Share shareNotebook({
     required NotebookKey notebookKey,
     required String notebookId,
@@ -226,6 +229,7 @@ class SharingService {
   }
 
   /// Creates a share for a single note.
+  @override
   Share shareNote({
     required NoteShareKey noteShareKey,
     required String noteId,
@@ -253,6 +257,7 @@ class SharingService {
   }
 
   /// Accepts a share and unwraps the key.
+  @override
   SecureBytes acceptShare({
     required Share share,
     required UserIdentity recipient,
@@ -275,6 +280,7 @@ class SharingService {
   }
 
   /// Lists shares where we are the recipient.
+  @override
   List<Share> filterSharesForRecipient({
     required List<Share> allShares,
     required UserIdentity recipient,
@@ -287,6 +293,7 @@ class SharingService {
   }
 
   /// Lists shares where we are the sharer.
+  @override
   List<Share> filterSharesFromSharer({
     required List<Share> allShares,
     required UserIdentity sharer,

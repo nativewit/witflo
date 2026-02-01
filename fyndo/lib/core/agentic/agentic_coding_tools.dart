@@ -29,11 +29,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:marionette_flutter/marionette_flutter.dart';
-import 'package:mcp_toolkit/mcp_toolkit.dart';
+import 'package:fyndo_app/core/logging/app_logger.dart';
 import 'package:fyndo_app/core/mcp/fyndo_mcp_tools.dart';
 import 'package:fyndo_app/ui/widgets/common/fyndo_card.dart';
 import 'package:fyndo_app/ui/widgets/common/fyndo_list_tile.dart';
+import 'package:marionette_flutter/marionette_flutter.dart';
+import 'package:mcp_toolkit/mcp_toolkit.dart';
 
 /// Wrapper widget that initializes all agentic coding tools.
 /// Only active in debug mode - has zero impact on production builds.
@@ -86,11 +87,14 @@ class AgenticCodingTools extends StatefulWidget {
     // Register custom Fyndo MCP tools
     initializeFyndoMCPTools();
 
-    debugPrint('✅ Agentic Coding Tools initialized');
-    debugPrint('   - Marionette MCP: UI testing & screenshots');
-    debugPrint('   - MCP Toolkit: Flutter testing tools (3 tools)');
-    debugPrint('   - Fyndo MCP Tools: Domain-specific inspection (6 tools)');
-    debugPrint('   - Total: 9+ MCP tools available');
+    final log = AppLogger.get('AgenticCoding');
+    log.info(
+      'Agentic Coding Tools initialized: '
+      'Marionette MCP (UI testing), '
+      'MCP Toolkit (3 Flutter tools), '
+      'Fyndo MCP (9 domain tools: vault, sync, crypto, hierarchy, app, logger, db, widget inspector) - '
+      '12+ tools total',
+    );
   }
 }
 
