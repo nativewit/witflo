@@ -21,7 +21,8 @@ import 'package:fyndo_app/ui/theme/fyndo_theme.dart';
 /// The vault key is generated randomly by the caller, not derived from a password.
 class VaultCreateDialog extends StatefulWidget {
   /// Callback when vault is created with name, description, icon, and color.
-  final void Function({
+  /// Returns a Future to allow async operations.
+  final Future<void> Function({
     required String name,
     String? description,
     String? icon,
@@ -34,7 +35,7 @@ class VaultCreateDialog extends StatefulWidget {
   /// Shows the create vault dialog.
   static Future<void> show(
     BuildContext context, {
-    void Function({
+    Future<void> Function({
       required String name,
       String? description,
       String? icon,
@@ -70,21 +71,30 @@ class _VaultCreateDialogState extends State<VaultCreateDialog> {
     super.dispose();
   }
 
-  void _createVault() {
+  void _createVault() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isCreating = true);
 
-    widget.onCreateVault?.call(
-      name: _nameController.text.trim(),
-      description: _descriptionController.text.trim().isEmpty
-          ? null
-          : _descriptionController.text.trim(),
-      icon: _selectedIcon,
-      color: _selectedColor,
-    );
+    try {
+      await widget.onCreateVault?.call(
+        name: _nameController.text.trim(),
+        description: _descriptionController.text.trim().isEmpty
+            ? null
+            : _descriptionController.text.trim(),
+        icon: _selectedIcon,
+        color: _selectedColor,
+      );
 
-    Navigator.of(context).pop();
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+    } catch (e) {
+      // Error is handled by the callback, just reset loading state
+      if (mounted) {
+        setState(() => _isCreating = false);
+      }
+    }
   }
 
   @override

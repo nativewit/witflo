@@ -6,7 +6,7 @@
 // UPDATED FOR WORKSPACE MASTER PASSWORD (spec-002):
 // - Uses unlockedWorkspaceProvider instead of deprecated unlockedVaultProvider
 // - Vault keys come from workspace keyring, not individual vault passwords
-// - First vault in keyring is used as the active vault
+// - Active vault is determined by selectedVaultIdProvider (user selection)
 //
 // Spec: docs/specs/spec-002-workspace-master-password.md
 // ═══════════════════════════════════════════════════════════════════════════
@@ -18,23 +18,12 @@ import 'package:fyndo_app/features/notes/models/note.dart';
 import 'package:fyndo_app/providers/crypto_providers.dart';
 import 'package:fyndo_app/providers/unlocked_workspace_provider.dart';
 import 'package:fyndo_app/providers/vault_providers.dart';
+import 'package:fyndo_app/providers/vault_selection_providers.dart';
 import 'package:path/path.dart' as p;
 
-/// Provider for the default/active vault ID.
-///
-/// For now, this returns the first vault in the workspace keyring.
-/// In the future, this could be enhanced to support multiple vaults with
-/// a user-selected "active" vault.
-final activeVaultIdProvider = Provider<String?>((ref) {
-  final workspace = ref.watch(unlockedWorkspaceProvider);
-  if (workspace == null) {
-    return null;
-  }
-
-  // Get the first vault ID from the keyring
-  final vaultIds = workspace.keyring.vaults.keys.toList();
-  return vaultIds.isNotEmpty ? vaultIds.first : null;
-});
+// Re-export activeVaultIdProvider for backward compatibility
+export 'package:fyndo_app/providers/vault_selection_providers.dart'
+    show activeVaultIdProvider;
 
 /// Provider for the unlocked active vault.
 ///

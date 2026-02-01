@@ -298,6 +298,25 @@ class FyndoKeys {
   static const btnAutoLockCancel = Key('btn_autolock_cancel');
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // VAULT SWITCHER DIALOG
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// Vault switcher dialog container
+  static const vaultSwitcherDialog = Key('vault_switcher_dialog');
+
+  /// Vault list in switcher
+  static const vaultList = Key('vault_list');
+
+  /// Create vault button in switcher
+  static const btnCreateVaultSwitcher = Key('btn_create_vault_switcher');
+
+  /// Vault switcher item with dynamic ID
+  static Key vaultSwitcherItem(String id) => Key('vault_switcher_item_$id');
+
+  /// Vault card on home page (tappable to open switcher)
+  static const vaultCardHome = Key('vault_card_home');
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // HELPER METHODS
   // ═══════════════════════════════════════════════════════════════════════════
 
@@ -395,6 +414,12 @@ class FyndoKeys {
     radioAutoLock30Min,
     radioAutoLock60Min,
     btnAutoLockCancel,
+
+    // Vault Switcher Dialog
+    vaultSwitcherDialog,
+    vaultList,
+    btnCreateVaultSwitcher,
+    vaultCardHome,
   ];
 
   /// Get count of all static keys

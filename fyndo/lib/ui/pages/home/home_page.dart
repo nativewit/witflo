@@ -9,15 +9,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fyndo_app/providers/note_providers.dart';
 import 'package:fyndo_app/providers/notebook_providers.dart';
 import 'package:fyndo_app/providers/vault_providers.dart';
+import 'package:fyndo_app/providers/vault_selection_providers.dart';
 import 'package:fyndo_app/providers/unlocked_workspace_provider.dart';
 import 'package:fyndo_app/ui/consumers/notebook_consumer.dart';
-import 'package:fyndo_app/ui/consumers/vault_consumer.dart';
 import 'package:fyndo_app/ui/theme/fyndo_theme.dart';
 import 'package:fyndo_app/ui/widgets/common/fyndo_app_bar.dart';
 import 'package:fyndo_app/ui/widgets/common/fyndo_empty_state.dart';
 import 'package:fyndo_app/ui/widgets/common/fyndo_list_tile.dart';
 import 'package:fyndo_app/ui/widgets/notebook/notebook_create_dialog.dart';
 import 'package:fyndo_app/ui/widgets/vault/vault_card.dart';
+import 'package:fyndo_app/ui/widgets/vault/vault_switcher_dialog.dart';
 import 'package:go_router/go_router.dart';
 
 /// Home page showing vault overview and notebooks.
@@ -234,18 +235,8 @@ class _HomePageContent extends ConsumerWidget {
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.all(FyndoTheme.padding),
-            child: VaultConsumer(
-              builder: (context, vaultState, _) {
-                return VaultCard(
-                  name: 'My Vault',
-                  description: 'Your personal encrypted vault',
-                  isLocked: false,
-                  noteCount: 0,
-                  notebookCount: ref.watch(notebooksProvider).notebooks.length,
-                  lastModified: DateTime.now(),
-                  onTap: () {},
-                );
-              },
+            child: _VaultCardWithData(
+              onTap: () => _showVaultSwitcher(context, ref),
             ),
           ),
         ),
@@ -330,6 +321,52 @@ class _HomePageContent extends ConsumerWidget {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text('Search coming soon')));
+  }
+
+  void _showVaultSwitcher(BuildContext context, WidgetRef ref) {
+    VaultSwitcherDialog.show(
+      context,
+      onVaultSelected: (vaultId) {
+        // Vault selection is handled by the dialog
+        // Invalidate dependent providers to reload data
+        ref.invalidate(notebooksProvider);
+        ref.invalidate(activeNotesProvider);
+      },
+      onCreateVault:
+          ({
+            required String name,
+            String? description,
+            String? icon,
+            String? color,
+          }) async {
+            // Create vault using the vault creation provider
+            final result = await ref
+                .read(vaultCreationProvider.notifier)
+                .createVault(
+                  name: name,
+                  description: description,
+                  icon: icon,
+                  color: color,
+                );
+
+            if (context.mounted) {
+              if (result.isSuccess) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Vault "$name" created successfully!'),
+                  ),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Failed to create vault: ${result.error}'),
+                    backgroundColor: Theme.of(context).colorScheme.error,
+                  ),
+                );
+              }
+            }
+          },
+    );
   }
 
   void _handleMenuAction(BuildContext context, WidgetRef ref, String action) {
@@ -566,6 +603,58 @@ class _NotebookGridCard extends ConsumerWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Vault card that displays real vault data from providers.
+class _VaultCardWithData extends ConsumerWidget {
+  final VoidCallback? onTap;
+
+  const _VaultCardWithData({this.onTap});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final metadataAsync = ref.watch(activeVaultMetadataProvider);
+    final statsAsync = ref.watch(activeVaultStatsProvider);
+    final vaultCount = ref.watch(vaultCountProvider);
+
+    return metadataAsync.when(
+      data: (metadata) {
+        final stats = statsAsync.valueOrNull ?? VaultStats.empty;
+
+        return VaultCard(
+          key: FyndoKeys.vaultCardHome,
+          name: metadata?.name ?? 'My Vault',
+          description: metadata?.description ?? 'Your personal encrypted vault',
+          isLocked: false,
+          noteCount: stats.noteCount,
+          notebookCount: stats.notebookCount,
+          lastModified: stats.lastModified ?? DateTime.now(),
+          vaultCount: vaultCount > 1 ? vaultCount : null,
+          onTap: onTap,
+        );
+      },
+      loading: () => VaultCard(
+        key: FyndoKeys.vaultCardHome,
+        name: 'Loading...',
+        description: '',
+        isLocked: false,
+        noteCount: 0,
+        notebookCount: 0,
+        lastModified: DateTime.now(),
+        onTap: null,
+      ),
+      error: (_, __) => VaultCard(
+        key: FyndoKeys.vaultCardHome,
+        name: 'Error',
+        description: 'Failed to load vault data',
+        isLocked: false,
+        noteCount: 0,
+        notebookCount: 0,
+        lastModified: DateTime.now(),
+        onTap: onTap,
       ),
     );
   }

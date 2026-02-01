@@ -108,6 +108,22 @@ class UnlockedWorkspaceNotifier extends StateNotifier<UnlockedWorkspace?>
     print('[UnlockedWorkspaceProvider] DEBUG: unlock() completed');
   }
 
+  /// Updates the workspace with a new instance (e.g., after keyring changes).
+  ///
+  /// This is used when the keyring is modified (e.g., new vault added) but
+  /// we don't want to fully lock/unlock. The old workspace is NOT disposed
+  /// because the MUK is shared - caller must ensure proper lifecycle.
+  ///
+  /// [workspace] - The updated workspace with new keyring
+  void update(UnlockedWorkspace workspace) {
+    print('[UnlockedWorkspaceProvider] DEBUG: update() called');
+    // Don't dispose the old workspace - the MUK is the same object
+    // Just replace the state with the updated workspace
+    state = workspace;
+    _lastActivityTime = DateTime.now();
+    print('[UnlockedWorkspaceProvider] DEBUG: update() completed');
+  }
+
   /// Locks the workspace by disposing all cryptographic material.
   ///
   /// This:

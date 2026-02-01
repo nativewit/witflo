@@ -648,6 +648,7 @@ class _NotebookPageContentState extends ConsumerState<_NotebookPageContent>
               FyndoTheme.paddingSmall,
             ),
             child: TextField(
+              key: const Key('input_note_title_embedded'),
               controller: _titleController,
               onChanged: _onTitleChanged,
               style: theme.textTheme.headlineSmall?.copyWith(
