@@ -70,39 +70,10 @@ class _HomePageContent extends ConsumerWidget {
         leading: const SizedBox(width: 16),
         actions: [
           IconButton(
-            key: FyndoKeys.btnSearch,
-            icon: const Icon(Icons.search),
-            onPressed: () => _showSearch(context),
-            tooltip: 'Search',
-          ),
-          IconButton(
             key: FyndoKeys.navSettings,
             icon: const Icon(Icons.settings),
             onPressed: () => context.push('/settings'),
             tooltip: 'Settings',
-          ),
-          PopupMenuButton<String>(
-            key: FyndoKeys.menuMoreActions,
-            icon: const Icon(Icons.more_vert),
-            onSelected: (value) => _handleMenuAction(context, ref, value),
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'lock',
-                child: ListTile(
-                  leading: Icon(Icons.lock),
-                  title: Text('Lock Vault'),
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'trash',
-                child: ListTile(
-                  leading: Icon(Icons.delete),
-                  title: Text('Trash'),
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-            ],
           ),
         ],
       ),
@@ -140,6 +111,26 @@ class _HomePageContent extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // Search field
+        Padding(
+          padding: const EdgeInsets.all(FyndoTheme.padding),
+          child: TextField(
+            key: FyndoKeys.btnSearch,
+            decoration: InputDecoration(
+              hintText: 'Search...',
+              prefixIcon: const Icon(Icons.search, size: 20),
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: FyndoTheme.paddingSmall,
+                vertical: FyndoTheme.paddingSmall,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            onSubmitted: (value) => _showSearch(context),
+          ),
+        ),
         // Quick links
         Padding(
           padding: const EdgeInsets.all(FyndoTheme.padding),
@@ -244,6 +235,44 @@ class _HomePageContent extends ConsumerWidget {
                 ),
               );
             },
+          ),
+        ),
+        const Divider(),
+        // Lock and Trash actions
+        Padding(
+          padding: const EdgeInsets.all(FyndoTheme.paddingSmall),
+          child: Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  key: const Key('btn_lock_vault_sidebar'),
+                  onPressed: () => _handleMenuAction(context, ref, 'lock'),
+                  icon: const Icon(Icons.lock, size: 18),
+                  label: const Text('Lock'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: FyndoTheme.paddingSmall,
+                      vertical: FyndoTheme.paddingSmall,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  key: const Key('btn_trash_sidebar'),
+                  onPressed: () => _handleMenuAction(context, ref, 'trash'),
+                  icon: const Icon(Icons.delete, size: 18),
+                  label: const Text('Trash'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: FyndoTheme.paddingSmall,
+                      vertical: FyndoTheme.paddingSmall,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ],

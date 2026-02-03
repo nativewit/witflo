@@ -83,8 +83,9 @@ class _VaultPageContent extends ConsumerWidget {
         children: [
           // Vault info
           FyndoCard(
+            padding: const EdgeInsets.all(FyndoTheme.padding),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Row(
                   children: [

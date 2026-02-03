@@ -123,7 +123,7 @@ class VaultCard extends StatelessWidget {
                           ],
                           const SizedBox(width: 4),
                           Icon(
-                            Icons.chevron_right,
+                            Icons.settings,
                             size: 20,
                             color: theme.colorScheme.onSurfaceVariant,
                           ),
