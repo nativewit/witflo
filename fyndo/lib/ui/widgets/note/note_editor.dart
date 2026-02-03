@@ -168,6 +168,7 @@ class NoteEditorState extends State<NoteEditor> {
 
   Widget _buildToolbar(ThemeData theme, bool isDark) {
     return Container(
+      width: double.infinity,
       decoration: BoxDecoration(
         color: theme.scaffoldBackgroundColor,
         border: Border(bottom: BorderSide(color: theme.dividerColor, width: 1)),
@@ -204,12 +205,62 @@ class NoteEditorState extends State<NoteEditor> {
             base: QuillToolbarBaseButtonOptions(
               iconTheme: QuillIconTheme(
                 iconButtonSelectedData: IconButtonData(
-                  color: theme.colorScheme.primary,
+                  color: isDark
+                      ? theme.colorScheme.onPrimary
+                      : theme.colorScheme.surface,
+                  style: IconButton.styleFrom(
+                    backgroundColor: theme.colorScheme.primary,
+                  ),
                 ),
                 iconButtonUnselectedData: IconButtonData(
                   color: theme.colorScheme.onSurface,
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                  ),
                 ),
               ),
+            ),
+            bold: const QuillToolbarToggleStyleButtonOptions(
+              tooltip: 'Bold (⌘B)',
+            ),
+            italic: const QuillToolbarToggleStyleButtonOptions(
+              tooltip: 'Italic (⌘I)',
+            ),
+            underLine: const QuillToolbarToggleStyleButtonOptions(
+              tooltip: 'Underline (⌘U)',
+            ),
+            strikeThrough: const QuillToolbarToggleStyleButtonOptions(
+              tooltip: 'Strikethrough (⌘⇧S)',
+            ),
+            inlineCode: const QuillToolbarToggleStyleButtonOptions(
+              tooltip: 'Code (⌘`)',
+            ),
+            undoHistory: const QuillToolbarHistoryButtonOptions(
+              tooltip: 'Undo (⌘Z)',
+            ),
+            redoHistory: const QuillToolbarHistoryButtonOptions(
+              tooltip: 'Redo (⌘Y)',
+            ),
+            listBullets: const QuillToolbarToggleStyleButtonOptions(
+              tooltip: 'Bullet List (⌘⇧L)',
+            ),
+            listNumbers: const QuillToolbarToggleStyleButtonOptions(
+              tooltip: 'Numbered List (⌘⇧O)',
+            ),
+            toggleCheckList: const QuillToolbarToggleCheckListButtonOptions(
+              tooltip: 'Checklist (⌘⇧C)',
+            ),
+            quote: const QuillToolbarToggleStyleButtonOptions(
+              tooltip: 'Quote (⌘⇧B)',
+            ),
+            codeBlock: const QuillToolbarToggleStyleButtonOptions(
+              tooltip: 'Code Block (⌘⇧`)',
+            ),
+            linkStyle: const QuillToolbarLinkStyleButtonOptions(
+              tooltip: 'Link (⌘K)',
+            ),
+            clearFormat: const QuillToolbarClearFormatButtonOptions(
+              tooltip: 'Clear Formatting',
             ),
           ),
         ),
