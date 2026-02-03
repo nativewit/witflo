@@ -8,7 +8,6 @@ import 'package:fyndo_app/core/agentic/fyndo_keys.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fyndo_app/providers/crypto_providers.dart';
 import 'package:fyndo_app/providers/unlocked_workspace_provider.dart';
-import 'package:fyndo_app/providers/vault_providers.dart';
 import 'package:fyndo_app/providers/vault_selection_providers.dart';
 import 'package:fyndo_app/ui/theme/fyndo_theme.dart';
 import 'package:fyndo_app/ui/widgets/common/fyndo_app_bar.dart';
@@ -347,16 +346,20 @@ class _VaultPageContent extends ConsumerWidget {
             throw Exception('No vault selected');
           }
 
-          // Delete the vault
+          // Delete the vault (updates keyring and deletes filesystem)
           await workspaceService.deleteVault(
             workspace: workspace,
             vaultId: vaultId,
           );
 
-          // Lock the vault state (since it no longer exists)
-          ref.read(vaultProvider.notifier).lock();
+          // Update the workspace provider with the modified keyring
+          // The workspace.keyring was already updated by deleteVault()
+          ref.read(unlockedWorkspaceProvider.notifier).update(workspace);
 
-          // Navigate away
+          // Select a different vault (first available after deletion)
+          ref.read(selectedVaultIdProvider.notifier).ensureSelection();
+
+          // Navigate away to home
           if (context.mounted) {
             context.go('/');
             ScaffoldMessenger.of(context).showSnackBar(

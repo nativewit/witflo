@@ -151,11 +151,23 @@ class NotebooksNotifier extends AsyncNotifier<NotebooksState> {
     });
   }
 
-  /// Deletes a notebook.
+  /// Deletes a notebook and all its notes.
   Future<void> deleteNotebook(String notebookId) async {
-    final repo = await ref.read(notebookRepositoryProvider.future);
-    await repo.delete(notebookId);
+    final notebookRepo = await ref.read(notebookRepositoryProvider.future);
+    final noteRepo = await ref.read(noteRepositoryProvider.future);
 
+    // Get all notes in this notebook
+    final notes = await noteRepo.listByNotebook(notebookId);
+
+    // Delete all notes first
+    for (final noteMetadata in notes) {
+      await noteRepo.delete(noteMetadata.id);
+    }
+
+    // Then delete the notebook
+    await notebookRepo.delete(notebookId);
+
+    // Update state
     state.whenData((currentState) {
       state = AsyncValue.data(
         currentState.rebuild((b) {
