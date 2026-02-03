@@ -8,7 +8,6 @@ import 'package:fyndo_app/core/agentic/fyndo_keys.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fyndo_app/providers/note_providers.dart';
 import 'package:fyndo_app/providers/notebook_providers.dart';
-import 'package:fyndo_app/providers/vault_providers.dart';
 import 'package:fyndo_app/providers/vault_selection_providers.dart';
 import 'package:fyndo_app/providers/unlocked_workspace_provider.dart';
 import 'package:fyndo_app/ui/consumers/notebook_consumer.dart';
@@ -382,13 +381,38 @@ class _HomePageContent extends ConsumerWidget {
   void _handleMenuAction(BuildContext context, WidgetRef ref, String action) {
     switch (action) {
       case 'lock':
-        ref.read(vaultProvider.notifier).lock();
-        context.go('/');
+        _confirmLockWorkspace(context, ref);
         break;
       case 'trash':
         context.push('/trash');
         break;
     }
+  }
+
+  void _confirmLockWorkspace(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Lock Workspace?'),
+        content: const Text(
+          'All vaults will be locked and you will need to enter your master password to unlock again.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(context);
+              ref.read(unlockedWorkspaceProvider.notifier).lock();
+              context.go('/');
+            },
+            child: const Text('Lock'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _createVault(BuildContext context, WidgetRef ref) {
