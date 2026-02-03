@@ -16,6 +16,7 @@ import 'package:fyndo_app/ui/widgets/common/fyndo_app_bar.dart';
 import 'package:fyndo_app/ui/widgets/common/fyndo_empty_state.dart';
 import 'package:fyndo_app/ui/widgets/common/fyndo_list_tile.dart';
 import 'package:fyndo_app/ui/widgets/notebook/notebook_create_dialog.dart';
+import 'package:fyndo_app/ui/widgets/notebook/notebook_menu.dart';
 import 'package:fyndo_app/ui/widgets/vault/vault_card.dart';
 import 'package:fyndo_app/ui/widgets/vault/vault_create_dialog.dart';
 import 'package:go_router/go_router.dart';
@@ -351,8 +352,10 @@ class _HomePageContent extends ConsumerWidget {
                       return _NotebookGridCard(
                         notebook: notebook,
                         onTap: () => context.push('/notebook/${notebook.id}'),
-                        onMoreOptions: () =>
-                            _showNotebookOptions(context, ref, notebook),
+                        onRename: () =>
+                            _showRenameDialog(context, ref, notebook),
+                        onDelete: () =>
+                            _confirmDeleteNotebook(context, ref, notebook),
                       );
                     }, childCount: notebooks.length),
                   ),
@@ -381,38 +384,14 @@ class _HomePageContent extends ConsumerWidget {
   void _handleMenuAction(BuildContext context, WidgetRef ref, String action) {
     switch (action) {
       case 'lock':
-        _confirmLockWorkspace(context, ref);
+        // Lock immediately without confirmation for quick access
+        ref.read(unlockedWorkspaceProvider.notifier).lock();
+        context.go('/');
         break;
       case 'trash':
         context.push('/trash');
         break;
     }
-  }
-
-  void _confirmLockWorkspace(BuildContext context, WidgetRef ref) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Lock Workspace?'),
-        content: const Text(
-          'All vaults will be locked and you will need to enter your master password to unlock again.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ref.read(unlockedWorkspaceProvider.notifier).lock();
-              context.go('/');
-            },
-            child: const Text('Lock'),
-          ),
-        ],
-      ),
-    );
   }
 
   void _createVault(BuildContext context, WidgetRef ref) {
@@ -471,59 +450,39 @@ class _HomePageContent extends ConsumerWidget {
     );
   }
 
-  void _showNotebookOptions(
+  void _showRenameDialog(
     BuildContext context,
     WidgetRef ref,
     Notebook notebook,
   ) {
-    showModalBottomSheet(
+    final controller = TextEditingController(text: notebook.name);
+
+    showDialog(
       context: context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.share),
-              title: const Text('Share'),
-              onTap: () {
-                Navigator.pop(context);
-                // TODO: Show share dialog
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.edit),
-              title: const Text('Rename'),
-              onTap: () {
-                Navigator.pop(context);
-                // TODO: Show rename dialog
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.archive),
-              title: const Text('Archive'),
-              onTap: () {
-                Navigator.pop(context);
-                ref
-                    .read(notebooksProvider.notifier)
-                    .archiveNotebook(notebook.id);
-              },
-            ),
-            ListTile(
-              leading: Icon(
-                Icons.delete,
-                color: Theme.of(context).colorScheme.error,
-              ),
-              title: Text(
-                'Delete',
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                _confirmDeleteNotebook(context, ref, notebook);
-              },
-            ),
-          ],
+      builder: (context) => AlertDialog(
+        title: const Text('Rename Notebook'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(labelText: 'Name'),
+          autofocus: true,
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(context);
+              ref
+                  .read(notebooksProvider.notifier)
+                  .updateNotebook(
+                    notebook.copyWith(name: controller.text.trim()),
+                  );
+            },
+            child: const Text('Rename'),
+          ),
+        ],
       ),
     );
   }
@@ -613,12 +572,14 @@ class _VaultListTile extends StatelessWidget {
 class _NotebookGridCard extends ConsumerWidget {
   final Notebook notebook;
   final VoidCallback? onTap;
-  final VoidCallback? onMoreOptions;
+  final VoidCallback onRename;
+  final VoidCallback onDelete;
 
   const _NotebookGridCard({
     required this.notebook,
     this.onTap,
-    this.onMoreOptions,
+    required this.onRename,
+    required this.onDelete,
   });
 
   @override
@@ -665,13 +626,12 @@ class _NotebookGridCard extends ConsumerWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        if (onMoreOptions != null)
-                          IconButton(
-                            icon: const Icon(Icons.more_vert, size: 18),
-                            onPressed: onMoreOptions,
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                          ),
+                        NotebookMenu(
+                          notebook: notebook,
+                          icon: const Icon(Icons.more_vert, size: 18),
+                          onRename: onRename,
+                          onDelete: onDelete,
+                        ),
                       ],
                     ),
                     const SizedBox(height: 8),
