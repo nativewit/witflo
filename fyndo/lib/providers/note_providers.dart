@@ -301,6 +301,9 @@ class NoteOperationsNotifier extends AsyncNotifier<void> {
       ref.invalidate(noteProvider(noteId));
       ref.invalidate(notesMetadataProvider);
       ref.invalidate(activeNotesProvider);
+      if (note.notebookId != null) {
+        ref.invalidate(notebookNotesProvider(note.notebookId));
+      }
     }
   }
 
@@ -315,6 +318,9 @@ class NoteOperationsNotifier extends AsyncNotifier<void> {
       ref.invalidate(notesMetadataProvider);
       ref.invalidate(activeNotesProvider);
       ref.invalidate(noteStatsProvider);
+      if (note.notebookId != null) {
+        ref.invalidate(notebookNotesProvider(note.notebookId));
+      }
     }
   }
 
@@ -329,6 +335,9 @@ class NoteOperationsNotifier extends AsyncNotifier<void> {
       ref.invalidate(notesMetadataProvider);
       ref.invalidate(activeNotesProvider);
       ref.invalidate(noteStatsProvider);
+      if (note.notebookId != null) {
+        ref.invalidate(notebookNotesProvider(note.notebookId));
+      }
     }
   }
 }
