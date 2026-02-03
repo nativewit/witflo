@@ -112,6 +112,9 @@ class FyndoKeys {
   /// Notebooks list in sidebar
   static const listNotebooksSidebar = Key('list_notebooks_sidebar');
 
+  /// Vaults list in sidebar
+  static const listVaultsSidebar = Key('list_vaults_sidebar');
+
   /// Create notebook button (FAB)
   static const btnNotebookCreate = Key('btn_notebook_create');
 
@@ -245,6 +248,28 @@ class FyndoKeys {
   static const btnShareDone = Key('btn_share_done');
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // VAULT EXPORT DIALOG
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// Export vault button (settings)
+  static const btnExportVault = Key('btn_export_vault');
+
+  /// Vault selection dropdown in export dialog
+  static const dropdownExportVaultSelect = Key('dropdown_export_vault_select');
+
+  /// Select export folder button
+  static const btnExportSelectFolder = Key('btn_export_select_folder');
+
+  /// Confirm export button
+  static const btnExportConfirm = Key('btn_export_confirm');
+
+  /// Cancel export button
+  static const btnExportCancel = Key('btn_export_cancel');
+
+  /// Security warning checkbox
+  static const checkboxExportWarning = Key('checkbox_export_warning');
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // SETTINGS PAGE
   // ═══════════════════════════════════════════════════════════════════════════
 
@@ -348,6 +373,7 @@ class FyndoKeys {
     navPinned,
     navArchived,
     listNotebooksSidebar,
+    listVaultsSidebar,
     btnNotebookCreate,
     btnNotebookCreateSidebar,
     btnNotebookCreateHeader,
@@ -393,6 +419,14 @@ class FyndoKeys {
     btnShareGenerateLink,
     btnShareCopyLink,
     btnShareDone,
+
+    // Vault Export Dialog
+    btnExportVault,
+    dropdownExportVaultSelect,
+    btnExportSelectFolder,
+    btnExportConfirm,
+    btnExportCancel,
+    checkboxExportWarning,
 
     // Settings Page
     btnSettingsChangePassword,

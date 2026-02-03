@@ -22,6 +22,7 @@ import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fyndo_app/core/crypto/crypto.dart';
+import 'package:fyndo_app/core/logging/app_logger.dart';
 import 'package:fyndo_app/core/vault/vault_metadata.dart';
 import 'package:fyndo_app/core/workspace/unlocked_workspace.dart';
 import 'package:fyndo_app/providers/crypto_providers.dart';
@@ -139,7 +140,7 @@ final selectedVaultIdProvider =
         if (next == null) {
           // Workspace locked, clear selection
           notifier.clearSelection();
-        } else if (previous == null && next != null) {
+        } else if (previous == null) {
           // Workspace just unlocked, ensure selection
           notifier.ensureSelection();
         }
@@ -223,32 +224,33 @@ final activeVaultStatsProvider = FutureProvider<VaultStats>((ref) async {
   final vaultId = ref.watch(activeVaultIdProvider);
   if (vaultId == null) return VaultStats.empty;
 
-  // Get notebook count from notebooks provider
-  final notebooksAsync = ref.watch(notebooksProvider);
-  final notebookCount = notebooksAsync.when(
-    data: (state) => state.notebooks.where((n) => !n.isArchived).length,
-    loading: () => 0,
-    error: (error, stackTrace) => 0,
-  );
+  // Wait for notebook data to load
+  final notebooksState = await ref.watch(notebooksProvider.future);
+  final notebookCount = notebooksState.notebooks
+      .where((n) => !n.isArchived)
+      .length;
 
-  // Get note count from note stats provider
-  final noteStatsAsync = ref.watch(noteStatsProvider);
-  final noteStats = noteStatsAsync.valueOrNull;
-  final noteCount = noteStats?.total ?? 0;
+  // Wait for note stats to load
+  final noteStats = await ref.watch(noteStatsProvider.future);
+  // Use active count (exclude archived and trashed notes) to match what users see in UI
+  final noteCount = noteStats.active;
+
+  // Debug logging
+  final log = AppLogger.get('VaultStats');
+  log.debug('Vault: $vaultId');
+  log.debug('Total notes: ${noteStats.total}');
+  log.debug('Active notes: ${noteStats.active}');
+  log.debug('Archived notes: ${noteStats.archived}');
+  log.debug('Trashed notes: ${noteStats.trashed}');
+  log.debug('Notebook count: $notebookCount');
 
   // Get last modified from the most recent note or notebook
-  DateTime? lastModified = notebooksAsync.when(
-    data: (state) {
-      if (state.notebooks.isNotEmpty) {
-        return state.notebooks
-            .map((n) => n.modifiedAt)
-            .reduce((a, b) => a.isAfter(b) ? a : b);
-      }
-      return null;
-    },
-    loading: () => null,
-    error: (error, stackTrace) => null,
-  );
+  DateTime? lastModified;
+  if (notebooksState.notebooks.isNotEmpty) {
+    lastModified = notebooksState.notebooks
+        .map((n) => n.modifiedAt)
+        .reduce((a, b) => a.isAfter(b) ? a : b);
+  }
 
   return VaultStats(
     noteCount: noteCount,

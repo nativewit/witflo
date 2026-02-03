@@ -18,7 +18,7 @@ import 'package:fyndo_app/ui/widgets/common/fyndo_empty_state.dart';
 import 'package:fyndo_app/ui/widgets/common/fyndo_list_tile.dart';
 import 'package:fyndo_app/ui/widgets/notebook/notebook_create_dialog.dart';
 import 'package:fyndo_app/ui/widgets/vault/vault_card.dart';
-import 'package:fyndo_app/ui/widgets/vault/vault_switcher_dialog.dart';
+import 'package:fyndo_app/ui/widgets/vault/vault_create_dialog.dart';
 import 'package:go_router/go_router.dart';
 
 /// Home page showing vault overview and notebooks.
@@ -170,24 +170,24 @@ class _HomePageContent extends ConsumerWidget {
         ),
         const Divider(),
 
-        // Notebooks
+        // Vaults
         Padding(
           padding: const EdgeInsets.all(FyndoTheme.padding),
           child: Row(
             children: [
               Expanded(
                 child: Text(
-                  'Notebooks',
+                  'Vaults',
                   style: theme.textTheme.labelMedium?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
               ),
               IconButton(
-                key: FyndoKeys.btnNotebookCreateSidebar,
+                key: FyndoKeys.btnVaultCreate,
                 icon: const Icon(Icons.add, size: 18),
-                onPressed: () => _createNotebook(context, ref),
-                tooltip: 'Create Notebook',
+                onPressed: () => _createVault(context, ref),
+                tooltip: 'Create Vault',
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
               ),
@@ -195,29 +195,53 @@ class _HomePageContent extends ConsumerWidget {
           ),
         ),
         Expanded(
-          child: ActiveNotebooksConsumer(
-            builder: (context, notebooks, _) {
-              if (notebooks.isEmpty) {
-                return Center(
-                  child: Text(
-                    'No notebooks yet',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                );
-              }
+          child: Consumer(
+            builder: (context, ref, _) {
+              final vaultsAsync = ref.watch(availableVaultsProvider);
+              final activeVaultId = ref.watch(activeVaultIdProvider);
 
-              return ListView.builder(
-                key: FyndoKeys.listNotebooksSidebar,
-                itemCount: notebooks.length,
-                itemBuilder: (context, index) {
-                  final notebook = notebooks[index];
-                  return _NotebookListTile(
-                    notebook: notebook,
-                    onTap: () => context.push('/notebook/${notebook.id}'),
+              return vaultsAsync.when(
+                data: (vaults) {
+                  if (vaults.isEmpty) {
+                    return Center(
+                      child: Text(
+                        'No vaults',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    );
+                  }
+
+                  return ListView.builder(
+                    key: FyndoKeys.listVaultsSidebar,
+                    itemCount: vaults.length,
+                    itemBuilder: (context, index) {
+                      final vaultInfo = vaults[index];
+                      return _VaultListTile(
+                        vaultInfo: vaultInfo,
+                        isActive: vaultInfo.vaultId == activeVaultId,
+                        onTap: () {
+                          ref
+                              .read(selectedVaultIdProvider.notifier)
+                              .selectVault(vaultInfo.vaultId);
+                          // Invalidate dependent providers to reload data
+                          ref.invalidate(notebooksProvider);
+                          ref.invalidate(activeNotesProvider);
+                        },
+                      );
+                    },
                   );
                 },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, stack) => Center(
+                  child: Text(
+                    'Error loading vaults',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.error,
+                    ),
+                  ),
+                ),
               );
             },
           ),
@@ -235,9 +259,7 @@ class _HomePageContent extends ConsumerWidget {
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.all(FyndoTheme.padding),
-            child: _VaultCardWithData(
-              onTap: () => _showVaultSwitcher(context, ref),
-            ),
+            child: _VaultCardWithData(onTap: () => context.push('/vault')),
           ),
         ),
 
@@ -328,15 +350,21 @@ class _HomePageContent extends ConsumerWidget {
     ).showSnackBar(const SnackBar(content: Text('Search coming soon')));
   }
 
-  void _showVaultSwitcher(BuildContext context, WidgetRef ref) {
-    VaultSwitcherDialog.show(
+  void _handleMenuAction(BuildContext context, WidgetRef ref, String action) {
+    switch (action) {
+      case 'lock':
+        ref.read(vaultProvider.notifier).lock();
+        context.go('/');
+        break;
+      case 'trash':
+        context.push('/trash');
+        break;
+    }
+  }
+
+  void _createVault(BuildContext context, WidgetRef ref) {
+    VaultCreateDialog.show(
       context,
-      onVaultSelected: (vaultId) {
-        // Vault selection is handled by the dialog
-        // Invalidate dependent providers to reload data
-        ref.invalidate(notebooksProvider);
-        ref.invalidate(activeNotesProvider);
-      },
       onCreateVault:
           ({
             required String name,
@@ -372,18 +400,6 @@ class _HomePageContent extends ConsumerWidget {
             }
           },
     );
-  }
-
-  void _handleMenuAction(BuildContext context, WidgetRef ref, String action) {
-    switch (action) {
-      case 'lock':
-        ref.read(vaultProvider.notifier).lock();
-        context.go('/');
-        break;
-      case 'trash':
-        context.push('/trash');
-        break;
-    }
   }
 
   void _createNotebook(BuildContext context, WidgetRef ref) {
@@ -493,29 +509,49 @@ class _HomePageContent extends ConsumerWidget {
   }
 }
 
-/// List tile for notebook in sidebar with dynamic note count.
-class _NotebookListTile extends ConsumerWidget {
-  final Notebook notebook;
+/// List tile for vault in sidebar.
+class _VaultListTile extends StatelessWidget {
+  final VaultInfo vaultInfo;
+  final bool isActive;
   final VoidCallback? onTap;
 
-  const _NotebookListTile({required this.notebook, this.onTap});
+  const _VaultListTile({
+    required this.vaultInfo,
+    required this.isActive,
+    this.onTap,
+  });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final noteCountAsync = ref.watch(notebookNoteCountProvider(notebook.id));
-    final noteCount = noteCountAsync.valueOrNull ?? 0;
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final metadata = vaultInfo.metadata;
 
     return FyndoListTile(
-      key: FyndoKeys.notebookItem(notebook.id),
+      key: Key('vault_tile_${vaultInfo.vaultId}'),
       leading: Icon(
-        Icons.book,
+        isActive ? Icons.lock_open : Icons.lock,
         size: 20,
-        color: notebook.color != null
-            ? Color(int.parse('0xFF${notebook.color}'))
+        color: isActive ? theme.colorScheme.primary : null,
+      ),
+      title: Text(
+        metadata.name,
+        style: isActive
+            ? TextStyle(
+                fontWeight: FontWeight.w600,
+                color: theme.colorScheme.primary,
+              )
             : null,
       ),
-      title: Text(notebook.name),
-      subtitle: Text('$noteCount notes'),
+      subtitle: metadata.description != null && metadata.description!.isNotEmpty
+          ? Text(
+              metadata.description!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            )
+          : null,
+      trailing: isActive
+          ? Icon(Icons.check_circle, size: 16, color: theme.colorScheme.primary)
+          : null,
       onTap: onTap,
     );
   }
@@ -651,7 +687,7 @@ class _VaultCardWithData extends ConsumerWidget {
         lastModified: DateTime.now(),
         onTap: null,
       ),
-      error: (_, __) => VaultCard(
+      error: (_, stack) => VaultCard(
         key: FyndoKeys.vaultCardHome,
         name: 'Error',
         description: 'Failed to load vault data',
