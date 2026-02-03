@@ -339,6 +339,44 @@ abstract interface class IWorkspaceService {
   Future<void> saveKeyring(UnlockedWorkspace workspace);
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // VAULT DELETION
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// Deletes a vault from the workspace.
+  ///
+  /// This operation:
+  /// 1. Validates the vault exists and can be deleted
+  /// 2. Removes the vault from the workspace keyring
+  /// 3. Saves the updated keyring to disk (encrypted)
+  /// 4. Deletes the vault directory from the filesystem
+  ///
+  /// [workspace] - Currently unlocked workspace
+  /// [vaultId] - UUID of the vault to delete
+  ///
+  /// ## Throws
+  /// - [WorkspaceException] if vault doesn't exist or deletion fails
+  /// - [WorkspaceException] if this is the last vault (must have at least one)
+  ///
+  /// ## Example
+  /// ```dart
+  /// try {
+  ///   await service.deleteVault(
+  ///     workspace: workspace,
+  ///     vaultId: 'vault-uuid-1',
+  ///   );
+  ///   print('Vault deleted successfully');
+  /// } catch (e) {
+  ///   print('Failed to delete vault: $e');
+  /// }
+  /// ```
+  ///
+  /// WARNING: This operation is IRREVERSIBLE. All vault data will be permanently lost.
+  Future<void> deleteVault({
+    required UnlockedWorkspace workspace,
+    required String vaultId,
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // VERSION DETECTION & MIGRATION SUPPORT
   // ═══════════════════════════════════════════════════════════════════════════
 

@@ -635,6 +635,69 @@ class WorkspaceService implements IWorkspaceService {
     return version < 2;
   }
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // VAULT DELETION
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// Deletes a vault from the workspace.
+  ///
+  /// This operation:
+  /// 1. Validates the vault exists and can be deleted
+  /// 2. Removes the vault from the workspace keyring
+  /// 3. Saves the updated keyring to disk (encrypted)
+  /// 4. Deletes the vault directory from the filesystem
+  ///
+  /// [workspace] - Currently unlocked workspace
+  /// [vaultId] - UUID of the vault to delete
+  ///
+  /// Throws:
+  /// - [WorkspaceException] if vault doesn't exist or deletion fails
+  /// - [WorkspaceException] if this is the last vault (must have at least one)
+  ///
+  /// WARNING: This operation is IRREVERSIBLE. All vault data will be permanently lost.
+  @override
+  Future<void> deleteVault({
+    required UnlockedWorkspace workspace,
+    required String vaultId,
+  }) async {
+    // 1. Validate vault exists in keyring
+    if (!workspace.keyring.vaults.containsKey(vaultId)) {
+      throw WorkspaceException(
+        'Vault "$vaultId" not found in workspace keyring',
+      );
+    }
+
+    // 2. Prevent deleting the last vault
+    if (workspace.keyring.vaults.length <= 1) {
+      throw WorkspaceException(
+        'Cannot delete the last vault. A workspace must have at least one vault.',
+      );
+    }
+
+    // 3. Remove vault from keyring
+    workspace.keyring = workspace.keyring.removeVault(vaultId);
+
+    // 4. Save updated keyring to disk
+    await saveKeyring(workspace);
+
+    // 5. Delete vault directory from filesystem
+    final vaultPath = getNewVaultPath(workspace.rootPath, vaultId);
+    final vaultDir = Directory(vaultPath);
+
+    if (await vaultDir.exists()) {
+      try {
+        await vaultDir.delete(recursive: true);
+      } catch (e) {
+        // If filesystem deletion fails, the vault is already removed from keyring
+        // so it won't be accessible anymore. Log the error but don't throw.
+        throw WorkspaceException(
+          'Vault removed from keyring but failed to delete directory: $vaultPath',
+          e,
+        );
+      }
+    }
+  }
+
   /// Changes the master password for a workspace.
   ///
   /// This verifies the current password, generates a new salt and Argon2id

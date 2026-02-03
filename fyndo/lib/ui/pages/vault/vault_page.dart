@@ -6,12 +6,16 @@
 import 'package:flutter/material.dart';
 import 'package:fyndo_app/core/agentic/fyndo_keys.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fyndo_app/providers/crypto_providers.dart';
+import 'package:fyndo_app/providers/unlocked_workspace_provider.dart';
 import 'package:fyndo_app/providers/vault_providers.dart';
-import 'package:fyndo_app/ui/consumers/vault_consumer.dart';
+import 'package:fyndo_app/providers/vault_selection_providers.dart';
 import 'package:fyndo_app/ui/theme/fyndo_theme.dart';
 import 'package:fyndo_app/ui/widgets/common/fyndo_app_bar.dart';
 import 'package:fyndo_app/ui/widgets/common/fyndo_card.dart';
 import 'package:fyndo_app/ui/widgets/note/note_share_dialog.dart';
+import 'package:fyndo_app/ui/widgets/vault/vault_delete_dialog.dart';
+import 'package:fyndo_app/ui/widgets/vault/vault_export_dialog.dart';
 import 'package:go_router/go_router.dart';
 
 /// Vault details and settings page.
@@ -22,31 +26,28 @@ class VaultPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return VaultConsumer(
-      builder: (context, vaultState, _) {
-        if (!vaultState.isUnlocked) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            context.go('/');
-          });
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
+    // Check if workspace is unlocked (not individual vault)
+    final workspace = ref.watch(unlockedWorkspaceProvider);
 
-        return _VaultPageContent(vaultState: vaultState);
-      },
-    );
+    if (workspace == null) {
+      // Workspace is locked, redirect to welcome page
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        context.go('/');
+      });
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    return _VaultPageContent();
   }
 }
 
 class _VaultPageContent extends ConsumerWidget {
-  final VaultState vaultState;
-
-  const _VaultPageContent({required this.vaultState});
+  const _VaultPageContent();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final vaultId = ref.watch(activeVaultIdProvider) ?? 'Unknown';
 
     return Scaffold(
       appBar: FyndoAppBar(
@@ -120,7 +121,7 @@ class _VaultPageContent extends ConsumerWidget {
                   context,
                   icon: Icons.fingerprint,
                   label: 'Vault ID',
-                  value: vaultState.vault?.header.vaultId ?? 'Unknown',
+                  value: vaultId,
                 ),
                 const SizedBox(height: 12),
                 _buildInfoRow(
@@ -290,10 +291,7 @@ class _VaultPageContent extends ConsumerWidget {
         );
         break;
       case 'export':
-        // TODO: Export vault
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Export coming soon')));
+        VaultExportDialog.show(context);
         break;
     }
   }
@@ -323,34 +321,63 @@ class _VaultPageContent extends ConsumerWidget {
     ).showSnackBar(const SnackBar(content: Text('Backup options coming soon')));
   }
 
-  void _confirmDeleteVault(BuildContext context, WidgetRef ref) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Vault?'),
-        content: const Text(
-          'This will permanently delete your vault and all its contents. '
-          'This action cannot be undone.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // TODO: Delete vault
-              ref.read(vaultProvider.notifier).lock();
-              context.go('/');
-            },
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.error,
-            ),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+  void _confirmDeleteVault(BuildContext context, WidgetRef ref) async {
+    // Get vault metadata and ID
+    final metadataAsync = await ref.read(activeVaultMetadataProvider.future);
+    final vaultName = metadataAsync?.name ?? 'My Vault';
+    final vaultId = ref.read(activeVaultIdProvider);
+
+    if (!context.mounted) return;
+
+    VaultDeleteDialog.show(
+      context,
+      vaultName: vaultName,
+      onConfirmDelete: () async {
+        try {
+          // Get workspace and service
+          final workspace = ref.read(unlockedWorkspaceProvider);
+          final workspaceService = ref.read(workspaceServiceProvider);
+
+          if (workspace == null) {
+            throw Exception('Workspace not unlocked');
+          }
+
+          // Ensure vaultId is not null or empty
+          if (vaultId == null || vaultId.isEmpty) {
+            throw Exception('No vault selected');
+          }
+
+          // Delete the vault
+          await workspaceService.deleteVault(
+            workspace: workspace,
+            vaultId: vaultId,
+          );
+
+          // Lock the vault state (since it no longer exists)
+          ref.read(vaultProvider.notifier).lock();
+
+          // Navigate away
+          if (context.mounted) {
+            context.go('/');
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Vault "$vaultName" deleted successfully'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        } catch (e) {
+          // Show error message
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Failed to delete vault: $e'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
+      },
     );
   }
 }
