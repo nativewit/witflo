@@ -597,7 +597,11 @@ class _NotebookGridCard extends ConsumerWidget {
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.book, color: color, size: 24),
+                        Icon(
+                          _getIconData(notebook.icon),
+                          color: color,
+                          size: 24,
+                        ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
@@ -646,6 +650,31 @@ class _NotebookGridCard extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  IconData _getIconData(String? iconName) {
+    switch (iconName) {
+      case 'work':
+        return Icons.work;
+      case 'personal':
+        return Icons.person;
+      case 'ideas':
+        return Icons.lightbulb;
+      case 'journal':
+        return Icons.auto_stories;
+      case 'finance':
+        return Icons.attach_money;
+      case 'health':
+        return Icons.favorite;
+      case 'travel':
+        return Icons.flight;
+      case 'education':
+        return Icons.school;
+      case 'project':
+        return Icons.folder_special;
+      default:
+        return Icons.book;
+    }
   }
 }
 
