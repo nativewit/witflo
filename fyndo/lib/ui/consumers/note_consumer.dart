@@ -5,6 +5,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fyndo_app/core/logging/app_logger.dart';
 import 'package:fyndo_app/features/notes/data/note_repository.dart';
 import 'package:fyndo_app/features/notes/models/note.dart';
 import 'package:fyndo_app/providers/note_providers.dart';
@@ -55,6 +56,8 @@ class ActiveNotesConsumer extends ConsumerWidget {
 
 /// Consumer widget for notes in a notebook.
 class NotebookNotesConsumer extends ConsumerWidget {
+  static final _log = AppLogger.get('NotebookNotesConsumer');
+
   /// Notebook ID to filter by.
   final String? notebookId;
 
@@ -78,7 +81,22 @@ class NotebookNotesConsumer extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    _log.debug('Building NotebookNotesConsumer for notebook: $notebookId');
     final notesAsync = ref.watch(notebookNotesProvider(notebookId));
+
+    notesAsync.when(
+      data: (notes) =>
+          _log.debug('Loaded ${notes.length} notes for notebook $notebookId'),
+      loading: () => _log.debug('Loading notes for notebook $notebookId...'),
+      error: (error, stack) {
+        _log.error(
+          'Error loading notes for notebook $notebookId',
+          error: error,
+          stackTrace: stack,
+        );
+      },
+    );
+
     return builder(context, notesAsync, child);
   }
 }

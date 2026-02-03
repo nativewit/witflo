@@ -267,47 +267,52 @@ class _HomePageContent extends ConsumerWidget {
         // Notebooks grid
         NotebookConsumer(
           builder: (context, state, _) {
-            if (state.isLoading) {
-              return const SliverFillRemaining(
-                child: Center(child: CircularProgressIndicator()),
-              );
-            }
+            return state.when(
+              data: (notebooksState) {
+                final notebooks = notebooksState.notebooks
+                    .where((n) => !n.isArchived)
+                    .toList();
 
-            final notebooks = state.notebooks
-                .where((n) => !n.isArchived)
-                .toList();
-
-            if (notebooks.isEmpty) {
-              return SliverFillRemaining(
-                child: FyndoEmptyState(
-                  icon: Icons.book,
-                  title: 'No Notebooks Yet',
-                  description:
-                      'Create your first notebook to start organizing your notes.',
-                  actionText: 'Create Notebook',
-                  onAction: () => _createNotebook(context, ref),
-                ),
-              );
-            }
-
-            return SliverPadding(
-              padding: const EdgeInsets.all(FyndoTheme.padding),
-              sliver: SliverGrid(
-                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                  maxCrossAxisExtent: 300,
-                  mainAxisSpacing: FyndoTheme.padding,
-                  crossAxisSpacing: FyndoTheme.padding,
-                  childAspectRatio: 1.5,
-                ),
-                delegate: SliverChildBuilderDelegate((context, index) {
-                  final notebook = notebooks[index];
-                  return _NotebookGridCard(
-                    notebook: notebook,
-                    onTap: () => context.push('/notebook/${notebook.id}'),
-                    onMoreOptions: () =>
-                        _showNotebookOptions(context, ref, notebook),
+                if (notebooks.isEmpty) {
+                  return SliverFillRemaining(
+                    child: FyndoEmptyState(
+                      icon: Icons.book,
+                      title: 'No Notebooks Yet',
+                      description:
+                          'Create your first notebook to start organizing your notes.',
+                      actionText: 'Create Notebook',
+                      onAction: () => _createNotebook(context, ref),
+                    ),
                   );
-                }, childCount: notebooks.length),
+                }
+
+                return SliverPadding(
+                  padding: const EdgeInsets.all(FyndoTheme.padding),
+                  sliver: SliverGrid(
+                    gridDelegate:
+                        const SliverGridDelegateWithMaxCrossAxisExtent(
+                          maxCrossAxisExtent: 300,
+                          mainAxisSpacing: FyndoTheme.padding,
+                          crossAxisSpacing: FyndoTheme.padding,
+                          childAspectRatio: 1.5,
+                        ),
+                    delegate: SliverChildBuilderDelegate((context, index) {
+                      final notebook = notebooks[index];
+                      return _NotebookGridCard(
+                        notebook: notebook,
+                        onTap: () => context.push('/notebook/${notebook.id}'),
+                        onMoreOptions: () =>
+                            _showNotebookOptions(context, ref, notebook),
+                      );
+                    }, childCount: notebooks.length),
+                  ),
+                );
+              },
+              loading: () => const SliverFillRemaining(
+                child: Center(child: CircularProgressIndicator()),
+              ),
+              error: (error, stack) => SliverFillRemaining(
+                child: Center(child: Text('Error loading notebooks: $error')),
               ),
             );
           },

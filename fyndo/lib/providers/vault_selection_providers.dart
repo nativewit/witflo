@@ -224,10 +224,12 @@ final activeVaultStatsProvider = FutureProvider<VaultStats>((ref) async {
   if (vaultId == null) return VaultStats.empty;
 
   // Get notebook count from notebooks provider
-  final notebooksState = ref.watch(notebooksProvider);
-  final notebookCount = notebooksState.notebooks
-      .where((n) => !n.isArchived)
-      .length;
+  final notebooksAsync = ref.watch(notebooksProvider);
+  final notebookCount = notebooksAsync.when(
+    data: (state) => state.notebooks.where((n) => !n.isArchived).length,
+    loading: () => 0,
+    error: (error, stackTrace) => 0,
+  );
 
   // Get note count from note stats provider
   final noteStatsAsync = ref.watch(noteStatsProvider);
@@ -235,12 +237,18 @@ final activeVaultStatsProvider = FutureProvider<VaultStats>((ref) async {
   final noteCount = noteStats?.total ?? 0;
 
   // Get last modified from the most recent note or notebook
-  DateTime? lastModified;
-  if (notebooksState.notebooks.isNotEmpty) {
-    lastModified = notebooksState.notebooks
-        .map((n) => n.modifiedAt)
-        .reduce((a, b) => a.isAfter(b) ? a : b);
-  }
+  DateTime? lastModified = notebooksAsync.when(
+    data: (state) {
+      if (state.notebooks.isNotEmpty) {
+        return state.notebooks
+            .map((n) => n.modifiedAt)
+            .reduce((a, b) => a.isAfter(b) ? a : b);
+      }
+      return null;
+    },
+    loading: () => null,
+    error: (error, stackTrace) => null,
+  );
 
   return VaultStats(
     noteCount: noteCount,

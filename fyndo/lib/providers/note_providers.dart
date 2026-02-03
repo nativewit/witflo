@@ -13,6 +13,7 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fyndo_app/core/core.dart';
+import 'package:fyndo_app/core/logging/app_logger.dart';
 import 'package:fyndo_app/features/notes/data/note_repository.dart';
 import 'package:fyndo_app/features/notes/models/note.dart';
 import 'package:fyndo_app/providers/crypto_providers.dart';
@@ -35,38 +36,63 @@ export 'package:fyndo_app/providers/vault_selection_providers.dart'
 final unlockedActiveVaultProvider = FutureProvider.autoDispose<UnlockedVault>((
   ref,
 ) async {
+  final log = AppLogger.get('unlockedActiveVaultProvider');
+  log.debug('Provider build started');
+
   final workspace = ref.watch(unlockedWorkspaceProvider);
   if (workspace == null) {
+    log.error(
+      'Provider build failed: Workspace is not unlocked',
+      error: StateError('Workspace is not unlocked'),
+    );
     throw StateError('Workspace is not unlocked');
   }
+  log.debug('Workspace is unlocked, getting active vault ID...');
 
   final vaultId = ref.watch(activeVaultIdProvider);
   if (vaultId == null) {
+    log.error(
+      'Provider build failed: No vaults available',
+      error: StateError('No vaults available'),
+    );
     throw StateError('No vaults available in workspace');
   }
+  log.debug('Active vault ID: $vaultId');
 
   // Get the vault key from the workspace
+  log.debug('Getting vault key from workspace...');
   final vaultKeyBytes = workspace.getVaultKey(vaultId);
+  log.debug(
+    'Got vault key from workspace (disposed: ${vaultKeyBytes.isDisposed})',
+  );
 
   // Wrap in VaultKey type
   final vaultKey = VaultKey(vaultKeyBytes);
+  log.debug('Wrapped in VaultKey');
 
   // Get the vault path
   final vaultPath = p.join(workspace.rootPath, 'vaults', vaultId);
+  log.debug('Vault path: $vaultPath');
 
   // Unlock the vault using the vault service
   final vaultService = ref.watch(vaultServiceProvider);
+  log.debug('Unlocking vault...');
   final unlockedVault = await vaultService.unlockVault(
     vaultPath: vaultPath,
     vaultKey: vaultKey,
   );
+  log.debug('Vault unlocked successfully');
 
   // Dispose the vault when the provider is disposed
+  // NOTE: We do NOT dispose vaultKey here because it's owned by the workspace
+  // The workspace manages the lifecycle of all vault keys and will dispose them
+  // when the workspace is locked. Disposing here would break the cached keys.
   ref.onDispose(() {
+    log.debug('Provider disposing, disposing unlockedVault only');
     unlockedVault.dispose();
-    vaultKey.dispose();
   });
 
+  log.debug('Provider build completed successfully');
   return unlockedVault;
 });
 

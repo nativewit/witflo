@@ -12,7 +12,7 @@ class NotebookConsumer extends ConsumerWidget {
   /// Builder function called with notebooks state.
   final Widget Function(
     BuildContext context,
-    NotebooksState state,
+    AsyncValue<NotebooksState> state,
     Widget? child,
   )
   builder;

@@ -151,8 +151,12 @@ class UnlockedVault {
     }
     _keyCache.clear();
 
-    // Dispose vault key
-    _vaultKey.dispose();
+    // NOTE: We do NOT dispose _vaultKey here because it's owned by the workspace.
+    // The workspace manages the lifecycle of all vault keys (cached in UnlockedWorkspace).
+    // The _vaultKey here is just a wrapper around the workspace's cached SecureBytes.
+    // Disposing it would break the workspace cache and cause "disposed key" errors
+    // when switching between vaults.
+    // The workspace will dispose all vault keys when it's locked via UnlockedWorkspace.dispose().
   }
 }
 

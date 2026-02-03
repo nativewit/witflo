@@ -1,42 +1,22 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // FYNDO - Zero-Trust Notes OS
-// UnlockedWorkspace - Session state for an unlocked workspace
+// Unlocked Workspace - In-memory state after unlocking
 // ═══════════════════════════════════════════════════════════════════════════
 //
-// SESSION LIFECYCLE:
-// 1. UNLOCK: masterPassword → MUK → decrypt keyring → cache state
-// 2. ACTIVE: MUK & vault keys cached in memory for fast access
-// 3. LOCK: zeroize all keys → require password again
+// UPDATED FOR WORKSPACE MASTER PASSWORD (spec-002):
+// This class represents the unlocked workspace state, including:
+// - Master Unlock Key (MUK) - memory only, derived from master password
+// - Workspace Keyring - vault keys encrypted with MUK
+// - Cached vault keys - decoded SecureBytes for performance
 //
-// KEY HIERARCHY (see spec-002 section 2.1):
-// Master Password (user input, never stored)
-//   ↓ Argon2id(workspace-salt)
-// Master Unlock Key (MUK) - cached during session
-//   ↓ XChaCha20.decrypt(.fyndo-keyring.enc)
-// Workspace Keyring (registry of vault keys)
-//   ↓ contains random 32-byte keys per vault
-// Vault Keys (VK1, VK2, ...) - cached during session
-//   ↓ HKDF per notebook/note
-// Content Keys (short-lived or cached per session)
-//
-// SECURITY INVARIANTS:
-// - MUK is zeroized on workspace lock / app background
-// - All vault keys are zeroized on lock
-// - Cached vault keys are zeroized on dispose
-// - Never log or serialize any key material
-//
-// AUTO-LOCK TRIGGERS:
-// - Explicit lock button
-// - App goes to background (iOS/Android)
-// - Configurable idle timer (5/15/30/60 min)
-//
-// Spec: docs/specs/spec-002-workspace-master-password.md (Section 2.1, 3.1)
+// Spec: docs/specs/spec-002-workspace-master-password.md
 // ═══════════════════════════════════════════════════════════════════════════
 
 import 'dart:convert';
 
-import 'package:fyndo_app/core/crypto/types/secure_bytes.dart';
 import 'package:fyndo_app/core/crypto/types/key_types.dart';
+import 'package:fyndo_app/core/crypto/types/secure_bytes.dart';
+import 'package:fyndo_app/core/logging/app_logger.dart';
 import 'package:fyndo_app/core/workspace/workspace_keyring.dart';
 
 /// Session state for an unlocked workspace.
@@ -134,7 +114,15 @@ class UnlockedWorkspace {
     required this.muk,
     required this.keyring,
     required this.rootPath,
-  });
+  }) {
+    final log = AppLogger.get('UnlockedWorkspace');
+    log.debug(
+      'UnlockedWorkspace created: '
+      'instance=${identityHashCode(this)}, '
+      'vaults in keyring=${keyring.vaults.length}, '
+      'vault IDs=${keyring.vaults.keys.join(", ")}',
+    );
+  }
 
   /// Gets the vault key for a specific vault.
   ///
@@ -158,14 +146,45 @@ class UnlockedWorkspace {
   ///
   /// Throws [StateError] if the vault ID is not found in the keyring.
   SecureBytes getVaultKey(String vaultId) {
+    final log = AppLogger.get('UnlockedWorkspace');
+    log.debug(
+      'getVaultKey() called: '
+      'instance=${identityHashCode(this)}, '
+      'vaultId=$vaultId',
+    );
+
     // Check cache first
     if (_vaultKeyCache.containsKey(vaultId)) {
-      return _vaultKeyCache[vaultId]!;
+      final cachedKey = _vaultKeyCache[vaultId]!;
+      log.debug(
+        'Vault key found in cache. '
+        'Is disposed: ${cachedKey.isDisposed}, '
+        'Length: ${cachedKey.isDisposed ? "N/A" : cachedKey.length}',
+      );
+      if (cachedKey.isDisposed) {
+        log.error(
+          'CRITICAL: Cached vault key is already disposed!',
+          error: StateError('Cached vault key for $vaultId is disposed'),
+        );
+      }
+      return cachedKey;
     }
+
+    log.debug(
+      'Vault key not in cache, decoding from keyring... '
+      'Available vaults in this instance: ${keyring.vaults.keys.join(", ")}',
+    );
 
     // Lookup in keyring
     final entry = keyring.vaults[vaultId];
     if (entry == null) {
+      log.error(
+        'Vault not found in keyring!',
+        error: StateError(
+          'Vault "$vaultId" not found in workspace keyring. '
+          'Available vaults: ${keyring.vaults.keys.join(', ')}',
+        ),
+      );
       throw StateError(
         'Vault "$vaultId" not found in workspace keyring. '
         'Available vaults: ${keyring.vaults.keys.join(', ')}',
@@ -178,6 +197,8 @@ class UnlockedWorkspace {
 
     // Cache for future access
     _vaultKeyCache[vaultId] = vaultKey;
+
+    log.debug('Vault key decoded and cached. Length: ${vaultKey.length}');
 
     return vaultKey;
   }

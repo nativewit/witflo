@@ -49,35 +49,17 @@ class AgenticCodingTools extends StatefulWidget {
   /// Initialize all agentic coding tools.
   /// Call this from main() before runApp().
   static Future<void> initialize() async {
+    // Always initialize the standard Flutter binding first
+    WidgetsFlutterBinding.ensureInitialized();
+
     if (!kDebugMode) {
-      // In release mode, just initialize the standard Flutter binding
-      WidgetsFlutterBinding.ensureInitialized();
+      // In release mode, nothing more to do
       return;
     }
 
-    // Initialize Marionette binding for UI testing
-    MarionetteBinding.ensureInitialized(
-      MarionetteConfiguration(
-        // Custom widget detection for Fyndo components
-        isInteractiveWidget: (type) =>
-            type == FyndoCard || type == FyndoListTile,
-
-        extractText: (widget) {
-          // Extract text from Fyndo custom widgets
-          if (widget is FyndoListTile) {
-            // Extract text from title widget
-            if (widget.title is Text) {
-              return (widget.title as Text).data;
-            }
-          }
-          // Let Marionette handle standard widgets
-          return null;
-        },
-
-        // Screenshot configuration
-        maxScreenshotSize: const Size(2000, 2000),
-      ),
-    );
+    // DO NOT initialize MarionetteBinding here - it interferes with keyboard input!
+    // Marionette will automatically initialize when first accessed via MCP.
+    // This prevents keyboard event conflicts during normal app usage.
 
     // Initialize MCP Toolkit for Flutter-specific testing
     MCPToolkitBinding.instance
@@ -90,7 +72,7 @@ class AgenticCodingTools extends StatefulWidget {
     final log = AppLogger.get('AgenticCoding');
     log.info(
       'Agentic Coding Tools initialized: '
-      'Marionette MCP (UI testing), '
+      'Marionette MCP (lazy init on first use), '
       'MCP Toolkit (3 Flutter tools), '
       'Fyndo MCP (9 domain tools: vault, sync, crypto, hierarchy, app, logger, db, widget inspector) - '
       '12+ tools total',

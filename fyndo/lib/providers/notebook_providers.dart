@@ -6,12 +6,26 @@
 import 'package:built_collection/built_collection.dart';
 import 'package:built_value/built_value.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fyndo_app/features/notes/data/notebook_repository.dart';
 import 'package:fyndo_app/features/notes/models/notebook.dart';
+import 'package:fyndo_app/providers/crypto_providers.dart';
+import 'package:fyndo_app/providers/note_providers.dart';
 import 'package:fyndo_app/providers/vault_providers.dart';
 
 export 'package:fyndo_app/features/notes/models/notebook.dart';
 
 part 'notebook_providers.g.dart';
+
+/// Provider for notebook repository.
+///
+/// Uses the unlocked active vault to create an encrypted notebook repository.
+final notebookRepositoryProvider =
+    FutureProvider.autoDispose<EncryptedNotebookRepository>((ref) async {
+      final vault = await ref.watch(unlockedActiveVaultProvider.future);
+      final crypto = ref.watch(cryptoServiceProvider);
+
+      return EncryptedNotebookRepository(vault: vault, crypto: crypto);
+    });
 
 /// State for notebooks.
 ///
@@ -41,30 +55,48 @@ abstract class NotebooksState
 }
 
 /// Notifier for notebooks.
-class NotebooksNotifier extends Notifier<NotebooksState> {
+class NotebooksNotifier extends AsyncNotifier<NotebooksState> {
   @override
-  NotebooksState build() {
-    return NotebooksState.initial();
+  Future<NotebooksState> build() async {
+    // Load notebooks from repository on initialization
+    try {
+      final repo = await ref.watch(notebookRepositoryProvider.future);
+      final notebooks = await repo.listAll();
+
+      return NotebooksState(
+        (b) => b
+          ..notebooks = ListBuilder<Notebook>(notebooks)
+          ..isLoading = false
+          ..error = null,
+      );
+    } catch (e) {
+      return NotebooksState(
+        (b) => b
+          ..notebooks = ListBuilder<Notebook>()
+          ..isLoading = false
+          ..error = e.toString(),
+      );
+    }
   }
 
   /// Loads notebooks from storage.
   Future<void> loadNotebooks() async {
-    state = state.rebuild(
-      (b) => b
-        ..isLoading = true
-        ..error = null,
-    );
+    state = const AsyncValue.loading();
 
     try {
-      // TODO: Load from encrypted storage
-      // For now, using in-memory storage
-      state = state.rebuild((b) => b..isLoading = false);
-    } catch (e) {
-      state = state.rebuild(
-        (b) => b
-          ..isLoading = false
-          ..error = e.toString(),
+      final repo = await ref.read(notebookRepositoryProvider.future);
+      final notebooks = await repo.listAll();
+
+      state = AsyncValue.data(
+        NotebooksState(
+          (b) => b
+            ..notebooks = ListBuilder<Notebook>(notebooks)
+            ..isLoading = false
+            ..error = null,
+        ),
       );
+    } catch (e, stack) {
+      state = AsyncValue.error(e, stack);
     }
   }
 
@@ -86,68 +118,104 @@ class NotebooksNotifier extends Notifier<NotebooksState> {
       icon: icon,
     );
 
-    state = state.rebuild((b) => b..notebooks.add(notebook));
+    // Save to repository
+    final repo = await ref.read(notebookRepositoryProvider.future);
+    final savedNotebook = await repo.save(notebook);
 
-    // TODO: Persist to encrypted storage
-    return notebook;
+    // Update state
+    state.whenData((currentState) {
+      state = AsyncValue.data(
+        currentState.rebuild((b) => b..notebooks.add(savedNotebook)),
+      );
+    });
+
+    return savedNotebook;
   }
 
   /// Updates a notebook.
   Future<void> updateNotebook(Notebook notebook) async {
-    final updated = notebook.rebuild(
-      (b) => b..modifiedAt = DateTime.now().toUtc(),
-    );
+    final repo = await ref.read(notebookRepositoryProvider.future);
+    final updated = await repo.save(notebook);
 
-    state = state.rebuild((b) {
-      final index = b.notebooks.build().indexWhere((n) => n.id == notebook.id);
-      if (index >= 0) {
-        b.notebooks[index] = updated;
-      }
+    state.whenData((currentState) {
+      state = AsyncValue.data(
+        currentState.rebuild((b) {
+          final index = b.notebooks.build().indexWhere(
+            (n) => n.id == notebook.id,
+          );
+          if (index >= 0) {
+            b.notebooks[index] = updated;
+          }
+        }),
+      );
     });
-
-    // TODO: Persist to encrypted storage
   }
 
   /// Deletes a notebook.
   Future<void> deleteNotebook(String notebookId) async {
-    state = state.rebuild((b) {
-      b.notebooks.removeWhere((n) => n.id == notebookId);
-    });
+    final repo = await ref.read(notebookRepositoryProvider.future);
+    await repo.delete(notebookId);
 
-    // TODO: Delete from encrypted storage
+    state.whenData((currentState) {
+      state = AsyncValue.data(
+        currentState.rebuild((b) {
+          b.notebooks.removeWhere((n) => n.id == notebookId);
+        }),
+      );
+    });
   }
 
   /// Archives a notebook.
   Future<void> archiveNotebook(String notebookId) async {
-    final notebook = state.notebooks.firstWhere((n) => n.id == notebookId);
-    await updateNotebook(notebook.rebuild((b) => b..isArchived = true));
+    state.whenData((currentState) async {
+      final notebook = currentState.notebooks.firstWhere(
+        (n) => n.id == notebookId,
+      );
+      await updateNotebook(notebook.rebuild((b) => b..isArchived = true));
+    });
   }
 
   /// Unarchives a notebook.
   Future<void> unarchiveNotebook(String notebookId) async {
-    final notebook = state.notebooks.firstWhere((n) => n.id == notebookId);
-    await updateNotebook(notebook.rebuild((b) => b..isArchived = false));
+    state.whenData((currentState) async {
+      final notebook = currentState.notebooks.firstWhere(
+        (n) => n.id == notebookId,
+      );
+      await updateNotebook(notebook.rebuild((b) => b..isArchived = false));
+    });
   }
 }
 
 /// Provider for notebooks.
-final notebooksProvider = NotifierProvider<NotebooksNotifier, NotebooksState>(
-  NotebooksNotifier.new,
-);
+final notebooksProvider =
+    AsyncNotifierProvider<NotebooksNotifier, NotebooksState>(
+      NotebooksNotifier.new,
+    );
 
 /// Provider for active (non-archived) notebooks.
 final activeNotebooksProvider = Provider<List<Notebook>>((ref) {
   final state = ref.watch(notebooksProvider);
-  return state.notebooks.where((n) => !n.isArchived).toList()
-    ..sort((a, b) => a.name.compareTo(b.name));
+  return state.when(
+    data: (notebooksState) =>
+        notebooksState.notebooks.where((n) => !n.isArchived).toList()
+          ..sort((a, b) => a.name.compareTo(b.name)),
+    loading: () => [],
+    error: (error, stackTrace) => [],
+  );
 });
 
 /// Provider for a single notebook.
 final notebookProvider = Provider.family<Notebook?, String>((ref, id) {
   final state = ref.watch(notebooksProvider);
-  try {
-    return state.notebooks.firstWhere((n) => n.id == id);
-  } catch (_) {
-    return null;
-  }
+  return state.when(
+    data: (notebooksState) {
+      try {
+        return notebooksState.notebooks.firstWhere((n) => n.id == id);
+      } catch (_) {
+        return null;
+      }
+    },
+    loading: () => null,
+    error: (error, stackTrace) => null,
+  );
 });
