@@ -6,6 +6,7 @@
 import 'package:flutter/material.dart';
 import 'package:fyndo_app/core/agentic/fyndo_keys.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fyndo_app/core/workspace/unlocked_workspace.dart';
 import 'package:fyndo_app/providers/crypto_providers.dart';
 import 'package:fyndo_app/providers/unlocked_workspace_provider.dart';
 import 'package:fyndo_app/providers/vault_selection_providers.dart';
@@ -352,9 +353,23 @@ class _VaultPageContent extends ConsumerWidget {
             vaultId: vaultId,
           );
 
-          // Update the workspace provider with the modified keyring
-          // The workspace.keyring was already updated by deleteVault()
-          ref.read(unlockedWorkspaceProvider.notifier).update(workspace);
+          // CRITICAL: Create a NEW workspace instance to trigger Riverpod change detection
+          // The deleteVault() method modifies workspace.keyring in-place, but Riverpod
+          // uses identity comparison (identical()) to detect changes. Creating a new
+          // instance ensures dependent providers rebuild.
+          final updatedWorkspace = UnlockedWorkspace(
+            muk: workspace.muk, // Reuse the same MUK (don't dispose)
+            keyring: workspace.keyring, // Already updated by deleteVault()
+            rootPath: workspace.rootPath,
+          );
+
+          // CRITICAL: Clear the current vault selection first
+          // (since the deleted vault might be selected)
+          ref.read(selectedVaultIdProvider.notifier).clearSelection();
+
+          // Update the workspace provider with NEW instance
+          // This triggers all dependent providers to rebuild
+          ref.read(unlockedWorkspaceProvider.notifier).update(updatedWorkspace);
 
           // Select a different vault (first available after deletion)
           ref.read(selectedVaultIdProvider.notifier).ensureSelection();
