@@ -348,15 +348,76 @@ class _WorkspaceUnlockViewState extends ConsumerState<_WorkspaceUnlockView> {
   Widget _buildLogo(ThemeData theme) {
     return Column(
       children: [
+        // Enhanced infographic similar to vault card
         Container(
-          width: 80,
-          height: 80,
+          width: 160,
+          height: 160,
           decoration: BoxDecoration(
-            border: Border.all(color: theme.colorScheme.primary, width: 2),
+            color: theme.colorScheme.primaryContainer.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(16),
           ),
-          child: Icon(Icons.lock, size: 40, color: theme.colorScheme.primary),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // Background pattern (encrypted data visual)
+              Positioned.fill(
+                child: CustomPaint(
+                  painter: _EncryptionPatternPainter(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                  ),
+                ),
+              ),
+              // Central lock icon with glow effect
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primaryContainer.withValues(
+                        alpha: 0.5,
+                      ),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: theme.colorScheme.primary,
+                        width: 2,
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.lock,
+                      size: 48,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Text(
+                      'LOCKED',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.primary,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 32),
         Text(
           'FYNDO',
           style: theme.textTheme.headlineLarge?.copyWith(
@@ -1196,4 +1257,40 @@ class _VaultListItem extends ConsumerWidget {
       ),
     );
   }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Custom Painter for Encryption Pattern
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// Custom painter for encryption pattern background.
+class _EncryptionPatternPainter extends CustomPainter {
+  final Color color;
+
+  _EncryptionPatternPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+
+    // Draw a grid pattern representing encrypted data
+    final spacing = 16.0;
+
+    // Vertical lines
+    for (double x = 0; x < size.width; x += spacing) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+    }
+
+    // Horizontal lines
+    for (double y = 0; y < size.height; y += spacing) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_EncryptionPatternPainter oldDelegate) =>
+      oldDelegate.color != color;
 }
