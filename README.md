@@ -1,4 +1,4 @@
-# Fyndo Platform
+# Witflo Platform
 
 A zero-trust, privacy-first, offline-first notes and LifeOS platform.
 
@@ -7,8 +7,8 @@ A zero-trust, privacy-first, offline-first notes and LifeOS platform.
 This is a monorepo containing multiple packages:
 
 ```
-fyndo-platform/
-├── fyndo/              # Flutter app (iOS, Android, macOS, Linux, Windows, Web)
+witflo-platform/
+├── witflo/              # Flutter app (iOS, Android, macOS, Linux, Windows, Web)
 │   ├── lib/            # Dart source code
 │   ├── android/        # Android platform code
 │   ├── ios/            # iOS platform code
@@ -23,17 +23,17 @@ fyndo-platform/
 
 ## Packages
 
-### fyndo/ - Flutter App
+### witflo/ - Flutter App
 
-The main Fyndo application built with Flutter. Supports all platforms.
+The main Witflo application built with Flutter. Supports all platforms.
 
 ```bash
-cd fyndo
+cd witflo
 fvm flutter pub get
 fvm flutter run
 ```
 
-See [fyndo/README.md](fyndo/README.md) for more details.
+See [witflo/README.md](witflo/README.md) for more details.
 
 ## Development
 
@@ -65,11 +65,11 @@ See [fyndo/README.md](fyndo/README.md) for more details.
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/fyndo-platform.git
-cd fyndo-platform
+git clone https://github.com/yourusername/witflo-platform.git
+cd witflo-platform
 
 # Navigate to the Flutter app
-cd fyndo
+cd witflo
 
 # Install FVM and set Flutter version
 fvm install
@@ -84,22 +84,22 @@ fvm flutter run
 
 ## Architecture
 
-Fyndo follows a zero-trust security model:
+Witflo follows a zero-trust security model:
 
 - **Client-side encryption**: All data is encrypted on-device before storage or sync
 - **No server trust**: Servers only see ciphertext
 - **Local-first**: Works fully offline
 - **Key hierarchy**: Password → MUK → VaultKey → ContentKeys
 
-See [fyndo/docs/PRODUCT.md](fyndo/docs/PRODUCT.md) for detailed architecture documentation.
+See [witflo/docs/PRODUCT.md](witflo/docs/PRODUCT.md) for detailed architecture documentation.
 
 ## Future Packages
 
 This monorepo is structured to accommodate future packages:
 
-- `fyndo-server/` - Optional sync server (stores only ciphertext)
-- `fyndo-cli/` - Command-line tools
-- `fyndo-web/` - Web-only lightweight client
+- `witflo-server/` - Optional sync server (stores only ciphertext)
+- `witflo-cli/` - Command-line tools
+- `witflo-web/` - Web-only lightweight client
 - `packages/` - Shared Dart packages
 
 ## License
