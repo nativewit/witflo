@@ -16,6 +16,7 @@ import 'package:witflo_app/providers/workspace_provider.dart';
 import 'package:witflo_app/ui/theme/app_theme.dart';
 import 'package:witflo_app/ui/widgets/common/password_field.dart';
 import 'package:witflo_app/ui/widgets/common/security_badges.dart';
+import 'package:witflo_app/ui/widgets/common/encryption_pattern_background.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
@@ -479,11 +480,13 @@ class _WorkspaceUnlockViewState extends ConsumerState<_WorkspaceUnlockView> {
         Stack(
           alignment: Alignment.center,
           children: [
+            // Background infographic
+            EncryptionPatternBackground(width: 256, height: 256),
             // Logo image
             Image.asset(
-              'assets/images/logo_256.png',
-              width: 160,
-              height: 160,
+              'assets/images/logo_512.png',
+              width: 240,
+              height: 240,
               filterQuality: FilterQuality.high,
             ),
             // Lock badge overlay

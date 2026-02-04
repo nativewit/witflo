@@ -19,6 +19,7 @@ import 'package:witflo_app/providers/vault_registry.dart';
 import 'package:witflo_app/providers/workspace_provider.dart';
 import 'package:witflo_app/ui/theme/app_theme.dart';
 import 'package:witflo_app/ui/widgets/common/password_field.dart';
+import 'package:witflo_app/ui/widgets/common/encryption_pattern_background.dart';
 import 'package:go_router/go_router.dart';
 import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart';
@@ -134,12 +135,20 @@ class _OnboardingWizardState extends ConsumerState<OnboardingWizard> {
   Widget _buildHeader(ThemeData theme) {
     return Column(
       children: [
-        // Witflo logo
-        Image.asset(
-          'assets/images/logo_128.png',
-          width: 80,
-          height: 80,
-          filterQuality: FilterQuality.high,
+        // Witflo logo with background infographic
+        Stack(
+          alignment: Alignment.center,
+          children: [
+            // Background infographic
+            EncryptionPatternBackground(width: 136, height: 136),
+            // Logo image
+            Image.asset(
+              'assets/images/logo_256.png',
+              width: 120,
+              height: 120,
+              filterQuality: FilterQuality.high,
+            ),
+          ],
         ),
         const SizedBox(height: 16),
         Text(
