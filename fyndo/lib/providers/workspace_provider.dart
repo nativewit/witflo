@@ -155,7 +155,15 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceState> {
   /// If the workspace is not initialized (empty folder), it saves the config
   /// and marks as uninitialized so the app redirects to onboarding.
   Future<void> switchWorkspace(String newRootPath) async {
-    state = AsyncValue.data(WorkspaceState((b) => b..isLoading = true));
+    // Preserve current isInitialized state while loading
+    final currentState = state.valueOrNull;
+    state = AsyncValue.data(
+      WorkspaceState(
+        (b) => b
+          ..isLoading = true
+          ..isInitialized = currentState?.isInitialized ?? false,
+      ),
+    );
 
     try {
       // Check if new workspace is initialized
