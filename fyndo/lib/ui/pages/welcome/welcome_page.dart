@@ -367,6 +367,7 @@ class _WorkspaceUnlockViewState extends ConsumerState<_WorkspaceUnlockView> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Icon(
                 Icons.folder_outlined,
