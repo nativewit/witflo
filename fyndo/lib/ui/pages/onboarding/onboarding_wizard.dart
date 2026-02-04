@@ -328,7 +328,30 @@ class _OnboardingWizardState extends ConsumerState<OnboardingWizard> {
       return;
     }
 
-    // Move to next step
+    // Check if the selected folder is already an initialized workspace
+    final workspaceService = WorkspaceService();
+    final isInitialized = await workspaceService.isValidWorkspace(
+      _selectedWorkspacePath!,
+    );
+
+    if (isInitialized && mounted) {
+      // This folder is already a workspace - switch to it and go to unlock screen
+      try {
+        await ref
+            .read(workspaceProvider.notifier)
+            .switchWorkspace(_selectedWorkspacePath!);
+
+        if (mounted) {
+          // Navigate to welcome page which will show the unlock screen
+          context.go('/');
+        }
+      } catch (e) {
+        setState(() => _error = 'Failed to switch to workspace: $e');
+      }
+      return;
+    }
+
+    // Not initialized - continue with onboarding to create new workspace
     setState(() {
       _currentStep = 1;
       _error = null;
