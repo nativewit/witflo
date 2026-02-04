@@ -20,7 +20,7 @@ class AppEnvironment {
   ///
   /// Used throughout the UI for branding and display purposes.
   /// Change this single value to rebrand the entire application.
-  String get appName => 'Fyndo';
+  String get appName => 'Witflo';
 
   /// Workspace marker file name
   ///
@@ -29,7 +29,7 @@ class AppEnvironment {
   /// like version, salt, and Argon2id parameters.
   ///
   /// File format: `.{app-name}-workspace`
-  String get workspaceMarkerFile => '.fyndo-workspace';
+  String get workspaceMarkerFile => '.witflo-workspace';
 
   /// Workspace keyring file name
   ///
@@ -37,7 +37,7 @@ class AppEnvironment {
   /// Encrypted with the Master Unlock Key (MUK) using XChaCha20-Poly1305.
   ///
   /// File format: `.{app-name}-keyring.enc`
-  String get workspaceKeyringFile => '.fyndo-keyring.enc';
+  String get workspaceKeyringFile => '.witflo-keyring.enc';
 
   /// Vault metadata file name
   ///
@@ -53,7 +53,7 @@ class AppEnvironment {
   /// Created temporarily and immediately deleted.
   ///
   /// File format: `.{app-name}-access-test`
-  String get accessTestFile => '.fyndo-access-test';
+  String get accessTestFile => '.witflo-access-test';
 
   /// Application version
   ///
