@@ -1,0 +1,70 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Concept 3: Brain Waves with Shield Aura -->
+  <!-- Soft aura for calm energy -->
+  <ellipse cx="256" cy="256" rx="240" ry="200" fill="url(#glow3)" opacity="0.12"/>
+  
+  <!-- Shield outline (subtle, wide) -->
+  <path d="M256 90C256 90 170 120 170 190V260C170 350 256 400 256 400C256 400 342 350 342 260V190C342 120 256 90 256 90Z" 
+        stroke="url(#gradient3)" 
+        stroke-width="2" 
+        fill="none"
+        opacity="0.3"
+        stroke-linecap="round"/>
+  
+  <!-- Flowing brain wave patterns (EEG-style) -->
+  <g opacity="0.95">
+    <!-- Top wave - calm thoughts -->
+    <path d="M180 190 Q200 180, 215 190 Q230 200, 245 190 Q260 180, 275 190 Q290 200, 305 190 Q320 180, 335 190" 
+          stroke="url(#gradient3)" 
+          stroke-width="5" 
+          fill="none" 
+          stroke-linecap="round"/>
+    
+    <!-- Middle wave - active thinking (more energy) -->
+    <path d="M180 240 Q195 220, 210 240 Q225 260, 240 240 Q255 220, 270 240 Q285 260, 300 240 Q315 220, 330 240" 
+          stroke="url(#gradient3)" 
+          stroke-width="7" 
+          fill="none" 
+          stroke-linecap="round"/>
+    
+    <!-- Bottom wave - deep thoughts -->
+    <path d="M185 290 Q205 275, 220 290 Q235 305, 250 290 Q265 275, 280 290 Q295 305, 310 290 Q325 275, 340 290" 
+          stroke="url(#gradient3)" 
+          stroke-width="5" 
+          fill="none" 
+          stroke-linecap="round"/>
+    
+    <!-- Subtle baseline -->
+    <path d="M180 330 Q220 325, 256 330 Q292 335, 335 330" 
+          stroke="url(#gradient3)" 
+          stroke-width="3" 
+          fill="none" 
+          stroke-linecap="round"
+          opacity="0.5"/>
+  </g>
+  
+  <!-- Energy pulses at wave peaks -->
+  <g opacity="0.7">
+    <circle cx="215" cy="190" r="5" fill="url(#gradient3)">
+      <animate attributeName="opacity" values="0.3;1;0.3" dur="2s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="270" cy="240" r="6" fill="url(#gradient3)">
+      <animate attributeName="opacity" values="0.3;1;0.3" dur="2.5s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="250" cy="290" r="5" fill="url(#gradient3)">
+      <animate attributeName="opacity" values="0.3;1;0.3" dur="3s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+  
+  <!-- Gradients - Teal/Cyan for calm, trust, clarity -->
+  <defs>
+    <linearGradient id="gradient3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#06B6D4;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#3B82F6;stop-opacity:1" />
+    </linearGradient>
+    <radialGradient id="glow3">
+      <stop offset="0%" style="stop-color:#06B6D4;stop-opacity:0.3" />
+      <stop offset="100%" style="stop-color:#06B6D4;stop-opacity:0" />
+    </radialGradient>
+  </defs>
+</svg>

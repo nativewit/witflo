@@ -1,0 +1,56 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Concept 1: Flowing Waves in Shield Container -->
+  <!-- Background glow for calm energy -->
+  <circle cx="256" cy="256" r="220" fill="url(#glow1)" opacity="0.15"/>
+  
+  <!-- Outer shield (security) -->
+  <path d="M256 80C256 80 180 105 180 165V245C180 325 256 380 256 380C256 380 332 325 332 245V165C332 105 256 80 256 80Z" 
+        stroke="url(#gradient1)" 
+        stroke-width="8" 
+        fill="none"
+        stroke-linecap="round"/>
+  
+  <!-- Flowing thought waves (3 layers) -->
+  <g opacity="0.9">
+    <!-- Wave 1 - Top -->
+    <path d="M200 200 Q220 190, 240 200 T280 200 T320 200" 
+          stroke="url(#gradient1)" 
+          stroke-width="6" 
+          fill="none" 
+          stroke-linecap="round"/>
+    
+    <!-- Wave 2 - Middle (thicker, more energy) -->
+    <path d="M190 240 Q215 225, 240 240 T290 240 T340 240" 
+          stroke="url(#gradient1)" 
+          stroke-width="10" 
+          fill="none" 
+          stroke-linecap="round"/>
+    
+    <!-- Wave 3 - Bottom -->
+    <path d="M200 280 Q225 270, 250 280 T300 280 T330 280" 
+          stroke="url(#gradient1)" 
+          stroke-width="6" 
+          fill="none" 
+          stroke-linecap="round"/>
+  </g>
+  
+  <!-- Energy particles/sparkles -->
+  <g opacity="0.8">
+    <circle cx="210" cy="180" r="4" fill="url(#gradient1)"/>
+    <circle cx="300" cy="190" r="3" fill="url(#gradient1)"/>
+    <circle cx="195" cy="305" r="3" fill="url(#gradient1)"/>
+    <circle cx="315" cy="295" r="4" fill="url(#gradient1)"/>
+  </g>
+  
+  <!-- Gradients -->
+  <defs>
+    <linearGradient id="gradient1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667EEA;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764BA2;stop-opacity:1" />
+    </linearGradient>
+    <radialGradient id="glow1">
+      <stop offset="0%" style="stop-color:#667EEA;stop-opacity:0.3" />
+      <stop offset="100%" style="stop-color:#667EEA;stop-opacity:0" />
+    </radialGradient>
+  </defs>
+</svg>
