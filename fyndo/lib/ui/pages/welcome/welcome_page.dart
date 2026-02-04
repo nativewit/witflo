@@ -300,7 +300,11 @@ class _WorkspaceUnlockViewState extends ConsumerState<_WorkspaceUnlockView> {
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 24),
+
+                  // Workspace info
+                  _buildWorkspaceInfo(theme),
+                  const SizedBox(height: 24),
 
                   // Password field
                   PasswordField(
@@ -343,6 +347,128 @@ class _WorkspaceUnlockViewState extends ConsumerState<_WorkspaceUnlockView> {
         ),
       ),
     );
+  }
+
+  Widget _buildWorkspaceInfo(ThemeData theme) {
+    final workspaceState = ref.watch(workspaceProvider).valueOrNull;
+    final workspacePath = workspaceState?.rootPath ?? '';
+
+    // Extract folder name from path
+    final folderName = workspacePath.split('/').last;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.folder_outlined,
+                size: 20,
+                color: theme.colorScheme.primary,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Workspace',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      folderName.isEmpty ? 'Default Workspace' : folderName,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              TextButton.icon(
+                onPressed: _switchWorkspace,
+                icon: const Icon(Icons.swap_horiz, size: 18),
+                label: const Text('Switch'),
+                style: TextButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                ),
+              ),
+            ],
+          ),
+          if (workspacePath.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              workspacePath,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                fontFamily: 'monospace',
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Future<void> _switchWorkspace() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Switch Workspace?'),
+        content: const Text(
+          'You will be redirected to select a different workspace folder.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Switch'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      // Pick new workspace folder
+      final selectedDir = await ref
+          .read(workspaceProvider.notifier)
+          .pickWorkspaceFolder();
+
+      if (selectedDir == null || !mounted) return;
+
+      // Switch workspace using the provider
+      await ref.read(workspaceProvider.notifier).switchWorkspace(selectedDir);
+
+      if (mounted) {
+        // Navigation will be handled by router
+        context.go('/');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to switch workspace: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    }
   }
 
   Widget _buildLogo(ThemeData theme) {
