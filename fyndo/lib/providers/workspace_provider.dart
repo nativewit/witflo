@@ -30,6 +30,11 @@ abstract class WorkspaceState
   @BuiltValueField(wireName: 'discoveredVaults')
   BuiltList<String>? get discoveredVaults;
 
+  /// Whether the workspace directory is actually initialized.
+  /// A workspace is initialized if it has the .fyndo-workspace marker file.
+  @BuiltValueField(wireName: 'isInitialized')
+  bool get isInitialized;
+
   WorkspaceState._();
   factory WorkspaceState([void Function(WorkspaceStateBuilder) updates]) =
       _$WorkspaceState;
@@ -40,10 +45,11 @@ abstract class WorkspaceState
       ..config = null
       ..isLoading = false
       ..error = null
-      ..discoveredVaults = null,
+      ..discoveredVaults = null
+      ..isInitialized = false,
   );
 
-  bool get hasWorkspace => config != null;
+  bool get hasWorkspace => config != null && isInitialized;
   String? get rootPath => config?.rootPath;
 }
 
@@ -61,7 +67,8 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceState> {
           ..config = WorkspaceConfig.create(
             rootPath: '/web-storage',
           ).toBuilder()
-          ..isLoading = false,
+          ..isLoading = false
+          ..isInitialized = true,
       );
     }
 
@@ -78,14 +85,18 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceState> {
         return WorkspaceState.initial();
       }
 
-      // Validate that workspace still exists
-      if (!await _service!.isValidWorkspace(config.rootPath)) {
-        // Workspace no longer valid (folder deleted, etc.)
+      // Check if workspace directory is initialized (has marker file)
+      final isInitialized = await _service!.isValidWorkspace(config.rootPath);
+
+      if (!isInitialized) {
+        // Workspace folder exists in config but not initialized yet
+        // This happens when switching to a new empty folder
         return WorkspaceState(
           (b) => b
+            ..config = config.toBuilder()
             ..isLoading = false
-            ..error =
-                'Workspace directory no longer accessible: ${config.rootPath}',
+            ..isInitialized = false
+            ..discoveredVaults = BuiltList<String>([]).toBuilder(),
         );
       }
 
@@ -100,12 +111,14 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceState> {
         (b) => b
           ..config = updatedConfig.toBuilder()
           ..isLoading = false
+          ..isInitialized = true
           ..discoveredVaults = BuiltList<String>(vaults).toBuilder(),
       );
     } catch (e) {
       return WorkspaceState(
         (b) => b
           ..isLoading = false
+          ..isInitialized = false
           ..error = e.toString(),
       );
     }
@@ -136,29 +149,60 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceState> {
     );
   }
 
-  /// Switches to an existing workspace.
+  /// Switches to an existing workspace or a new uninitialized folder.
   ///
-  /// Validates workspace and adds current to recent workspaces.
+  /// If the workspace is initialized, it loads vaults and marks as initialized.
+  /// If the workspace is not initialized (empty folder), it saves the config
+  /// and marks as uninitialized so the app redirects to onboarding.
   Future<void> switchWorkspace(String newRootPath) async {
     state = AsyncValue.data(WorkspaceState((b) => b..isLoading = true));
 
     try {
-      final config = await _service!.switchWorkspace(newRootPath);
-      final vaults = await _service!.discoverVaults(newRootPath);
+      // Check if new workspace is initialized
+      final isInitialized = await _service!.isValidWorkspace(newRootPath);
 
-      state = AsyncValue.data(
-        WorkspaceState(
-          (b) => b
-            ..config = config.toBuilder()
-            ..isLoading = false
-            ..discoveredVaults = BuiltList<String>(vaults).toBuilder(),
-        ),
-      );
+      if (isInitialized) {
+        // Switching to an existing initialized workspace
+        final config = await _service!.switchWorkspace(newRootPath);
+        final vaults = await _service!.discoverVaults(newRootPath);
+
+        state = AsyncValue.data(
+          WorkspaceState(
+            (b) => b
+              ..config = config.toBuilder()
+              ..isLoading = false
+              ..isInitialized = true
+              ..discoveredVaults = BuiltList<String>(vaults).toBuilder(),
+          ),
+        );
+      } else {
+        // Switching to an uninitialized folder (will need onboarding)
+        // Save the new path to config but mark as uninitialized
+        final currentConfig = await _service!.loadWorkspaceConfig();
+        final newConfig = WorkspaceConfig.create(
+          rootPath: newRootPath,
+          recentWorkspaces: currentConfig != null
+              ? [currentConfig.rootPath, ...currentConfig.recentWorkspaces]
+              : [],
+        );
+        await _service!.saveWorkspaceConfig(newConfig);
+
+        state = AsyncValue.data(
+          WorkspaceState(
+            (b) => b
+              ..config = newConfig.toBuilder()
+              ..isLoading = false
+              ..isInitialized = false
+              ..discoveredVaults = BuiltList<String>([]).toBuilder(),
+          ),
+        );
+      }
     } catch (e) {
       state = AsyncValue.data(
         WorkspaceState(
           (b) => b
             ..isLoading = false
+            ..isInitialized = false
             ..error = e.toString(),
         ),
       );
