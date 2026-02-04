@@ -19,7 +19,7 @@ import 'package:fyndo_app/core/mcp/widget_inspector_mcp_tool.dart';
 ProviderContainer? _providerContainer;
 
 /// Set the provider container for MCP tools to access app state
-/// Must be called from FyndoApp after the ProviderScope is initialized
+/// Must be called from App after the ProviderScope is initialized
 void setMCPProviderContainer(ProviderContainer container) {
   _providerContainer = container;
 }

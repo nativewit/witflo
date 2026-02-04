@@ -113,7 +113,7 @@ class _VaultExportDialogState extends ConsumerState<VaultExportDialog> {
     return Dialog(
       child: Container(
         constraints: const BoxConstraints(maxWidth: 500),
-        padding: const EdgeInsets.all(FyndoTheme.paddingLarge),
+        padding: const EdgeInsets.all(AppTheme.paddingLarge),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -130,7 +130,7 @@ class _VaultExportDialogState extends ConsumerState<VaultExportDialog> {
 
             // Security Warning Box
             Container(
-              padding: const EdgeInsets.all(FyndoTheme.padding),
+              padding: const EdgeInsets.all(AppTheme.padding),
               decoration: BoxDecoration(
                 color: theme.colorScheme.errorContainer.withValues(alpha: 0.3),
                 border: Border.all(color: theme.colorScheme.error, width: 2),
@@ -195,7 +195,7 @@ class _VaultExportDialogState extends ConsumerState<VaultExportDialog> {
                 }
 
                 return DropdownButtonFormField<String>(
-                  key: FyndoKeys.dropdownExportVaultSelect,
+                  key: AppKeys.dropdownExportVaultSelect,
                   initialValue: _selectedVaultId,
                   decoration: const InputDecoration(
                     labelText: 'Select Vault',
@@ -221,7 +221,7 @@ class _VaultExportDialogState extends ConsumerState<VaultExportDialog> {
 
             // Folder Selection
             OutlinedButton.icon(
-              key: FyndoKeys.btnExportSelectFolder,
+              key: AppKeys.btnExportSelectFolder,
               onPressed: _isExporting ? null : _selectFolder,
               icon: const Icon(Icons.folder_open),
               label: Text(_selectedFolderPath ?? 'Select Export Folder'),
@@ -229,7 +229,7 @@ class _VaultExportDialogState extends ConsumerState<VaultExportDialog> {
             if (_selectedFolderPath != null) ...[
               const SizedBox(height: 8),
               Container(
-                padding: const EdgeInsets.all(FyndoTheme.paddingSmall),
+                padding: const EdgeInsets.all(AppTheme.paddingSmall),
                 decoration: BoxDecoration(
                   color: theme.colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(4),
@@ -248,7 +248,7 @@ class _VaultExportDialogState extends ConsumerState<VaultExportDialog> {
 
             // Acknowledgment Checkbox
             CheckboxListTile(
-              key: FyndoKeys.checkboxExportWarning,
+              key: AppKeys.checkboxExportWarning,
               value: _acknowledgedWarning,
               onChanged: _isExporting
                   ? null
@@ -271,13 +271,13 @@ class _VaultExportDialogState extends ConsumerState<VaultExportDialog> {
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 TextButton(
-                  key: FyndoKeys.btnExportCancel,
+                  key: AppKeys.btnExportCancel,
                   onPressed: _isExporting ? null : () => Navigator.pop(context),
                   child: const Text('Cancel'),
                 ),
                 const SizedBox(width: 12),
                 FilledButton.icon(
-                  key: FyndoKeys.btnExportConfirm,
+                  key: AppKeys.btnExportConfirm,
                   onPressed:
                       (_selectedVaultId != null &&
                           _selectedFolderPath != null &&

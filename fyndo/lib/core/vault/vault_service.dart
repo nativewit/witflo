@@ -35,6 +35,7 @@
 
 import 'dart:convert';
 
+import 'package:fyndo_app/core/config/env.dart';
 import 'package:fyndo_app/core/crypto/crypto.dart';
 import 'package:fyndo_app/core/vault/vault_filesystem.dart';
 import 'package:fyndo_app/core/vault/vault_header.dart';
@@ -293,7 +294,10 @@ class VaultService implements IVaultService {
     String vaultPath,
     VaultMetadata metadata,
   ) async {
-    final metadataPath = p.join(vaultPath, '.vault-meta.json');
+    final metadataPath = p.join(
+      vaultPath,
+      AppEnvironment.instance.vaultMetadataFile,
+    );
     final json = jsonEncode(metadata.toJson());
     final bytes = utf8.encode(json);
     await storageProvider.writeAtomic(metadataPath, bytes);
@@ -303,10 +307,14 @@ class VaultService implements IVaultService {
   ///
   /// [vaultPath] - Directory containing the vault
   ///
-  /// Returns the metadata if the file exists, null otherwise.
+  /// Returns [VaultMetadata] if the file exists and is valid.
+  /// Throws [VaultException] if the file is missing or corrupted.
   @override
   Future<VaultMetadata?> loadVaultMetadata(String vaultPath) async {
-    final metadataPath = p.join(vaultPath, '.vault-meta.json');
+    final metadataPath = p.join(
+      vaultPath,
+      AppEnvironment.instance.vaultMetadataFile,
+    );
     final bytes = await storageProvider.readFile(metadataPath);
     if (bytes == null) {
       return null;

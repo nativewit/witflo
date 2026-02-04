@@ -74,9 +74,9 @@ class _SecurityBadge extends StatelessWidget {
         vertical: compact ? 4 : 6,
       ),
       decoration: BoxDecoration(
-        color: isDark ? FyndoColors.darkSurfaceElevated : FyndoColors.paleGray,
+        color: isDark ? AppColors.darkSurfaceElevated : AppColors.paleGray,
         border: Border.all(
-          color: isDark ? FyndoColors.darkGray : FyndoColors.lightGray,
+          color: isDark ? AppColors.darkGray : AppColors.lightGray,
           width: 1,
         ),
       ),

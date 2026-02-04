@@ -6,6 +6,7 @@
 import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:fyndo_app/core/config/env.dart';
 import 'package:fyndo_app/core/workspace/folder_picker.dart';
 
 /// Mobile implementation of [FolderPicker] using app-scoped storage.
@@ -76,7 +77,9 @@ class FolderPickerMobile implements FolderPicker {
       }
 
       // Try to create a temp file to verify write permission
-      final testFile = File(p.join(path, '.fyndo-access-test'));
+      final testFile = File(
+        p.join(path, AppEnvironment.instance.accessTestFile),
+      );
       try {
         await testFile.writeAsString('test', flush: true);
         await testFile.delete();

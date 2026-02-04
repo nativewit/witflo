@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:fyndo_app/ui/theme/fyndo_theme.dart';
 
 /// Empty state widget with icon, title, and optional action.
-class FyndoEmptyState extends StatelessWidget {
+class AppEmptyState extends StatelessWidget {
   /// Icon to display.
   final IconData icon;
 
@@ -23,7 +23,7 @@ class FyndoEmptyState extends StatelessWidget {
   /// Optional action callback.
   final VoidCallback? onAction;
 
-  const FyndoEmptyState({
+  const AppEmptyState({
     super.key,
     required this.icon,
     required this.title,
@@ -38,7 +38,7 @@ class FyndoEmptyState extends StatelessWidget {
 
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(FyndoTheme.paddingLarge),
+        padding: const EdgeInsets.all(AppTheme.paddingLarge),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [

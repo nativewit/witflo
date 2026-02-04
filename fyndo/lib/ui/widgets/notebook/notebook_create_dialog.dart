@@ -102,7 +102,7 @@ class _NotebookCreateDialogState extends State<NotebookCreateDialog> {
     return Dialog(
       child: Container(
         constraints: const BoxConstraints(maxWidth: 400),
-        padding: const EdgeInsets.all(FyndoTheme.paddingLarge),
+        padding: const EdgeInsets.all(AppTheme.paddingLarge),
         child: Form(
           key: _formKey,
           child: Column(
@@ -118,7 +118,7 @@ class _NotebookCreateDialogState extends State<NotebookCreateDialog> {
               ),
               const SizedBox(height: 24),
               TextFormField(
-                key: FyndoKeys.inputNotebookName,
+                key: AppKeys.inputNotebookName,
                 controller: _nameController,
                 decoration: const InputDecoration(
                   labelText: 'Notebook Name',
@@ -136,7 +136,7 @@ class _NotebookCreateDialogState extends State<NotebookCreateDialog> {
               ),
               const SizedBox(height: 16),
               TextFormField(
-                key: FyndoKeys.inputNotebookDescription,
+                key: AppKeys.inputNotebookDescription,
                 controller: _descriptionController,
                 decoration: const InputDecoration(
                   labelText: 'Description (optional)',
@@ -173,8 +173,8 @@ class _NotebookCreateDialogState extends State<NotebookCreateDialog> {
                               Icons.check,
                               size: 16,
                               color: color == '000000' || color == '424242'
-                                  ? FyndoColors.white
-                                  : FyndoColors.white,
+                                  ? AppColors.white
+                                  : AppColors.white,
                             )
                           : null,
                     ),
@@ -220,13 +220,13 @@ class _NotebookCreateDialogState extends State<NotebookCreateDialog> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   TextButton(
-                    key: FyndoKeys.btnNotebookCancel,
+                    key: AppKeys.btnNotebookCancel,
                     onPressed: () => Navigator.pop(context),
                     child: const Text('Cancel'),
                   ),
                   const SizedBox(width: 12),
                   FilledButton(
-                    key: FyndoKeys.btnNotebookCreateConfirm,
+                    key: AppKeys.btnNotebookCreateConfirm,
                     onPressed: _create,
                     child: const Text('Create'),
                   ),

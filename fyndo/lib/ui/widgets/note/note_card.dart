@@ -53,7 +53,7 @@ class NoteCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return FyndoCard(
+    return AppCard(
       onTap: onTap,
       onLongPress: onLongPress,
       isSelected: isSelected,

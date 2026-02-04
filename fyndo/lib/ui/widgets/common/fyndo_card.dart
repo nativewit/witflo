@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:fyndo_app/ui/theme/fyndo_theme.dart';
 
 /// A card widget with pointed edges (no border radius).
-class FyndoCard extends StatelessWidget {
+class AppCard extends StatelessWidget {
   /// Card content.
   final Widget child;
 
@@ -29,7 +29,7 @@ class FyndoCard extends StatelessWidget {
   /// Whether card is selected.
   final bool isSelected;
 
-  const FyndoCard({
+  const AppCard({
     super.key,
     required this.child,
     this.padding,
@@ -45,7 +45,7 @@ class FyndoCard extends StatelessWidget {
     final theme = Theme.of(context);
 
     Widget content = Container(
-      padding: padding ?? const EdgeInsets.all(FyndoTheme.padding),
+      padding: padding ?? const EdgeInsets.all(AppTheme.padding),
       decoration: BoxDecoration(
         color: isSelected
             ? theme.colorScheme.primaryContainer.withValues(alpha: 0.3)

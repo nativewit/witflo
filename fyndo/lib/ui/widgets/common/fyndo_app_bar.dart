@@ -6,7 +6,7 @@
 import 'package:flutter/material.dart';
 
 /// Custom app bar with paper-like aesthetic.
-class FyndoAppBar extends StatelessWidget implements PreferredSizeWidget {
+class AppAppBar extends StatelessWidget implements PreferredSizeWidget {
   /// Title text or widget.
   final Widget? title;
 
@@ -25,7 +25,7 @@ class FyndoAppBar extends StatelessWidget implements PreferredSizeWidget {
   /// Custom height.
   final double height;
 
-  const FyndoAppBar({
+  const AppAppBar({
     super.key,
     this.title,
     this.leading,
@@ -90,10 +90,10 @@ class FyndoAppBar extends StatelessWidget implements PreferredSizeWidget {
 }
 
 /// Simple app bar title text.
-class FyndoAppBarTitle extends StatelessWidget {
+class AppBarTitle extends StatelessWidget {
   final String text;
 
-  const FyndoAppBarTitle(this.text, {super.key});
+  const AppBarTitle(this.text, {super.key});
 
   @override
   Widget build(BuildContext context) {

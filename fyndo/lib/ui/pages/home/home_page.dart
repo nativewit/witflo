@@ -5,6 +5,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:fyndo_app/core/agentic/fyndo_keys.dart';
+import 'package:fyndo_app/core/config/env.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fyndo_app/providers/note_providers.dart';
 import 'package:fyndo_app/providers/notebook_providers.dart';
@@ -65,12 +66,12 @@ class _HomePageContent extends ConsumerWidget {
     final isWide = size.width > 800;
 
     return Scaffold(
-      appBar: FyndoAppBar(
-        title: const FyndoAppBarTitle('Fyndo'),
+      appBar: AppAppBar(
+        title: AppBarTitle(AppEnvironment.instance.appName),
         leading: const SizedBox(width: 16),
         actions: [
           IconButton(
-            key: FyndoKeys.navSettings,
+            key: AppKeys.navSettings,
             icon: const Icon(Icons.settings),
             onPressed: () => context.push('/settings'),
             tooltip: 'Settings',
@@ -81,7 +82,7 @@ class _HomePageContent extends ConsumerWidget {
           ? _buildWideLayout(context, ref)
           : _buildNarrowLayout(context, ref),
       floatingActionButton: FloatingActionButton(
-        key: FyndoKeys.btnNotebookCreate,
+        key: AppKeys.btnNotebookCreate,
         onPressed: () => _createNotebook(context, ref),
         tooltip: 'Create Notebook',
         child: const Icon(Icons.add),
@@ -113,16 +114,16 @@ class _HomePageContent extends ConsumerWidget {
       children: [
         // Search field
         Padding(
-          padding: const EdgeInsets.all(FyndoTheme.padding),
+          padding: const EdgeInsets.all(AppTheme.padding),
           child: TextField(
-            key: FyndoKeys.btnSearch,
+            key: AppKeys.btnSearch,
             decoration: InputDecoration(
               hintText: 'Search...',
               prefixIcon: const Icon(Icons.search, size: 20),
               isDense: true,
               contentPadding: const EdgeInsets.symmetric(
-                horizontal: FyndoTheme.paddingSmall,
-                vertical: FyndoTheme.paddingSmall,
+                horizontal: AppTheme.paddingSmall,
+                vertical: AppTheme.paddingSmall,
               ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
@@ -133,7 +134,7 @@ class _HomePageContent extends ConsumerWidget {
         ),
         // Quick links
         Padding(
-          padding: const EdgeInsets.all(FyndoTheme.padding),
+          padding: const EdgeInsets.all(AppTheme.padding),
           child: Text(
             'Quick Access',
             style: theme.textTheme.labelMedium?.copyWith(
@@ -141,20 +142,20 @@ class _HomePageContent extends ConsumerWidget {
             ),
           ),
         ),
-        FyndoListTile(
-          key: FyndoKeys.navAllNotes,
+        AppListTile(
+          key: AppKeys.navAllNotes,
           leading: const Icon(Icons.note, size: 20),
           title: const Text('All Notes'),
           onTap: () => context.push('/notes'),
         ),
-        FyndoListTile(
-          key: FyndoKeys.navPinned,
+        AppListTile(
+          key: AppKeys.navPinned,
           leading: const Icon(Icons.push_pin, size: 20),
           title: const Text('Pinned'),
           onTap: () => context.push('/notes/pinned'),
         ),
-        FyndoListTile(
-          key: FyndoKeys.navArchived,
+        AppListTile(
+          key: AppKeys.navArchived,
           leading: const Icon(Icons.archive, size: 20),
           title: const Text('Archived'),
           onTap: () => context.push('/notes/archived'),
@@ -163,7 +164,7 @@ class _HomePageContent extends ConsumerWidget {
 
         // Vaults
         Padding(
-          padding: const EdgeInsets.all(FyndoTheme.padding),
+          padding: const EdgeInsets.all(AppTheme.padding),
           child: Row(
             children: [
               Expanded(
@@ -175,7 +176,7 @@ class _HomePageContent extends ConsumerWidget {
                 ),
               ),
               IconButton(
-                key: FyndoKeys.btnVaultCreate,
+                key: AppKeys.btnVaultCreate,
                 icon: const Icon(Icons.add, size: 18),
                 onPressed: () => _createVault(context, ref),
                 tooltip: 'Create Vault',
@@ -205,7 +206,7 @@ class _HomePageContent extends ConsumerWidget {
                   }
 
                   return ListView.builder(
-                    key: FyndoKeys.listVaultsSidebar,
+                    key: AppKeys.listVaultsSidebar,
                     itemCount: vaults.length,
                     itemBuilder: (context, index) {
                       final vaultInfo = vaults[index];
@@ -240,7 +241,7 @@ class _HomePageContent extends ConsumerWidget {
         const Divider(),
         // Lock and Trash actions
         Padding(
-          padding: const EdgeInsets.all(FyndoTheme.paddingSmall),
+          padding: const EdgeInsets.all(AppTheme.paddingSmall),
           child: Row(
             children: [
               Expanded(
@@ -251,8 +252,8 @@ class _HomePageContent extends ConsumerWidget {
                   label: const Text('Lock'),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: FyndoTheme.paddingSmall,
-                      vertical: FyndoTheme.paddingSmall,
+                      horizontal: AppTheme.paddingSmall,
+                      vertical: AppTheme.paddingSmall,
                     ),
                   ),
                 ),
@@ -266,8 +267,8 @@ class _HomePageContent extends ConsumerWidget {
                   label: const Text('Trash'),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: FyndoTheme.paddingSmall,
-                      vertical: FyndoTheme.paddingSmall,
+                      horizontal: AppTheme.paddingSmall,
+                      vertical: AppTheme.paddingSmall,
                     ),
                   ),
                 ),
@@ -287,7 +288,7 @@ class _HomePageContent extends ConsumerWidget {
         // Vault info card
         SliverToBoxAdapter(
           child: Padding(
-            padding: const EdgeInsets.all(FyndoTheme.padding),
+            padding: const EdgeInsets.all(AppTheme.padding),
             child: _VaultCardWithData(onTap: () => context.push('/vault')),
           ),
         ),
@@ -296,8 +297,8 @@ class _HomePageContent extends ConsumerWidget {
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.symmetric(
-              horizontal: FyndoTheme.padding,
-              vertical: FyndoTheme.paddingSmall,
+              horizontal: AppTheme.padding,
+              vertical: AppTheme.paddingSmall,
             ),
             child: Row(
               children: [
@@ -305,7 +306,7 @@ class _HomePageContent extends ConsumerWidget {
                   child: Text('Notebooks', style: theme.textTheme.titleMedium),
                 ),
                 TextButton.icon(
-                  key: FyndoKeys.btnNotebookCreateHeader,
+                  key: AppKeys.btnNotebookCreateHeader,
                   onPressed: () => _createNotebook(context, ref),
                   icon: const Icon(Icons.add, size: 18),
                   label: const Text('New'),
@@ -326,7 +327,7 @@ class _HomePageContent extends ConsumerWidget {
 
                 if (notebooks.isEmpty) {
                   return SliverFillRemaining(
-                    child: FyndoEmptyState(
+                    child: AppEmptyState(
                       icon: Icons.book,
                       title: 'No Notebooks Yet',
                       description:
@@ -338,13 +339,13 @@ class _HomePageContent extends ConsumerWidget {
                 }
 
                 return SliverPadding(
-                  padding: const EdgeInsets.all(FyndoTheme.padding),
+                  padding: const EdgeInsets.all(AppTheme.padding),
                   sliver: SliverGrid(
                     gridDelegate:
                         const SliverGridDelegateWithMaxCrossAxisExtent(
                           maxCrossAxisExtent: 300,
-                          mainAxisSpacing: FyndoTheme.padding,
-                          crossAxisSpacing: FyndoTheme.padding,
+                          mainAxisSpacing: AppTheme.padding,
+                          crossAxisSpacing: AppTheme.padding,
                           childAspectRatio: 1.5,
                         ),
                     delegate: SliverChildBuilderDelegate((context, index) {
@@ -538,7 +539,7 @@ class _VaultListTile extends StatelessWidget {
     final theme = Theme.of(context);
     final metadata = vaultInfo.metadata;
 
-    return FyndoListTile(
+    return AppListTile(
       key: Key('vault_tile_${vaultInfo.vaultId}'),
       leading: Icon(
         isActive ? Icons.lock_open : Icons.lock,
@@ -592,7 +593,7 @@ class _NotebookGridCard extends ConsumerWidget {
         : theme.colorScheme.primary;
 
     return InkWell(
-      key: FyndoKeys.notebookCard(notebook.id),
+      key: AppKeys.notebookCard(notebook.id),
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
@@ -605,7 +606,7 @@ class _NotebookGridCard extends ConsumerWidget {
             Container(height: 8, color: color),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.all(FyndoTheme.padding),
+                padding: const EdgeInsets.all(AppTheme.padding),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -708,7 +709,7 @@ class _VaultCardWithData extends ConsumerWidget {
         final stats = statsAsync.valueOrNull ?? VaultStats.empty;
 
         return VaultCard(
-          key: FyndoKeys.vaultCardHome,
+          key: AppKeys.vaultCardHome,
           name: metadata?.name ?? 'My Vault',
           description: metadata?.description ?? 'Your personal encrypted vault',
           isLocked: false,
@@ -720,7 +721,7 @@ class _VaultCardWithData extends ConsumerWidget {
         );
       },
       loading: () => VaultCard(
-        key: FyndoKeys.vaultCardHome,
+        key: AppKeys.vaultCardHome,
         name: 'Loading...',
         description: '',
         isLocked: false,
@@ -730,7 +731,7 @@ class _VaultCardWithData extends ConsumerWidget {
         onTap: null,
       ),
       error: (_, stack) => VaultCard(
-        key: FyndoKeys.vaultCardHome,
+        key: AppKeys.vaultCardHome,
         name: 'Error',
         description: 'Failed to load vault data',
         isLocked: false,

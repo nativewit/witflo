@@ -98,7 +98,7 @@ class _ErrorView extends StatelessWidget {
     return Scaffold(
       body: Center(
         child: Padding(
-          padding: const EdgeInsets.all(FyndoTheme.paddingLarge),
+          padding: const EdgeInsets.all(AppTheme.paddingLarge),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -136,7 +136,7 @@ class _NoWorkspaceView extends StatelessWidget {
     return Scaffold(
       body: Center(
         child: Padding(
-          padding: const EdgeInsets.all(FyndoTheme.paddingLarge),
+          padding: const EdgeInsets.all(AppTheme.paddingLarge),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -158,7 +158,7 @@ class _NoWorkspaceView extends StatelessWidget {
               ),
               const SizedBox(height: 32),
               FilledButton.icon(
-                key: FyndoKeys.btnGetStarted,
+                key: AppKeys.btnGetStarted,
                 icon: const Icon(Icons.start),
                 label: const Text('Get Started'),
                 onPressed: () => context.go('/onboarding'),
@@ -308,7 +308,7 @@ class _WorkspaceUnlockViewState extends ConsumerState<_WorkspaceUnlockView> {
 
                   // Password field
                   PasswordField(
-                    key: FyndoKeys.inputMasterPassword,
+                    key: AppKeys.inputMasterPassword,
                     controller: _passwordController,
                     labelText: 'Master Password',
                     hintText: 'Enter your password',
@@ -322,7 +322,7 @@ class _WorkspaceUnlockViewState extends ConsumerState<_WorkspaceUnlockView> {
 
                   // Unlock button
                   FilledButton(
-                    key: FyndoKeys.btnUnlockWorkspace,
+                    key: AppKeys.btnUnlockWorkspace,
                     onPressed: _isUnlocking ? null : _unlock,
                     child: _isUnlocking
                         ? const SizedBox(
@@ -582,7 +582,7 @@ class _UnlockedWorkspaceView extends ConsumerWidget {
         title: const Text('Your Vaults'),
         actions: [
           IconButton(
-            key: FyndoKeys.btnLockWorkspace,
+            key: AppKeys.btnLockWorkspace,
             icon: const Icon(Icons.lock),
             tooltip: 'Lock Workspace',
             onPressed: () {
@@ -848,7 +848,7 @@ class _WorkspaceSwitcherDialogState
     return Dialog(
       child: Container(
         constraints: const BoxConstraints(maxWidth: 500),
-        padding: const EdgeInsets.all(FyndoTheme.paddingLarge),
+        padding: const EdgeInsets.all(AppTheme.paddingLarge),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -985,7 +985,7 @@ class _VaultListSection extends ConsumerWidget {
         children: [
           // Header
           Container(
-            padding: const EdgeInsets.all(FyndoTheme.padding),
+            padding: const EdgeInsets.all(AppTheme.padding),
             decoration: BoxDecoration(
               color: theme.colorScheme.surfaceContainerHighest.withValues(
                 alpha: 0.3,
@@ -1005,7 +1005,7 @@ class _VaultListSection extends ConsumerWidget {
                   ),
                 ),
                 IconButton(
-                  key: FyndoKeys.btnVaultCreate,
+                  key: AppKeys.btnVaultCreate,
                   icon: const Icon(Icons.add),
                   onPressed: () => _showCreateVaultDialog(context, ref),
                   tooltip: 'Create New Vault',
@@ -1027,7 +1027,7 @@ class _VaultListSection extends ConsumerWidget {
               child: Center(child: CircularProgressIndicator()),
             ),
             error: (error, _) => Padding(
-              padding: const EdgeInsets.all(FyndoTheme.padding),
+              padding: const EdgeInsets.all(AppTheme.padding),
               child: Text('Error: $error'),
             ),
           ),
@@ -1042,7 +1042,7 @@ class _VaultListSection extends ConsumerWidget {
     ThemeData theme,
   ) {
     return Padding(
-      padding: const EdgeInsets.all(FyndoTheme.paddingLarge),
+      padding: const EdgeInsets.all(AppTheme.paddingLarge),
       child: Column(
         children: [
           Icon(
@@ -1062,7 +1062,7 @@ class _VaultListSection extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
           FilledButton.icon(
-            key: FyndoKeys.btnVaultCreateEmpty,
+            key: AppKeys.btnVaultCreateEmpty,
             icon: const Icon(Icons.add),
             label: const Text('Create Vault'),
             onPressed: () => _showCreateVaultDialog(context, ref),
@@ -1116,10 +1116,10 @@ class _VaultListItem extends ConsumerWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        key: FyndoKeys.vaultItem(vault.id),
+        key: AppKeys.vaultItem(vault.id),
         onTap: () => _openVault(context, ref),
         child: Container(
-          padding: const EdgeInsets.all(FyndoTheme.padding),
+          padding: const EdgeInsets.all(AppTheme.padding),
           decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: theme.dividerColor)),
           ),

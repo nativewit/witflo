@@ -104,7 +104,7 @@ class _VaultCreateDialogState extends State<VaultCreateDialog> {
     return Dialog(
       child: Container(
         constraints: const BoxConstraints(maxWidth: 400),
-        padding: const EdgeInsets.all(FyndoTheme.paddingLarge),
+        padding: const EdgeInsets.all(AppTheme.paddingLarge),
         child: Form(
           key: _formKey,
           child: Column(
@@ -120,7 +120,7 @@ class _VaultCreateDialogState extends State<VaultCreateDialog> {
               ),
               const SizedBox(height: 24),
               Container(
-                padding: const EdgeInsets.all(FyndoTheme.padding),
+                padding: const EdgeInsets.all(AppTheme.padding),
                 decoration: BoxDecoration(
                   color: theme.colorScheme.primaryContainer.withValues(
                     alpha: 0.2,
@@ -147,7 +147,7 @@ class _VaultCreateDialogState extends State<VaultCreateDialog> {
               ),
               const SizedBox(height: 24),
               TextFormField(
-                key: FyndoKeys.inputVaultNameCreate,
+                key: AppKeys.inputVaultNameCreate,
                 controller: _nameController,
                 decoration: const InputDecoration(
                   labelText: 'Vault Name',
@@ -165,7 +165,7 @@ class _VaultCreateDialogState extends State<VaultCreateDialog> {
               ),
               const SizedBox(height: 16),
               TextFormField(
-                key: FyndoKeys.inputVaultDescription,
+                key: AppKeys.inputVaultDescription,
                 controller: _descriptionController,
                 decoration: const InputDecoration(
                   labelText: 'Description (optional)',
@@ -181,7 +181,7 @@ class _VaultCreateDialogState extends State<VaultCreateDialog> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   TextButton(
-                    key: FyndoKeys.btnVaultCancel,
+                    key: AppKeys.btnVaultCancel,
                     onPressed: _isCreating
                         ? null
                         : () => Navigator.pop(context),
@@ -189,7 +189,7 @@ class _VaultCreateDialogState extends State<VaultCreateDialog> {
                   ),
                   const SizedBox(width: 12),
                   FilledButton(
-                    key: FyndoKeys.btnVaultCreateConfirm,
+                    key: AppKeys.btnVaultCreateConfirm,
                     onPressed: _isCreating ? null : _createVault,
                     child: _isCreating
                         ? const SizedBox(

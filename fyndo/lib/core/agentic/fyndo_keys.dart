@@ -16,7 +16,7 @@ import 'package:flutter/widgets.dart';
 /// Usage:
 /// ```dart
 /// ElevatedButton(
-///   key: FyndoKeys.btnGetStarted,
+///   key: AppKeys.btnGetStarted,
 ///   onPressed: () => ...,
 ///   child: Text('Get Started'),
 /// )
@@ -25,12 +25,12 @@ import 'package:flutter/widgets.dart';
 /// For dynamic keys with IDs:
 /// ```dart
 /// ListTile(
-///   key: FyndoKeys.vaultItem(vaultId),
+///   key: AppKeys.vaultItem(vaultId),
 ///   ...
 /// )
 /// ```
-class FyndoKeys {
-  FyndoKeys._(); // Private constructor to prevent instantiation
+class AppKeys {
+  AppKeys._(); // Private constructor to prevent instantiation
 
   // ═══════════════════════════════════════════════════════════════════════════
   // WELCOME PAGE

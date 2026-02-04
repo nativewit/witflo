@@ -66,7 +66,7 @@ class VaultSwitcherDialog extends ConsumerWidget {
     final availableVaultsAsync = ref.watch(availableVaultsProvider);
 
     return Dialog(
-      key: FyndoKeys.vaultSwitcherDialog,
+      key: AppKeys.vaultSwitcherDialog,
       child: Container(
         constraints: const BoxConstraints(maxWidth: 400, maxHeight: 500),
         child: Column(
@@ -75,7 +75,7 @@ class VaultSwitcherDialog extends ConsumerWidget {
           children: [
             // Header
             Padding(
-              padding: const EdgeInsets.all(FyndoTheme.paddingLarge),
+              padding: const EdgeInsets.all(AppTheme.paddingLarge),
               child: Row(
                 children: [
                   Icon(Icons.folder_copy, color: theme.colorScheme.primary),
@@ -101,11 +101,11 @@ class VaultSwitcherDialog extends ConsumerWidget {
                   }
 
                   return ListView.builder(
-                    key: FyndoKeys.vaultList,
+                    key: AppKeys.vaultList,
                     shrinkWrap: true,
                     itemCount: vaults.length,
                     padding: const EdgeInsets.symmetric(
-                      vertical: FyndoTheme.paddingSmall,
+                      vertical: AppTheme.paddingSmall,
                     ),
                     itemBuilder: (context, index) {
                       final vault = vaults[index];
@@ -123,11 +123,11 @@ class VaultSwitcherDialog extends ConsumerWidget {
                   );
                 },
                 loading: () => const Padding(
-                  padding: EdgeInsets.all(FyndoTheme.paddingLarge),
+                  padding: EdgeInsets.all(AppTheme.paddingLarge),
                   child: Center(child: CircularProgressIndicator()),
                 ),
                 error: (error, stack) => Padding(
-                  padding: const EdgeInsets.all(FyndoTheme.paddingLarge),
+                  padding: const EdgeInsets.all(AppTheme.paddingLarge),
                   child: Center(
                     child: Text(
                       'Error loading vaults: $error',
@@ -142,9 +142,9 @@ class VaultSwitcherDialog extends ConsumerWidget {
 
             // Create vault button
             Padding(
-              padding: const EdgeInsets.all(FyndoTheme.padding),
+              padding: const EdgeInsets.all(AppTheme.padding),
               child: TextButton.icon(
-                key: FyndoKeys.btnCreateVaultSwitcher,
+                key: AppKeys.btnCreateVaultSwitcher,
                 onPressed: () => _showCreateVaultDialog(context, ref),
                 icon: const Icon(Icons.add),
                 label: const Text('Create New Vault'),
@@ -158,7 +158,7 @@ class VaultSwitcherDialog extends ConsumerWidget {
 
   Widget _buildEmptyState(BuildContext context, ThemeData theme) {
     return Padding(
-      padding: const EdgeInsets.all(FyndoTheme.paddingLarge),
+      padding: const EdgeInsets.all(AppTheme.paddingLarge),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -212,12 +212,12 @@ class _VaultListItem extends StatelessWidget {
     }
 
     return InkWell(
-      key: FyndoKeys.vaultSwitcherItem(vault.vaultId),
+      key: AppKeys.vaultSwitcherItem(vault.vaultId),
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(
-          horizontal: FyndoTheme.paddingLarge,
-          vertical: FyndoTheme.padding,
+          horizontal: AppTheme.paddingLarge,
+          vertical: AppTheme.padding,
         ),
         decoration: BoxDecoration(
           color: vault.isSelected

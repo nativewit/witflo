@@ -51,7 +51,7 @@ class NotebookCard extends StatelessWidget {
         ? Color(int.parse('0xFF$color'))
         : theme.colorScheme.primary;
 
-    return FyndoCard(
+    return AppCard(
       onTap: onTap,
       isSelected: isSelected,
       child: Column(

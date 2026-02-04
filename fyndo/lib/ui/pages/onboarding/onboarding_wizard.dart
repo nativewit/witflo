@@ -305,7 +305,7 @@ class _OnboardingWizardState extends ConsumerState<OnboardingWizard> {
       children: [
         if (_currentStep > 0)
           TextButton.icon(
-            key: FyndoKeys.btnOnboardingBack,
+            key: AppKeys.btnOnboardingBack,
             icon: const Icon(Icons.arrow_back),
             label: const Text('Back'),
             onPressed: _isProcessing
@@ -320,7 +320,7 @@ class _OnboardingWizardState extends ConsumerState<OnboardingWizard> {
         else
           const SizedBox.shrink(),
         FilledButton.icon(
-          key: FyndoKeys.btnOnboardingNext,
+          key: AppKeys.btnOnboardingNext,
           icon: Icon(_currentStep == 2 ? Icons.check : Icons.arrow_forward),
           label: Text(_currentStep == 2 ? 'Finish' : 'Next'),
           onPressed: _isProcessing ? null : _handleNext,
@@ -543,7 +543,7 @@ class _Step1WorkspaceSelectionState
         Platform.isMacOS || Platform.isWindows || Platform.isLinux;
 
     return Container(
-      padding: const EdgeInsets.all(FyndoTheme.paddingLarge),
+      padding: const EdgeInsets.all(AppTheme.paddingLarge),
       decoration: BoxDecoration(border: Border.all(color: theme.dividerColor)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -619,7 +619,7 @@ class _Step1WorkspaceSelectionState
             if (isDesktop) ...[
               const SizedBox(height: 12),
               TextButton.icon(
-                key: FyndoKeys.btnWorkspaceChange,
+                key: AppKeys.btnWorkspaceChange,
                 icon: const Icon(Icons.folder_open),
                 label: const Text('Choose Different Folder'),
                 onPressed: _pickWorkspaceFolder,
@@ -627,7 +627,7 @@ class _Step1WorkspaceSelectionState
             ],
           ] else if (isDesktop) ...[
             OutlinedButton.icon(
-              key: FyndoKeys.btnWorkspaceChoose,
+              key: AppKeys.btnWorkspaceChoose,
               icon: const Icon(Icons.folder_open),
               label: const Text('Choose Folder'),
               onPressed: _pickWorkspaceFolder,
@@ -637,7 +637,7 @@ class _Step1WorkspaceSelectionState
             ),
             const SizedBox(height: 12),
             TextButton.icon(
-              key: FyndoKeys.btnWorkspaceDefault,
+              key: AppKeys.btnWorkspaceDefault,
               icon: const Icon(Icons.home),
               label: const Text('Use Default Location'),
               onPressed: _selectDefaultWorkspace,
@@ -692,7 +692,7 @@ class _Step2PasswordCreationState extends State<_Step2PasswordCreation> {
     final theme = Theme.of(context);
 
     return Container(
-      padding: const EdgeInsets.all(FyndoTheme.paddingLarge),
+      padding: const EdgeInsets.all(AppTheme.paddingLarge),
       decoration: BoxDecoration(border: Border.all(color: theme.dividerColor)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -749,7 +749,7 @@ class _Step2PasswordCreationState extends State<_Step2PasswordCreation> {
           const SizedBox(height: 24),
 
           PasswordField(
-            key: FyndoKeys.inputMasterPasswordCreate,
+            key: AppKeys.inputMasterPasswordCreate,
             controller: _passwordController,
             labelText: 'Master Password',
             hintText: 'Enter a strong password (min 8 characters)',
@@ -757,7 +757,7 @@ class _Step2PasswordCreationState extends State<_Step2PasswordCreation> {
           ),
           const SizedBox(height: 16),
           ConfirmPasswordField(
-            key: FyndoKeys.inputMasterPasswordConfirm,
+            key: AppKeys.inputMasterPasswordConfirm,
             controller: _confirmController,
             passwordController: _passwordController,
             labelText: 'Confirm Password',
@@ -810,7 +810,7 @@ class _Step3VaultCreationState extends State<_Step3VaultCreation> {
     final theme = Theme.of(context);
 
     return Container(
-      padding: const EdgeInsets.all(FyndoTheme.paddingLarge),
+      padding: const EdgeInsets.all(AppTheme.paddingLarge),
       decoration: BoxDecoration(border: Border.all(color: theme.dividerColor)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -837,7 +837,7 @@ class _Step3VaultCreationState extends State<_Step3VaultCreation> {
           ),
           const SizedBox(height: 24),
           TextField(
-            key: FyndoKeys.inputVaultName,
+            key: AppKeys.inputVaultName,
             controller: _nameController,
             decoration: const InputDecoration(
               labelText: 'Vault Name',

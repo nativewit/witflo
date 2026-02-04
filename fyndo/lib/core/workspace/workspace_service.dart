@@ -9,6 +9,7 @@ import 'dart:typed_data';
 import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
+import 'package:fyndo_app/core/config/env.dart';
 import 'package:fyndo_app/core/crypto/crypto.dart';
 import 'package:fyndo_app/core/workspace/workspace_config.dart';
 import 'package:fyndo_app/core/workspace/folder_picker.dart';
@@ -49,8 +50,11 @@ import 'package:fyndo_app/core/workspace/master_key_derivation.dart';
 /// Spec: docs/specs/spec-002-workspace-master-password.md (Section 3)
 class WorkspaceService implements IWorkspaceService {
   static const String _workspaceConfigKey = 'fyndo_workspace_config';
-  static const String _workspaceMarkerFile = '.fyndo-workspace';
-  static const String _keyringFile = '.fyndo-keyring.enc';
+
+  // Use environment config for file names
+  String get _workspaceMarkerFile =>
+      AppEnvironment.instance.workspaceMarkerFile;
+  String get _keyringFile => AppEnvironment.instance.workspaceKeyringFile;
   static const String _vaultsSubdir = 'vaults';
 
   final FolderPicker _folderPicker;

@@ -15,8 +15,8 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'fyndo_colors.dart';
 
-/// Fyndo theme configuration.
-abstract final class FyndoTheme {
+/// Application theme configuration.
+abstract final class AppTheme {
   /// Border radius - ZERO for pointed edges (notebook aesthetic)
   static const double borderRadius = 0.0;
 
@@ -44,29 +44,29 @@ abstract final class FyndoTheme {
       useMaterial3: true,
       colorScheme: colorScheme,
       textTheme: textTheme,
-      scaffoldBackgroundColor: FyndoColors.paper,
+      scaffoldBackgroundColor: AppColors.paper,
 
       // AppBar - minimal, clean
       appBarTheme: AppBarTheme(
-        backgroundColor: FyndoColors.paper,
-        foregroundColor: FyndoColors.charcoal,
+        backgroundColor: AppColors.paper,
+        foregroundColor: AppColors.charcoal,
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
         titleTextStyle: textTheme.titleLarge?.copyWith(
           fontWeight: FontWeight.w600,
         ),
-        iconTheme: const IconThemeData(color: FyndoColors.charcoal, size: 24),
+        iconTheme: const IconThemeData(color: AppColors.charcoal, size: 24),
       ),
 
       // Cards - no border radius, subtle border
       cardTheme: CardThemeData(
-        color: FyndoColors.white,
+        color: AppColors.white,
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(borderRadius),
           side: const BorderSide(
-            color: FyndoColors.paleGray,
+            color: AppColors.paleGray,
             width: borderWidth,
           ),
         ),
@@ -76,8 +76,8 @@ abstract final class FyndoTheme {
       // Buttons - pointed edges
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: FyndoColors.black,
-          foregroundColor: FyndoColors.white,
+          backgroundColor: AppColors.black,
+          foregroundColor: AppColors.white,
           elevation: 0,
           padding: const EdgeInsets.symmetric(
             horizontal: padding,
@@ -94,8 +94,8 @@ abstract final class FyndoTheme {
 
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: FyndoColors.black,
-          foregroundColor: FyndoColors.white,
+          backgroundColor: AppColors.black,
+          foregroundColor: AppColors.white,
           padding: const EdgeInsets.symmetric(
             horizontal: padding,
             vertical: paddingSmall + 4,
@@ -111,13 +111,13 @@ abstract final class FyndoTheme {
 
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: FyndoColors.charcoal,
+          foregroundColor: AppColors.charcoal,
           padding: const EdgeInsets.symmetric(
             horizontal: padding,
             vertical: paddingSmall + 4,
           ),
           side: const BorderSide(
-            color: FyndoColors.charcoal,
+            color: AppColors.charcoal,
             width: borderWidth,
           ),
           shape: RoundedRectangleBorder(
@@ -131,7 +131,7 @@ abstract final class FyndoTheme {
 
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: FyndoColors.charcoal,
+          foregroundColor: AppColors.charcoal,
           padding: const EdgeInsets.symmetric(
             horizontal: paddingSmall,
             vertical: paddingSmall,
@@ -147,7 +147,7 @@ abstract final class FyndoTheme {
 
       iconButtonTheme: IconButtonThemeData(
         style: IconButton.styleFrom(
-          foregroundColor: FyndoColors.charcoal,
+          foregroundColor: AppColors.charcoal,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(borderRadius),
           ),
@@ -157,39 +157,39 @@ abstract final class FyndoTheme {
       // Input fields - pointed edges, underline style
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: FyndoColors.white,
+        fillColor: AppColors.white,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(borderRadius),
           borderSide: const BorderSide(
-            color: FyndoColors.gray,
+            color: AppColors.gray,
             width: borderWidth,
           ),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(borderRadius),
           borderSide: const BorderSide(
-            color: FyndoColors.lightGray,
+            color: AppColors.lightGray,
             width: borderWidth,
           ),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(borderRadius),
           borderSide: const BorderSide(
-            color: FyndoColors.charcoal,
+            color: AppColors.charcoal,
             width: borderWidthHeavy,
           ),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(borderRadius),
           borderSide: const BorderSide(
-            color: FyndoColors.error,
+            color: AppColors.error,
             width: borderWidth,
           ),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(borderRadius),
           borderSide: const BorderSide(
-            color: FyndoColors.error,
+            color: AppColors.error,
             width: borderWidthHeavy,
           ),
         ),
@@ -197,18 +197,18 @@ abstract final class FyndoTheme {
           horizontal: padding,
           vertical: paddingSmall + 4,
         ),
-        labelStyle: textTheme.bodyMedium?.copyWith(color: FyndoColors.darkGray),
-        hintStyle: textTheme.bodyMedium?.copyWith(color: FyndoColors.gray),
+        labelStyle: textTheme.bodyMedium?.copyWith(color: AppColors.darkGray),
+        hintStyle: textTheme.bodyMedium?.copyWith(color: AppColors.gray),
       ),
 
       // Dialogs - pointed edges
       dialogTheme: DialogThemeData(
-        backgroundColor: FyndoColors.white,
+        backgroundColor: AppColors.white,
         elevation: 8,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(borderRadius),
           side: const BorderSide(
-            color: FyndoColors.paleGray,
+            color: AppColors.paleGray,
             width: borderWidth,
           ),
         ),
@@ -219,7 +219,7 @@ abstract final class FyndoTheme {
 
       // Bottom sheets - pointed edges
       bottomSheetTheme: BottomSheetThemeData(
-        backgroundColor: FyndoColors.white,
+        backgroundColor: AppColors.white,
         elevation: 8,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(borderRadius),
@@ -228,7 +228,7 @@ abstract final class FyndoTheme {
 
       // Chips - pointed edges
       chipTheme: ChipThemeData(
-        backgroundColor: FyndoColors.paleGray,
+        backgroundColor: AppColors.paleGray,
         labelStyle: textTheme.labelMedium,
         padding: const EdgeInsets.symmetric(
           horizontal: paddingSmall,
@@ -237,7 +237,7 @@ abstract final class FyndoTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(borderRadius),
           side: const BorderSide(
-            color: FyndoColors.lightGray,
+            color: AppColors.lightGray,
             width: borderWidth,
           ),
         ),
@@ -245,15 +245,15 @@ abstract final class FyndoTheme {
 
       // Divider
       dividerTheme: const DividerThemeData(
-        color: FyndoColors.paleGray,
+        color: AppColors.paleGray,
         thickness: borderWidth,
         space: 1,
       ),
 
       // FloatingActionButton - pointed edges
       floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: FyndoColors.black,
-        foregroundColor: FyndoColors.white,
+        backgroundColor: AppColors.black,
+        foregroundColor: AppColors.white,
         elevation: 2,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(borderRadius),
@@ -271,18 +271,18 @@ abstract final class FyndoTheme {
         ),
         titleTextStyle: textTheme.bodyLarge,
         subtitleTextStyle: textTheme.bodyMedium?.copyWith(
-          color: FyndoColors.darkGray,
+          color: AppColors.darkGray,
         ),
       ),
 
       // PopupMenu - pointed edges
       popupMenuTheme: PopupMenuThemeData(
-        color: FyndoColors.white,
+        color: AppColors.white,
         elevation: 4,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(borderRadius),
           side: const BorderSide(
-            color: FyndoColors.paleGray,
+            color: AppColors.paleGray,
             width: borderWidth,
           ),
         ),
@@ -291,9 +291,9 @@ abstract final class FyndoTheme {
 
       // SnackBar
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: FyndoColors.charcoal,
+        backgroundColor: AppColors.charcoal,
         contentTextStyle: textTheme.bodyMedium?.copyWith(
-          color: FyndoColors.white,
+          color: AppColors.white,
         ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(borderRadius),
@@ -303,13 +303,13 @@ abstract final class FyndoTheme {
 
       // Tab bar
       tabBarTheme: TabBarThemeData(
-        labelColor: FyndoColors.charcoal,
-        unselectedLabelColor: FyndoColors.gray,
+        labelColor: AppColors.charcoal,
+        unselectedLabelColor: AppColors.gray,
         labelStyle: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
         unselectedLabelStyle: textTheme.labelLarge,
         indicator: const UnderlineTabIndicator(
           borderSide: BorderSide(
-            color: FyndoColors.charcoal,
+            color: AppColors.charcoal,
             width: borderWidthHeavy,
           ),
         ),
@@ -317,8 +317,8 @@ abstract final class FyndoTheme {
 
       // Progress indicators
       progressIndicatorTheme: const ProgressIndicatorThemeData(
-        color: FyndoColors.charcoal,
-        linearTrackColor: FyndoColors.paleGray,
+        color: AppColors.charcoal,
+        linearTrackColor: AppColors.paleGray,
       ),
     );
   }
@@ -332,30 +332,30 @@ abstract final class FyndoTheme {
       useMaterial3: true,
       colorScheme: colorScheme,
       textTheme: textTheme,
-      scaffoldBackgroundColor: FyndoColors.darkBackground,
+      scaffoldBackgroundColor: AppColors.darkBackground,
 
       // AppBar
       appBarTheme: AppBarTheme(
-        backgroundColor: FyndoColors.darkBackground,
-        foregroundColor: FyndoColors.darkText,
+        backgroundColor: AppColors.darkBackground,
+        foregroundColor: AppColors.darkText,
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
         titleTextStyle: textTheme.titleLarge?.copyWith(
           fontWeight: FontWeight.w600,
-          color: FyndoColors.darkText,
+          color: AppColors.darkText,
         ),
-        iconTheme: const IconThemeData(color: FyndoColors.darkText, size: 24),
+        iconTheme: const IconThemeData(color: AppColors.darkText, size: 24),
       ),
 
       // Cards
       cardTheme: CardThemeData(
-        color: FyndoColors.darkSurface,
+        color: AppColors.darkSurface,
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(borderRadius),
           side: const BorderSide(
-            color: FyndoColors.darkSurfaceElevated,
+            color: AppColors.darkSurfaceElevated,
             width: borderWidth,
           ),
         ),
@@ -365,8 +365,8 @@ abstract final class FyndoTheme {
       // Buttons
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: FyndoColors.white,
-          foregroundColor: FyndoColors.black,
+          backgroundColor: AppColors.white,
+          foregroundColor: AppColors.black,
           elevation: 0,
           padding: const EdgeInsets.symmetric(
             horizontal: padding,
@@ -383,8 +383,8 @@ abstract final class FyndoTheme {
 
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: FyndoColors.white,
-          foregroundColor: FyndoColors.black,
+          backgroundColor: AppColors.white,
+          foregroundColor: AppColors.black,
           padding: const EdgeInsets.symmetric(
             horizontal: padding,
             vertical: paddingSmall + 4,
@@ -400,13 +400,13 @@ abstract final class FyndoTheme {
 
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: FyndoColors.darkText,
+          foregroundColor: AppColors.darkText,
           padding: const EdgeInsets.symmetric(
             horizontal: padding,
             vertical: paddingSmall + 4,
           ),
           side: const BorderSide(
-            color: FyndoColors.darkText,
+            color: AppColors.darkText,
             width: borderWidth,
           ),
           shape: RoundedRectangleBorder(
@@ -420,7 +420,7 @@ abstract final class FyndoTheme {
 
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: FyndoColors.darkText,
+          foregroundColor: AppColors.darkText,
           padding: const EdgeInsets.symmetric(
             horizontal: paddingSmall,
             vertical: paddingSmall,
@@ -436,7 +436,7 @@ abstract final class FyndoTheme {
 
       iconButtonTheme: IconButtonThemeData(
         style: IconButton.styleFrom(
-          foregroundColor: FyndoColors.darkText,
+          foregroundColor: AppColors.darkText,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(borderRadius),
           ),
@@ -446,25 +446,25 @@ abstract final class FyndoTheme {
       // Input fields
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: FyndoColors.darkSurface,
+        fillColor: AppColors.darkSurface,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(borderRadius),
           borderSide: const BorderSide(
-            color: FyndoColors.darkSurfaceElevated,
+            color: AppColors.darkSurfaceElevated,
             width: borderWidth,
           ),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(borderRadius),
           borderSide: const BorderSide(
-            color: FyndoColors.darkSurfaceElevated,
+            color: AppColors.darkSurfaceElevated,
             width: borderWidth,
           ),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(borderRadius),
           borderSide: const BorderSide(
-            color: FyndoColors.white,
+            color: AppColors.white,
             width: borderWidthHeavy,
           ),
         ),
@@ -484,39 +484,39 @@ abstract final class FyndoTheme {
           vertical: paddingSmall + 4,
         ),
         labelStyle: textTheme.bodyMedium?.copyWith(
-          color: FyndoColors.darkTextSecondary,
+          color: AppColors.darkTextSecondary,
         ),
-        hintStyle: textTheme.bodyMedium?.copyWith(color: FyndoColors.gray),
+        hintStyle: textTheme.bodyMedium?.copyWith(color: AppColors.gray),
       ),
 
       // Dialogs
       dialogTheme: DialogThemeData(
-        backgroundColor: FyndoColors.darkSurface,
+        backgroundColor: AppColors.darkSurface,
         elevation: 8,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(borderRadius),
           side: const BorderSide(
-            color: FyndoColors.darkSurfaceElevated,
+            color: AppColors.darkSurfaceElevated,
             width: borderWidth,
           ),
         ),
         titleTextStyle: textTheme.titleLarge?.copyWith(
           fontWeight: FontWeight.w600,
-          color: FyndoColors.darkText,
+          color: AppColors.darkText,
         ),
       ),
 
       // Divider
       dividerTheme: const DividerThemeData(
-        color: FyndoColors.darkSurfaceElevated,
+        color: AppColors.darkSurfaceElevated,
         thickness: borderWidth,
         space: 1,
       ),
 
       // FloatingActionButton
       floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: FyndoColors.white,
-        foregroundColor: FyndoColors.black,
+        backgroundColor: AppColors.white,
+        foregroundColor: AppColors.black,
         elevation: 2,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(borderRadius),
@@ -533,32 +533,32 @@ abstract final class FyndoTheme {
           borderRadius: BorderRadius.circular(borderRadius),
         ),
         titleTextStyle: textTheme.bodyLarge?.copyWith(
-          color: FyndoColors.darkText,
+          color: AppColors.darkText,
         ),
         subtitleTextStyle: textTheme.bodyMedium?.copyWith(
-          color: FyndoColors.darkTextSecondary,
+          color: AppColors.darkTextSecondary,
         ),
       ),
 
       // PopupMenu
       popupMenuTheme: PopupMenuThemeData(
-        color: FyndoColors.darkSurface,
+        color: AppColors.darkSurface,
         elevation: 4,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(borderRadius),
           side: const BorderSide(
-            color: FyndoColors.darkSurfaceElevated,
+            color: AppColors.darkSurfaceElevated,
             width: borderWidth,
           ),
         ),
-        textStyle: textTheme.bodyMedium?.copyWith(color: FyndoColors.darkText),
+        textStyle: textTheme.bodyMedium?.copyWith(color: AppColors.darkText),
       ),
 
       // SnackBar
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: FyndoColors.white,
+        backgroundColor: AppColors.white,
         contentTextStyle: textTheme.bodyMedium?.copyWith(
-          color: FyndoColors.charcoal,
+          color: AppColors.charcoal,
         ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(borderRadius),
@@ -568,13 +568,13 @@ abstract final class FyndoTheme {
 
       // Tab bar
       tabBarTheme: TabBarThemeData(
-        labelColor: FyndoColors.darkText,
-        unselectedLabelColor: FyndoColors.gray,
+        labelColor: AppColors.darkText,
+        unselectedLabelColor: AppColors.gray,
         labelStyle: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
         unselectedLabelStyle: textTheme.labelLarge,
         indicator: const UnderlineTabIndicator(
           borderSide: BorderSide(
-            color: FyndoColors.white,
+            color: AppColors.white,
             width: borderWidthHeavy,
           ),
         ),
@@ -582,8 +582,8 @@ abstract final class FyndoTheme {
 
       // Progress indicators
       progressIndicatorTheme: const ProgressIndicatorThemeData(
-        color: FyndoColors.white,
-        linearTrackColor: FyndoColors.darkSurfaceElevated,
+        color: AppColors.white,
+        linearTrackColor: AppColors.darkSurfaceElevated,
       ),
     );
   }

@@ -155,7 +155,7 @@ class NoteEditorState extends State<NoteEditor> {
               config: QuillEditorConfig(
                 autoFocus: widget.autofocus,
                 placeholder: widget.placeholder ?? 'Start writing...',
-                padding: const EdgeInsets.all(FyndoTheme.padding),
+                padding: const EdgeInsets.all(AppTheme.padding),
                 expands: true,
                 customStyles: _buildStyles(theme, isDark),
               ),
@@ -326,8 +326,8 @@ class NoteEditorState extends State<NoteEditor> {
           fontSize: 14,
           color: theme.colorScheme.onSurface,
           backgroundColor: isDark
-              ? FyndoColors.darkSurfaceElevated
-              : FyndoColors.paleGray,
+              ? AppColors.darkSurfaceElevated
+              : AppColors.paleGray,
         ),
       ),
       code: DefaultTextBlockStyle(
@@ -342,8 +342,8 @@ class NoteEditorState extends State<NoteEditor> {
         const VerticalSpacing(0, 0),
         BoxDecoration(
           color: isDark
-              ? FyndoColors.darkSurfaceElevated
-              : FyndoColors.paleGray,
+              ? AppColors.darkSurfaceElevated
+              : AppColors.paleGray,
           border: Border.all(color: theme.dividerColor),
         ),
       ),

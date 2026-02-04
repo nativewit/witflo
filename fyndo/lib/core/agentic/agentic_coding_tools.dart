@@ -15,7 +15,7 @@
 // ```dart
 // runApp(
 //   AgenticCodingTools(
-//     child: ProviderScope(child: FyndoApp()),
+//     child: ProviderScope(child: App()),
 //   ),
 // );
 // ```

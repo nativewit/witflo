@@ -35,8 +35,8 @@ class NotebookPage extends ConsumerWidget {
       builder: (context, notebook, _) {
         if (notebook == null) {
           return Scaffold(
-            appBar: const FyndoAppBar(title: FyndoAppBarTitle('Notebook')),
-            body: const FyndoEmptyState(
+            appBar: const AppAppBar(title: AppBarTitle('Notebook')),
+            body: const AppEmptyState(
               icon: Icons.book,
               title: 'Notebook Not Found',
               description: 'This notebook may have been deleted.',
@@ -311,7 +311,7 @@ class _NotebookPageContentState extends ConsumerState<_NotebookPageContent>
         : theme.colorScheme.primary;
 
     return Scaffold(
-      appBar: FyndoAppBar(
+      appBar: AppAppBar(
         title: Row(
           children: [
             Icon(_getIconData(notebook.icon), color: color, size: 24),
@@ -343,7 +343,7 @@ class _NotebookPageContentState extends ConsumerState<_NotebookPageContent>
         ),
         actions: [
           NotebookMenu(
-            key: FyndoKeys.menuNotebookActions,
+            key: AppKeys.menuNotebookActions,
             notebook: notebook,
             onRename: () => _showRenameDialog(context, ref),
             onDelete: () => _confirmDelete(context, ref),
@@ -378,7 +378,7 @@ class _NotebookPageContentState extends ConsumerState<_NotebookPageContent>
             child: Row(
               children: [
                 IconButton(
-                  key: FyndoKeys.btnBackToNotes,
+                  key: AppKeys.btnBackToNotes,
                   icon: const Icon(Icons.arrow_back),
                   onPressed: () {
                     if (_hasChanges) _saveNote();
@@ -405,7 +405,7 @@ class _NotebookPageContentState extends ConsumerState<_NotebookPageContent>
         return notesAsync.when(
           data: (notes) {
             if (notes.isEmpty) {
-              return FyndoEmptyState(
+              return AppEmptyState(
                 icon: Icons.note_outlined,
                 title: 'No Notes Yet',
                 description: 'Create your first note in this notebook.',
@@ -424,8 +424,8 @@ class _NotebookPageContentState extends ConsumerState<_NotebookPageContent>
                 // Header with create button
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: FyndoTheme.padding,
-                    vertical: FyndoTheme.paddingSmall,
+                    horizontal: AppTheme.padding,
+                    vertical: AppTheme.paddingSmall,
                   ),
                   decoration: BoxDecoration(
                     border: Border(
@@ -453,7 +453,7 @@ class _NotebookPageContentState extends ConsumerState<_NotebookPageContent>
                 // Notes list
                 Expanded(
                   child: ListView(
-                    key: FyndoKeys.listNotes,
+                    key: AppKeys.listNotes,
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     children: [
                       if (pinnedNotes.isNotEmpty) ...[
@@ -487,7 +487,7 @@ class _NotebookPageContentState extends ConsumerState<_NotebookPageContent>
                 ),
                 // Footer with total count and save status
                 Container(
-                  padding: const EdgeInsets.all(FyndoTheme.paddingSmall),
+                  padding: const EdgeInsets.all(AppTheme.paddingSmall),
                   decoration: BoxDecoration(
                     border: Border(top: BorderSide(color: theme.dividerColor)),
                   ),
@@ -551,7 +551,7 @@ class _NotebookPageContentState extends ConsumerState<_NotebookPageContent>
 
   Widget _buildEditorArea(ThemeData theme) {
     if (_selectedNoteId == null) {
-      return FyndoEmptyState(
+      return AppEmptyState(
         icon: Icons.edit_note,
         title: 'Select a Note',
         description: 'Choose a note from the list to start editing.',
@@ -580,7 +580,7 @@ class _NotebookPageContentState extends ConsumerState<_NotebookPageContent>
           // Note actions toolbar
           Container(
             padding: const EdgeInsets.symmetric(
-              horizontal: FyndoTheme.paddingSmall,
+              horizontal: AppTheme.paddingSmall,
               vertical: 4,
             ),
             color: theme.colorScheme.surface,
@@ -598,7 +598,7 @@ class _NotebookPageContentState extends ConsumerState<_NotebookPageContent>
                 const Spacer(),
                 // Pin button
                 IconButton(
-                  key: FyndoKeys.btnNotePin,
+                  key: AppKeys.btnNotePin,
                   icon: Icon(
                     _currentNote!.isPinned
                         ? Icons.push_pin
@@ -665,10 +665,10 @@ class _NotebookPageContentState extends ConsumerState<_NotebookPageContent>
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(
-              FyndoTheme.padding,
-              FyndoTheme.padding,
-              FyndoTheme.padding,
-              FyndoTheme.paddingSmall,
+              AppTheme.padding,
+              AppTheme.padding,
+              AppTheme.padding,
+              AppTheme.paddingSmall,
             ),
             child: TextField(
               key: const Key('input_note_title_embedded'),
@@ -687,8 +687,8 @@ class _NotebookPageContentState extends ConsumerState<_NotebookPageContent>
           ),
           Container(
             margin: const EdgeInsets.symmetric(
-              horizontal: FyndoTheme.padding,
-              vertical: FyndoTheme.paddingSmall,
+              horizontal: AppTheme.padding,
+              vertical: AppTheme.paddingSmall,
             ),
             height: 1,
             color: theme.dividerColor.withValues(alpha: 0.5),
@@ -998,7 +998,7 @@ class _NoteListItem extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Material(
-      key: FyndoKeys.noteItem(note.id),
+      key: AppKeys.noteItem(note.id),
       color: isSelected
           ? theme.colorScheme.primaryContainer.withValues(alpha: 0.3)
           : Colors.transparent,

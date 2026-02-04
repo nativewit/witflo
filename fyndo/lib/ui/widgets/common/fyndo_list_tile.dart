@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:fyndo_app/ui/theme/fyndo_theme.dart';
 
 /// A list tile widget with pointed edges.
-class FyndoListTile extends StatelessWidget {
+class AppListTile extends StatelessWidget {
   /// Leading widget.
   final Widget? leading;
 
@@ -35,7 +35,7 @@ class FyndoListTile extends StatelessWidget {
   /// Whether to show bottom border.
   final bool showBorder;
 
-  const FyndoListTile({
+  const AppListTile({
     super.key,
     this.leading,
     required this.title,
@@ -59,8 +59,8 @@ class FyndoListTile extends StatelessWidget {
         padding:
             contentPadding ??
             const EdgeInsets.symmetric(
-              horizontal: FyndoTheme.padding,
-              vertical: FyndoTheme.paddingSmall + 4,
+              horizontal: AppTheme.padding,
+              vertical: AppTheme.paddingSmall + 4,
             ),
         decoration: BoxDecoration(
           color: isSelected

@@ -97,7 +97,7 @@ class _VaultDeleteDialogState extends State<VaultDeleteDialog> {
     return Dialog(
       child: Container(
         constraints: const BoxConstraints(maxWidth: 500),
-        padding: const EdgeInsets.all(FyndoTheme.paddingLarge),
+        padding: const EdgeInsets.all(AppTheme.paddingLarge),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -126,7 +126,7 @@ class _VaultDeleteDialogState extends State<VaultDeleteDialog> {
 
             // Danger warning box
             Container(
-              padding: const EdgeInsets.all(FyndoTheme.padding),
+              padding: const EdgeInsets.all(AppTheme.padding),
               decoration: BoxDecoration(
                 color: theme.colorScheme.errorContainer.withValues(alpha: 0.3),
                 border: Border.all(color: theme.colorScheme.error, width: 2),

@@ -31,6 +31,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fyndo_app/core/agentic/agentic_coding_tools.dart';
+import 'package:fyndo_app/core/config/env.dart';
 import 'package:fyndo_app/core/crypto/crypto.dart';
 import 'package:fyndo_app/core/logging/app_logger.dart';
 import 'package:fyndo_app/providers/theme_provider.dart';
@@ -64,19 +65,19 @@ Future<void> main() async {
   log.debug('Cryptography initialized');
 
   // Run the app with centralized AI tooling wrapper
-  log.info('Launching Fyndo app');
-  runApp(const AgenticCodingTools(child: ProviderScope(child: FyndoApp())));
+  log.info('Launching app');
+  runApp(const AgenticCodingTools(child: ProviderScope(child: App())));
 }
 
-/// The main Fyndo application.
-class FyndoApp extends ConsumerStatefulWidget {
-  const FyndoApp({super.key});
+/// The main application widget.
+class App extends ConsumerStatefulWidget {
+  const App({super.key});
 
   @override
-  ConsumerState<FyndoApp> createState() => _FyndoAppState();
+  ConsumerState<App> createState() => _AppState();
 }
 
-class _FyndoAppState extends ConsumerState<FyndoApp> {
+class _AppState extends ConsumerState<App> {
   bool _initialized = false;
 
   @override
@@ -100,10 +101,10 @@ class _FyndoAppState extends ConsumerState<FyndoApp> {
   Widget build(BuildContext context) {
     if (!_initialized) {
       return MaterialApp(
-        title: 'Fyndo',
+        title: AppEnvironment.instance.appName,
         debugShowCheckedModeBanner: false,
-        theme: FyndoTheme.light(),
-        darkTheme: FyndoTheme.dark(),
+        theme: AppTheme.light(),
+        darkTheme: AppTheme.dark(),
         themeMode: ThemeMode.system,
         localizationsDelegates: [FlutterQuillLocalizations.delegate],
         home: const _SplashScreen(),
@@ -114,10 +115,10 @@ class _FyndoAppState extends ConsumerState<FyndoApp> {
     final themeMode = ref.watch(themeModeProvider);
 
     return MaterialApp.router(
-      title: 'Fyndo',
+      title: AppEnvironment.instance.appName,
       debugShowCheckedModeBanner: false,
-      theme: FyndoTheme.light(),
-      darkTheme: FyndoTheme.dark(),
+      theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
       themeMode: themeMode,
       routerConfig: router,
       localizationsDelegates: [FlutterQuillLocalizations.delegate],

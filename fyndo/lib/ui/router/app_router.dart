@@ -213,7 +213,7 @@ class _AllNotesPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      appBar: const FyndoAppBar(title: FyndoAppBarTitle('All Notes')),
+      appBar: const AppAppBar(title: AppBarTitle('All Notes')),
       body: ActiveNotesConsumer(
         builder: (context, notesAsync, _) {
           return notesAsync.when(
@@ -266,14 +266,14 @@ class _PinnedNotesPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      appBar: const FyndoAppBar(title: FyndoAppBarTitle('Pinned Notes')),
+      appBar: const AppAppBar(title: AppBarTitle('Pinned Notes')),
       body: ActiveNotesConsumer(
         builder: (context, notesAsync, _) {
           return notesAsync.when(
             data: (notes) {
               final pinnedNotes = notes.where((n) => n.isPinned).toList();
               if (pinnedNotes.isEmpty) {
-                return const FyndoEmptyState(
+                return const AppEmptyState(
                   icon: Icons.push_pin_outlined,
                   title: 'No Pinned Notes',
                   description: 'Pin important notes to find them quickly.',
@@ -300,13 +300,13 @@ class _ArchivedNotesPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      appBar: const FyndoAppBar(title: FyndoAppBarTitle('Archived Notes')),
+      appBar: const AppAppBar(title: AppBarTitle('Archived Notes')),
       body: ArchivedNotesConsumer(
         builder: (context, notesAsync, _) {
           return notesAsync.when(
             data: (notes) {
               if (notes.isEmpty) {
-                return const FyndoEmptyState(
+                return const AppEmptyState(
                   icon: Icons.archive_outlined,
                   title: 'No Archived Notes',
                   description: 'Archived notes will appear here.',
@@ -333,8 +333,8 @@ class _TrashPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      appBar: FyndoAppBar(
-        title: const FyndoAppBarTitle('Trash'),
+      appBar: AppAppBar(
+        title: const AppBarTitle('Trash'),
         actions: [
           TextButton(
             onPressed: () => _emptyTrash(context, ref),
@@ -347,7 +347,7 @@ class _TrashPage extends ConsumerWidget {
           return notesAsync.when(
             data: (notes) {
               if (notes.isEmpty) {
-                return const FyndoEmptyState(
+                return const AppEmptyState(
                   icon: Icons.delete_outline,
                   title: 'Trash is Empty',
                   description: 'Deleted notes will appear here.',
@@ -453,7 +453,7 @@ class _NotesGridView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (notes.isEmpty) {
-      return const FyndoEmptyState(
+      return const AppEmptyState(
         icon: Icons.note_outlined,
         title: 'No Notes Yet',
         description: 'Create your first note to get started.',
@@ -470,9 +470,9 @@ class _NotesGridView extends StatelessWidget {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(
-                FyndoTheme.padding,
-                FyndoTheme.padding,
-                FyndoTheme.padding,
+                AppTheme.padding,
+                AppTheme.padding,
+                AppTheme.padding,
                 8,
               ),
               child: Text(
@@ -492,9 +492,9 @@ class _NotesGridView extends StatelessWidget {
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(
-                  FyndoTheme.padding,
-                  FyndoTheme.padding,
-                  FyndoTheme.padding,
+                  AppTheme.padding,
+                  AppTheme.padding,
+                  AppTheme.padding,
                   8,
                 ),
                 child: Text(
@@ -517,12 +517,12 @@ class _NotesGridView extends StatelessWidget {
 
   Widget _buildGrid(BuildContext context, List<NoteMetadata> notes) {
     return SliverPadding(
-      padding: const EdgeInsets.symmetric(horizontal: FyndoTheme.padding),
+      padding: const EdgeInsets.symmetric(horizontal: AppTheme.padding),
       sliver: SliverGrid(
         gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
           maxCrossAxisExtent: 280,
-          mainAxisSpacing: FyndoTheme.padding,
-          crossAxisSpacing: FyndoTheme.padding,
+          mainAxisSpacing: AppTheme.padding,
+          crossAxisSpacing: AppTheme.padding,
           childAspectRatio: 0.85,
         ),
         delegate: SliverChildBuilderDelegate((context, index) {

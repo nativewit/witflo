@@ -9,6 +9,7 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fyndo_app/core/agentic/fyndo_keys.dart';
+import 'package:fyndo_app/core/config/env.dart';
 import 'package:fyndo_app/core/crypto/crypto.dart';
 import 'package:fyndo_app/core/workspace/auto_lock_settings.dart';
 import 'package:fyndo_app/providers/auto_lock_settings_provider.dart';
@@ -32,9 +33,9 @@ class SettingsPage extends ConsumerWidget {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: FyndoAppBar(title: const FyndoAppBarTitle('Settings')),
+      appBar: AppAppBar(title: const AppBarTitle('Settings')),
       body: ListView(
-        padding: const EdgeInsets.all(FyndoTheme.padding),
+        padding: const EdgeInsets.all(AppTheme.padding),
         children: [
           // Appearance Section
           Text('Appearance', style: theme.textTheme.titleMedium),
@@ -102,7 +103,7 @@ class _AppearanceSection extends ConsumerWidget {
     final theme = Theme.of(context);
     final themeMode = ref.watch(themeModeProvider);
 
-    return FyndoCard(
+    return AppCard(
       padding: EdgeInsets.zero,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -201,7 +202,7 @@ class _WorkspaceSection extends ConsumerWidget {
     final workspaceState = ref.watch(workspaceProvider).valueOrNull;
     final rootPath = workspaceState?.rootPath ?? 'Not set';
 
-    return FyndoCard(
+    return AppCard(
       padding: EdgeInsets.zero,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -298,8 +299,8 @@ class _SyncSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
 
-    return FyndoCard(
-      padding: const EdgeInsets.all(FyndoTheme.padding),
+    return AppCard(
+      padding: const EdgeInsets.all(AppTheme.padding),
       child: Row(
         children: [
           Icon(
@@ -348,14 +349,14 @@ class _SecuritySettingsSection extends ConsumerWidget {
         ? 'Lock after idle time: ${durationMinutes} minutes'
         : 'Lock after idle time: Disabled';
 
-    return FyndoCard(
+    return AppCard(
       padding: EdgeInsets.zero,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // Change Master Password
           ListTile(
-            key: FyndoKeys.btnSettingsChangePassword,
+            key: AppKeys.btnSettingsChangePassword,
             leading: const Icon(Icons.key),
             title: const Text('Change Master Password'),
             subtitle: Text(
@@ -373,7 +374,7 @@ class _SecuritySettingsSection extends ConsumerWidget {
 
           // Auto-Lock Duration
           ListTile(
-            key: FyndoKeys.btnAutoLockTimer,
+            key: AppKeys.btnAutoLockTimer,
             leading: const Icon(Icons.timer),
             title: const Text('Auto-Lock Timer'),
             subtitle: Text(durationText),
@@ -392,7 +393,7 @@ class _SecuritySettingsSection extends ConsumerWidget {
 
           // Lock on Background
           SwitchListTile(
-            key: FyndoKeys.switchLockOnBackground,
+            key: AppKeys.switchLockOnBackground,
             secondary: const Icon(Icons.phonelink_lock),
             title: const Text('Lock on Background'),
             subtitle: const Text(
@@ -424,11 +425,11 @@ void _showAutoLockDurationDialog(
   Function(int) onChanged,
 ) {
   final options = [
-    (0, 'Disabled', FyndoKeys.radioAutoLockDisabled),
-    (5, '5 minutes', FyndoKeys.radioAutoLock5Min),
-    (15, '15 minutes', FyndoKeys.radioAutoLock15Min),
-    (30, '30 minutes', FyndoKeys.radioAutoLock30Min),
-    (60, '60 minutes', FyndoKeys.radioAutoLock60Min),
+    (0, 'Disabled', AppKeys.radioAutoLockDisabled),
+    (5, '5 minutes', AppKeys.radioAutoLock5Min),
+    (15, '15 minutes', AppKeys.radioAutoLock15Min),
+    (30, '30 minutes', AppKeys.radioAutoLock30Min),
+    (60, '60 minutes', AppKeys.radioAutoLock60Min),
   ];
 
   showDialog(
@@ -460,7 +461,7 @@ void _showAutoLockDurationDialog(
         ),
         actions: [
           TextButton(
-            key: FyndoKeys.btnAutoLockCancel,
+            key: AppKeys.btnAutoLockCancel,
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancel'),
           ),
@@ -513,8 +514,8 @@ class _AboutSectionState extends State<_AboutSection> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return FyndoCard(
-      padding: const EdgeInsets.all(FyndoTheme.padding),
+    return AppCard(
+      padding: const EdgeInsets.all(AppTheme.padding),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -540,7 +541,7 @@ class _AboutSectionState extends State<_AboutSection> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Fyndo',
+                    AppEnvironment.instance.appName,
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w700,
                       letterSpacing: 2,
@@ -666,7 +667,7 @@ class _ChangePasswordDialogState extends ConsumerState<_ChangePasswordDialog> {
     return Dialog(
       child: Container(
         constraints: const BoxConstraints(maxWidth: 450),
-        padding: const EdgeInsets.all(FyndoTheme.paddingLarge),
+        padding: const EdgeInsets.all(AppTheme.paddingLarge),
         child: Form(
           key: _formKey,
           child: SingleChildScrollView(
@@ -748,7 +749,7 @@ class _ChangePasswordDialogState extends ConsumerState<_ChangePasswordDialog> {
                 ],
 
                 PasswordField(
-                  key: FyndoKeys.inputCurrentPassword,
+                  key: AppKeys.inputCurrentPassword,
                   controller: _currentPasswordController,
                   labelText: 'Current Password',
                   hintText: 'Enter your current password',
@@ -763,7 +764,7 @@ class _ChangePasswordDialogState extends ConsumerState<_ChangePasswordDialog> {
                 ),
                 const SizedBox(height: 16),
                 PasswordField(
-                  key: FyndoKeys.inputNewPassword,
+                  key: AppKeys.inputNewPassword,
                   controller: _newPasswordController,
                   labelText: 'New Password',
                   hintText: 'Enter a new password',
@@ -784,7 +785,7 @@ class _ChangePasswordDialogState extends ConsumerState<_ChangePasswordDialog> {
                 ),
                 const SizedBox(height: 16),
                 ConfirmPasswordField(
-                  key: FyndoKeys.inputConfirmNewPassword,
+                  key: AppKeys.inputConfirmNewPassword,
                   controller: _confirmPasswordController,
                   passwordController: _newPasswordController,
                   labelText: 'Confirm New Password',
@@ -796,7 +797,7 @@ class _ChangePasswordDialogState extends ConsumerState<_ChangePasswordDialog> {
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     TextButton(
-                      key: FyndoKeys.btnPasswordCancel,
+                      key: AppKeys.btnPasswordCancel,
                       onPressed: _isChanging
                           ? null
                           : () => Navigator.pop(context),
@@ -804,7 +805,7 @@ class _ChangePasswordDialogState extends ConsumerState<_ChangePasswordDialog> {
                     ),
                     const SizedBox(width: 12),
                     FilledButton(
-                      key: FyndoKeys.btnPasswordConfirm,
+                      key: AppKeys.btnPasswordConfirm,
                       onPressed: _isChanging ? null : _changePassword,
                       child: _isChanging
                           ? const SizedBox(

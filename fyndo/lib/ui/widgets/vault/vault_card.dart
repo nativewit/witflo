@@ -57,10 +57,10 @@ class VaultCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return FyndoCard(
+    return AppCard(
       onTap: onTap,
       isSelected: isSelected,
-      padding: const EdgeInsets.all(FyndoTheme.padding),
+      padding: const EdgeInsets.all(AppTheme.padding),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

@@ -50,11 +50,11 @@ class _VaultPageContent extends ConsumerWidget {
     final vaultId = ref.watch(activeVaultIdProvider) ?? 'Unknown';
 
     return Scaffold(
-      appBar: FyndoAppBar(
-        title: const FyndoAppBarTitle('Vault Settings'),
+      appBar: AppAppBar(
+        title: const AppBarTitle('Vault Settings'),
         actions: [
           PopupMenuButton<String>(
-            key: FyndoKeys.menuVaultActions,
+            key: AppKeys.menuVaultActions,
             icon: const Icon(Icons.more_vert),
             onSelected: (value) => _handleMenuAction(context, ref, value),
             itemBuilder: (context) => [
@@ -79,11 +79,11 @@ class _VaultPageContent extends ConsumerWidget {
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.all(FyndoTheme.padding),
+        padding: const EdgeInsets.all(AppTheme.padding),
         children: [
           // Vault info
-          FyndoCard(
-            padding: const EdgeInsets.all(FyndoTheme.padding),
+          AppCard(
+            padding: const EdgeInsets.all(AppTheme.padding),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -151,13 +151,13 @@ class _VaultPageContent extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 16),
-          FyndoCard(
+          AppCard(
             padding: EdgeInsets.zero,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 ListTile(
-                  key: FyndoKeys.btnDeleteVault,
+                  key: AppKeys.btnDeleteVault,
                   leading: Icon(
                     Icons.delete_forever,
                     color: theme.colorScheme.error,

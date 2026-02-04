@@ -124,7 +124,7 @@ class _ShareDialogState extends State<ShareDialog> {
     return Dialog(
       child: Container(
         constraints: const BoxConstraints(maxWidth: 480),
-        padding: const EdgeInsets.all(FyndoTheme.paddingLarge),
+        padding: const EdgeInsets.all(AppTheme.paddingLarge),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -162,7 +162,7 @@ class _ShareDialogState extends State<ShareDialog> {
               children: [
                 Expanded(
                   child: TextField(
-                    key: FyndoKeys.inputShareEmail,
+                    key: AppKeys.inputShareEmail,
                     controller: _emailController,
                     decoration: const InputDecoration(
                       hintText: 'Enter email address',
@@ -177,7 +177,7 @@ class _ShareDialogState extends State<ShareDialog> {
                     border: Border.all(color: theme.dividerColor),
                   ),
                   child: DropdownButton<String>(
-                    key: FyndoKeys.dropdownShareRole,
+                    key: AppKeys.dropdownShareRole,
                     value: _selectedRole,
                     underline: const SizedBox(),
                     padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -204,7 +204,7 @@ class _ShareDialogState extends State<ShareDialog> {
             Align(
               alignment: Alignment.centerRight,
               child: FilledButton.icon(
-                key: FyndoKeys.btnShareInvite,
+                key: AppKeys.btnShareInvite,
                 onPressed: _isSharing ? null : _shareWithUser,
                 icon: _isSharing
                     ? const SizedBox(
@@ -226,7 +226,7 @@ class _ShareDialogState extends State<ShareDialog> {
             const SizedBox(height: 12),
             if (_shareLink != null) ...[
               Container(
-                padding: const EdgeInsets.all(FyndoTheme.padding),
+                padding: const EdgeInsets.all(AppTheme.padding),
                 decoration: BoxDecoration(
                   color: theme.colorScheme.surfaceContainerHighest,
                   border: Border.all(color: theme.dividerColor),
@@ -241,7 +241,7 @@ class _ShareDialogState extends State<ShareDialog> {
                       ),
                     ),
                     IconButton(
-                      key: FyndoKeys.btnShareCopyLink,
+                      key: AppKeys.btnShareCopyLink,
                       icon: const Icon(Icons.copy, size: 18),
                       onPressed: _copyLink,
                       tooltip: 'Copy link',
@@ -251,7 +251,7 @@ class _ShareDialogState extends State<ShareDialog> {
               ),
             ] else ...[
               OutlinedButton.icon(
-                key: FyndoKeys.btnShareGenerateLink,
+                key: AppKeys.btnShareGenerateLink,
                 onPressed: _isGeneratingLink ? null : _generateLink,
                 icon: _isGeneratingLink
                     ? const SizedBox(
@@ -268,7 +268,7 @@ class _ShareDialogState extends State<ShareDialog> {
 
             // Security notice
             Container(
-              padding: const EdgeInsets.all(FyndoTheme.padding),
+              padding: const EdgeInsets.all(AppTheme.padding),
               decoration: BoxDecoration(
                 color: theme.colorScheme.primaryContainer.withValues(
                   alpha: 0.2,
@@ -294,7 +294,7 @@ class _ShareDialogState extends State<ShareDialog> {
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
-                key: FyndoKeys.btnShareDone,
+                key: AppKeys.btnShareDone,
                 onPressed: () => Navigator.pop(context),
                 child: const Text('Done'),
               ),
