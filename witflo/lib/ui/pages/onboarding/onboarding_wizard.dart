@@ -134,17 +134,12 @@ class _OnboardingWizardState extends ConsumerState<OnboardingWizard> {
   Widget _buildHeader(ThemeData theme) {
     return Column(
       children: [
-        Container(
-          width: 64,
-          height: 64,
-          decoration: BoxDecoration(
-            border: Border.all(color: theme.colorScheme.primary, width: 2),
-          ),
-          child: Icon(
-            Icons.rocket_launch,
-            size: 32,
-            color: theme.colorScheme.primary,
-          ),
+        // Witflo logo
+        Image.asset(
+          'assets/images/logo_128.png',
+          width: 80,
+          height: 80,
+          filterQuality: FilterQuality.high,
         ),
         const SizedBox(height: 16),
         Text(

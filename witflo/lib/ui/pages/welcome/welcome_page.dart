@@ -475,74 +475,62 @@ class _WorkspaceUnlockViewState extends ConsumerState<_WorkspaceUnlockView> {
   Widget _buildLogo(ThemeData theme) {
     return Column(
       children: [
-        // Enhanced infographic similar to vault card
-        Container(
-          width: 160,
-          height: 160,
-          decoration: BoxDecoration(
-            color: theme.colorScheme.primaryContainer.withValues(alpha: 0.2),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              // Background pattern (encrypted data visual)
-              Positioned.fill(
-                child: CustomPaint(
-                  painter: _EncryptionPatternPainter(
-                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                  ),
+        // Witflo logo with lock overlay to indicate locked state
+        Stack(
+          alignment: Alignment.center,
+          children: [
+            // Logo image
+            Image.asset(
+              'assets/images/logo_256.png',
+              width: 160,
+              height: 160,
+              filterQuality: FilterQuality.high,
+            ),
+            // Lock badge overlay
+            Positioned(
+              bottom: 0,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 4,
                 ),
-              ),
-              // Central lock icon with glow effect
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primaryContainer.withValues(
-                        alpha: 0.5,
-                      ),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: theme.colorScheme.primary,
-                        width: 2,
-                      ),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: theme.colorScheme.primary,
+                    width: 2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.1),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
                     ),
-                    child: Icon(
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
                       Icons.lock,
-                      size: 48,
+                      size: 16,
                       color: theme.colorScheme.primary,
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: theme.colorScheme.primary.withValues(alpha: 0.3),
-                      ),
-                    ),
-                    child: Text(
+                    const SizedBox(width: 4),
+                    Text(
                       'LOCKED',
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: theme.colorScheme.primary,
                         fontWeight: FontWeight.bold,
-                        letterSpacing: 1.5,
+                        letterSpacing: 1.2,
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
         const SizedBox(height: 32),
         Text(
@@ -554,11 +542,12 @@ class _WorkspaceUnlockViewState extends ConsumerState<_WorkspaceUnlockView> {
         ),
         const SizedBox(height: 8),
         Text(
-          'Zero-Trust Notes',
+          'A safe space for your thoughts to flow',
           style: theme.textTheme.bodyLarge?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
-            letterSpacing: 2,
+            letterSpacing: 0.5,
           ),
+          textAlign: TextAlign.center,
         ),
       ],
     );
@@ -1384,40 +1373,4 @@ class _VaultListItem extends ConsumerWidget {
       ),
     );
   }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Custom Painter for Encryption Pattern
-// ═══════════════════════════════════════════════════════════════════════════
-
-/// Custom painter for encryption pattern background.
-class _EncryptionPatternPainter extends CustomPainter {
-  final Color color;
-
-  _EncryptionPatternPainter({required this.color});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
-
-    // Draw a grid pattern representing encrypted data
-    final spacing = 16.0;
-
-    // Vertical lines
-    for (double x = 0; x < size.width; x += spacing) {
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
-    }
-
-    // Horizontal lines
-    for (double y = 0; y < size.height; y += spacing) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(_EncryptionPatternPainter oldDelegate) =>
-      oldDelegate.color != color;
 }
