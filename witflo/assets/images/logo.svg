@@ -1,0 +1,53 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle for safe space -->
+  <circle cx="256" cy="256" r="240" fill="#667EEA" opacity="0.1"/>
+  
+  <!-- Outer protective shield/container -->
+  <path d="M256 64C256 64 160 96 160 160V256C160 352 256 416 256 416C256 416 352 352 352 256V160C352 96 256 64 256 64Z" 
+        fill="none" 
+        stroke="#667EEA" 
+        stroke-width="12" 
+        stroke-linecap="round" 
+        stroke-linejoin="round"/>
+  
+  <!-- Flowing water droplets - representing thoughts flowing -->
+  <g opacity="0.9">
+    <!-- Large central droplet -->
+    <path d="M256 160C256 160 220 200 220 236C220 255.882 234.118 272 254 272C273.882 272 288 255.882 288 236C288 200 256 160 256 160Z" 
+          fill="#667EEA"/>
+    
+    <!-- Medium droplet - flowing right -->
+    <path d="M300 220C300 220 280 244 280 264C280 275.046 289.954 284 300 284C310.046 284 320 275.046 320 264C320 244 300 220 300 220Z" 
+          fill="#764BA2" 
+          opacity="0.8"/>
+    
+    <!-- Small droplet - flowing left -->
+    <path d="M212 220C212 220 192 244 192 264C192 275.046 201.954 284 212 284C222.046 284 232 275.046 232 264C232 244 212 220 212 220Z" 
+          fill="#764BA2" 
+          opacity="0.8"/>
+    
+    <!-- Flowing wave underneath -->
+    <path d="M200 300C210 295 220 300 230 300C240 300 250 295 260 295C270 295 280 300 290 300C300 300 310 295 320 300" 
+          stroke="#667EEA" 
+          stroke-width="8" 
+          stroke-linecap="round" 
+          fill="none" 
+          opacity="0.6"/>
+    
+    <!-- Second wave for depth -->
+    <path d="M180 330C192 325 204 330 216 330C228 330 240 325 252 325C264 325 276 330 288 330C300 330 312 325 324 330" 
+          stroke="#764BA2" 
+          stroke-width="6" 
+          stroke-linecap="round" 
+          fill="none" 
+          opacity="0.4"/>
+  </g>
+  
+  <!-- Small sparkle elements for creativity/inspiration -->
+  <g opacity="0.7">
+    <circle cx="200" cy="180" r="4" fill="#667EEA"/>
+    <circle cx="312" cy="190" r="3" fill="#764BA2"/>
+    <circle cx="240" cy="350" r="3" fill="#667EEA"/>
+    <circle cx="270" cy="340" r="4" fill="#764BA2"/>
+  </g>
+</svg>
