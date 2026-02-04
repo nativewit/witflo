@@ -46,7 +46,7 @@ abstract interface class IWorkspaceService {
   /// Creates directory structure:
   /// ```
   /// <rootPath>/
-  ///   .fyndo-workspace      # Marker file
+  ///   .witflo-workspace      # Marker file
   ///   vaults/               # Container for encrypted vaults
   /// ```
   ///
@@ -69,8 +69,8 @@ abstract interface class IWorkspaceService {
   /// Directory structure created:
   /// ```
   /// <rootPath>/
-  ///   .fyndo-workspace      # Plaintext metadata (version 2)
-  ///   .fyndo-keyring.enc    # Encrypted keyring
+  ///   .witflo-workspace      # Plaintext metadata (version 2)
+  ///   .witflo-keyring.enc    # Encrypted keyring
   ///   vaults/               # Container for vault directories
   /// ```
   ///
@@ -214,7 +214,7 @@ abstract interface class IWorkspaceService {
   ///
   /// Checks for:
   /// 1. Directory exists and is accessible
-  /// 2. Contains .fyndo-workspace marker file
+  /// 2. Contains workspace marker file (.witflo-workspace)
   /// 3. Contains vaults/ subdirectory
   ///
   /// Returns true if valid, false otherwise.
@@ -382,7 +382,7 @@ abstract interface class IWorkspaceService {
 
   /// Gets the version of an existing workspace.
   ///
-  /// Reads the .fyndo-workspace marker file and extracts the version number.
+  /// Reads the workspace marker file and extracts the version number.
   /// If the file doesn't exist or has no version field, assumes v1 (legacy).
   ///
   /// [rootPath] - Absolute path to workspace directory

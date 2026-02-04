@@ -5,7 +5,7 @@
 //
 // STRUCTURE:
 // The keyring is a map of vaultId → VaultKeyEntry, stored encrypted on disk.
-// File: .fyndo-keyring.enc (encrypted with MUK via XChaCha20-Poly1305)
+// File: encrypted keyring file (encrypted with MUK via XChaCha20-Poly1305)
 //
 // SECURITY:
 // - Only accessible after workspace unlock with master password
@@ -35,7 +35,7 @@ part 'workspace_keyring.g.dart';
 /// After unlocking the workspace with the master password, the keyring is
 /// decrypted to provide access to all vault keys.
 ///
-/// The keyring is stored encrypted at `.fyndo-keyring.enc` and synced across
+/// The keyring is stored encrypted in the workspace and synced across
 /// devices via the existing CRDT-based sync engine.
 abstract class WorkspaceKeyring
     implements Built<WorkspaceKeyring, WorkspaceKeyringBuilder> {
@@ -190,7 +190,7 @@ abstract class WorkspaceKeyring
 
   /// Deserializes a keyring from JSON after decryption.
   ///
-  /// [json] - Decrypted JSON map from .fyndo-keyring.enc
+  /// [json] - Decrypted JSON map from the encrypted keyring file
   ///
   /// Example:
   /// ```dart

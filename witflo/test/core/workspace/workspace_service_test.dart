@@ -17,6 +17,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:witflo_app/core/config/env.dart';
 import 'package:witflo_app/core/crypto/crypto.dart';
 import 'package:witflo_app/core/workspace/workspace_service.dart';
 
@@ -56,7 +57,9 @@ void main() {
         masterPassword: testPassword,
       );
 
-      final markerFile = File('$workspacePath/.fyndo-workspace');
+      final markerFile = File(
+        '$workspacePath/${AppEnvironment.instance.workspaceMarkerFile}',
+      );
       expect(await markerFile.exists(), isTrue);
 
       // Should have rootPath, muk, and keyring
@@ -88,7 +91,9 @@ void main() {
         masterPassword: testPassword,
       );
 
-      final keyringFile = File('$workspacePath/.fyndo-keyring.enc');
+      final keyringFile = File(
+        '$workspacePath/${AppEnvironment.instance.workspaceKeyringFile}',
+      );
       expect(await keyringFile.exists(), isTrue);
 
       // Keyring should start empty (no vaults yet)
@@ -104,7 +109,9 @@ void main() {
         masterPassword: testPassword,
       );
 
-      final metadataFile = File('$workspacePath/.fyndo-workspace.json');
+      final metadataFile = File(
+        '$workspacePath/${AppEnvironment.instance.workspaceMarkerFile}',
+      );
       expect(await metadataFile.exists(), isTrue);
 
       // Metadata file should contain crypto params (salt, kdfParams)
@@ -221,7 +228,9 @@ void main() {
     test('should return false for path without vaults directory', () async {
       final workspacePath = tempDir.path;
       // Create only marker file
-      final markerFile = File('$workspacePath/.fyndo-workspace');
+      final markerFile = File(
+        '$workspacePath/${AppEnvironment.instance.workspaceMarkerFile}',
+      );
       await markerFile.create(recursive: true);
       await markerFile.writeAsString('{}');
 

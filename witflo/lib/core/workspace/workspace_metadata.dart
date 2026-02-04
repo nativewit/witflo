@@ -1,14 +1,14 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // WITFLO - Zero-Trust Notes OS
-// Workspace Metadata (.fyndo-workspace file)
+// Workspace Metadata (workspace marker file)
 // ═══════════════════════════════════════════════════════════════════════════
 //
 // PURPOSE:
-// This file represents the plaintext metadata stored in .fyndo-workspace.
+// This file represents the plaintext metadata stored in the workspace marker.
 // It contains public information needed to:
 // 1. Identify the workspace (workspaceId)
 // 2. Derive the Master Unlock Key from password (crypto params)
-// 3. Decrypt the encrypted keyring (.fyndo-keyring.enc)
+// 3. Decrypt the encrypted keyring
 //
 // SECURITY:
 // - Safe to expose (contains no secrets)
@@ -25,7 +25,7 @@ import 'package:witflo_app/core/crypto/primitives/argon2id.dart';
 
 part 'workspace_metadata.g.dart';
 
-/// Workspace metadata stored in .fyndo-workspace file (plaintext JSON).
+/// Workspace metadata stored in the workspace marker file (plaintext JSON).
 ///
 /// This file enables workspace identification and Master Unlock Key (MUK)
 /// derivation without requiring the password upfront.
@@ -101,7 +101,7 @@ abstract class WorkspaceMetadata
   static Serializer<WorkspaceMetadata> get serializer =>
       _$workspaceMetadataSerializer;
 
-  /// Converts to JSON map for .fyndo-workspace file.
+  /// Converts to JSON map for the workspace marker file.
   ///
   /// Format:
   /// ```json
@@ -152,7 +152,7 @@ abstract class WorkspaceMetadata
 
 /// Cryptographic parameters for workspace master key derivation.
 ///
-/// These parameters are stored in plaintext in .fyndo-workspace and are
+/// These parameters are stored in plaintext in the workspace marker and are
 /// required to derive the Master Unlock Key (MUK) from the user's password.
 abstract class WorkspaceCryptoParams
     implements Built<WorkspaceCryptoParams, WorkspaceCryptoParamsBuilder> {
@@ -180,7 +180,7 @@ abstract class WorkspaceCryptoParams
 
   /// Nonce for XChaCha20-Poly1305 keyring encryption (base64-encoded, 24 bytes).
   ///
-  /// This nonce is used to encrypt the keyring file (.fyndo-keyring.enc)
+  /// This nonce is used to encrypt the encrypted keyring file
   /// with the Master Unlock Key (MUK).
   ///
   /// Security: Safe to expose (XChaCha20 security requires unique nonce, not secret)

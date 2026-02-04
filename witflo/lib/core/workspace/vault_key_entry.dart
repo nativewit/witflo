@@ -12,7 +12,7 @@
 // SECURITY:
 // - The vault key is random (not derived from master password)
 // - This allows vault sharing in future (wrap key for other users)
-// - Keys stored encrypted in .fyndo-keyring.enc (encrypted with MUK)
+// - Keys stored encrypted in the encrypted keyring file (encrypted with MUK)
 //
 // Spec: docs/specs/spec-002-workspace-master-password.md (Section 2.4)
 // ═══════════════════════════════════════════════════════════════════════════

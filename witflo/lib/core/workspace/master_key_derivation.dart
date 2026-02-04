@@ -96,8 +96,8 @@ class MasterKeyDerivation {
   ///
   /// **Parameters**:
   /// - [password]: User's master password (WILL BE ZEROIZED)
-  /// - [salt]: 16-byte workspace salt from `.fyndo-workspace`
-  /// - [params]: Argon2id parameters from `.fyndo-workspace`
+  /// - [salt]: 16-byte workspace salt from the workspace marker file
+  /// - [params]: Argon2id parameters from the workspace marker file
   ///
   /// **Returns**: [MasterUnlockKey] that unlocks the workspace keyring
   ///
@@ -193,7 +193,7 @@ class MasterKeyDerivation {
   /// Generates a cryptographically secure random workspace salt.
   ///
   /// This should be called once during workspace initialization. The salt is
-  /// stored in `.fyndo-workspace` (plaintext) and used for all future MUK
+  /// stored in the workspace marker file (plaintext) and used for all future MUK
   /// derivations.
   ///
   /// **SECURITY NOTES**:
@@ -210,7 +210,7 @@ class MasterKeyDerivation {
   ///
   /// **Storage**:
   /// ```json
-  /// // .fyndo-workspace
+  /// // workspace marker file
   /// {
   ///   "crypto": {
   ///     "masterKeySalt": "<base64-encoded-16-bytes>"

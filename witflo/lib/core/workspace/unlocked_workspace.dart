@@ -78,7 +78,7 @@ class UnlockedWorkspace {
   /// Decrypted workspace keyring containing vault keys.
   ///
   /// The keyring maps vaultId → VaultKeyEntry (containing base64 vault key).
-  /// This is the decrypted version of .fyndo-keyring.enc
+  /// This is the decrypted version of the encrypted keyring file.
   ///
   /// **NOTE:** This field is mutable to support keyring updates (add/remove vaults).
   WorkspaceKeyring keyring;
@@ -89,8 +89,8 @@ class UnlockedWorkspace {
   ///
   /// Used to:
   /// - Locate vault directories (under `vaults/`)
-  /// - Save keyring changes to `.fyndo-keyring.enc`
-  /// - Access workspace metadata (`.fyndo-workspace`)
+  /// - Save keyring changes to the encrypted keyring file
+  /// - Access workspace metadata (workspace marker file)
   final String rootPath;
 
   /// Cache of decrypted vault keys (vaultId → vault key material).

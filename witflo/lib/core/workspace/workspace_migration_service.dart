@@ -25,6 +25,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:path/path.dart' as p;
+import 'package:witflo_app/core/config/env.dart';
 import 'package:witflo_app/core/crypto/crypto.dart';
 import 'package:witflo_app/core/vault/vault_service.dart';
 import 'package:witflo_app/core/workspace/workspace_service.dart';
@@ -61,7 +62,6 @@ import 'package:witflo_app/core/workspace/workspace_migration_service_interface.
 /// );
 /// ```
 class WorkspaceMigrationService implements IWorkspaceMigrationService {
-  static const String _workspaceMarkerFile = '.fyndo-workspace';
   static const String _vaultsSubdir = 'vaults';
 
   final WorkspaceService _workspaceService;
@@ -240,7 +240,9 @@ class WorkspaceMigrationService implements IWorkspaceMigrationService {
   /// - [MigrationException] if update fails
   @override
   Future<void> updateWorkspaceVersion(String rootPath, int version) async {
-    final markerFile = File(p.join(rootPath, _workspaceMarkerFile));
+    final markerFile = File(
+      p.join(rootPath, AppEnvironment.instance.workspaceMarkerFile),
+    );
 
     try {
       // Read current metadata

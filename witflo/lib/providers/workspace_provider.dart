@@ -31,7 +31,7 @@ abstract class WorkspaceState
   BuiltList<String>? get discoveredVaults;
 
   /// Whether the workspace directory is actually initialized.
-  /// A workspace is initialized if it has the .fyndo-workspace marker file.
+  /// A workspace is initialized if it has the workspace marker file.
   @BuiltValueField(wireName: 'isInitialized')
   bool get isInitialized;
 

@@ -22,7 +22,7 @@ abstract class WorkspaceConfig
   /// Example (Mobile): `/data/data/com.fyndo.app/files/workspace`
   ///
   /// This directory contains:
-  /// - `.fyndo-workspace` marker file
+  /// - Workspace marker file (.witflo-workspace)
   /// - `vaults/` subdirectory with encrypted vaults
   String get rootPath;
 
