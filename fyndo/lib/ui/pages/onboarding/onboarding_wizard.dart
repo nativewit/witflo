@@ -47,6 +47,23 @@ class _OnboardingWizardState extends ConsumerState<OnboardingWizard> {
   String? _error;
 
   @override
+  void initState() {
+    super.initState();
+    // Check if there's already a workspace config from workspace switching
+    // If so, pre-fill the path so user doesn't have to select it again
+    Future.microtask(() {
+      final workspaceState = ref.read(workspaceProvider).valueOrNull;
+      if (workspaceState?.config != null &&
+          workspaceState?.isInitialized == false &&
+          mounted) {
+        setState(() {
+          _selectedWorkspacePath = workspaceState!.config!.rootPath;
+        });
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final size = MediaQuery.of(context).size;
