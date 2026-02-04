@@ -33,6 +33,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fyndo_app/core/agentic/agentic_coding_tools.dart';
 import 'package:fyndo_app/core/crypto/crypto.dart';
 import 'package:fyndo_app/core/logging/app_logger.dart';
+import 'package:fyndo_app/providers/theme_provider.dart';
 import 'package:fyndo_app/providers/workspace_provider.dart';
 import 'package:fyndo_app/ui/router/app_router.dart';
 import 'package:fyndo_app/ui/theme/fyndo_theme.dart';
@@ -110,13 +111,14 @@ class _FyndoAppState extends ConsumerState<FyndoApp> {
     }
 
     final router = ref.watch(appRouterProvider);
+    final themeMode = ref.watch(themeModeProvider);
 
     return MaterialApp.router(
       title: 'Fyndo',
       debugShowCheckedModeBanner: false,
       theme: FyndoTheme.light(),
       darkTheme: FyndoTheme.dark(),
-      themeMode: ThemeMode.system,
+      themeMode: themeMode,
       routerConfig: router,
       localizationsDelegates: [FlutterQuillLocalizations.delegate],
     );
