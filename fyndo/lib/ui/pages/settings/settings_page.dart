@@ -1,10 +1,11 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // FYNDO - Zero-Trust Notes OS
-// Settings Page - App settings and vault management
+// Settings Page - App settings and workspace management
 // ═══════════════════════════════════════════════════════════════════════════
 
 import 'dart:convert';
 
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fyndo_app/core/agentic/fyndo_keys.dart';
@@ -12,19 +13,17 @@ import 'package:fyndo_app/core/crypto/crypto.dart';
 import 'package:fyndo_app/core/workspace/auto_lock_settings.dart';
 import 'package:fyndo_app/providers/auto_lock_settings_provider.dart';
 import 'package:fyndo_app/providers/crypto_providers.dart';
+import 'package:fyndo_app/providers/theme_provider.dart';
 import 'package:fyndo_app/providers/unlocked_workspace_provider.dart';
 import 'package:fyndo_app/providers/workspace_provider.dart';
 import 'package:fyndo_app/ui/theme/fyndo_theme.dart';
+import 'package:fyndo_app/ui/widgets/common/fyndo_app_bar.dart';
+import 'package:fyndo_app/ui/widgets/common/fyndo_card.dart';
 import 'package:fyndo_app/ui/widgets/common/password_field.dart';
+import 'package:go_router/go_router.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 /// Settings page for app configuration and workspace management.
-///
-/// This page implements spec-002 workspace settings including:
-/// - Change master password (workspace-level, re-encrypts keyring)
-/// - Auto-lock settings (idle timeout, lock on background)
-/// - Lock workspace button
-///
-/// Spec: docs/specs/spec-002-workspace-master-password.md (Section 3.4)
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
 
@@ -33,50 +32,306 @@ class SettingsPage extends ConsumerWidget {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(FyndoTheme.paddingLarge),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 800),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Security Section
-                _buildSectionHeader('Security', Icons.security, theme),
-                const SizedBox(height: 16),
-                const _SecuritySettingsSection(),
+      appBar: FyndoAppBar(title: const FyndoAppBarTitle('Settings')),
+      body: ListView(
+        padding: const EdgeInsets.all(FyndoTheme.padding),
+        children: [
+          // Appearance Section
+          Text('Appearance', style: theme.textTheme.titleMedium),
+          const SizedBox(height: 16),
+          const _AppearanceSection(),
+          const SizedBox(height: 24),
 
-                const SizedBox(height: 32),
+          // Workspace Section
+          Text('Workspace', style: theme.textTheme.titleMedium),
+          const SizedBox(height: 16),
+          const _WorkspaceSection(),
+          const SizedBox(height: 24),
 
-                // About Section
-                _buildSectionHeader('About', Icons.info_outline, theme),
-                const SizedBox(height: 16),
-                const _AboutSection(),
-              ],
-            ),
+          // Sync Section (moved from vault settings)
+          Row(
+            children: [
+              Text('Sync & Backup', style: theme.textTheme.titleMedium),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary,
+                  border: Border.all(color: theme.colorScheme.primary),
+                ),
+                child: Text(
+                  'COMING SOON',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.onPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
           ),
-        ),
+          const SizedBox(height: 16),
+          const _SyncSection(),
+          const SizedBox(height: 24),
+
+          // Security Section
+          Text('Security', style: theme.textTheme.titleMedium),
+          const SizedBox(height: 16),
+          const _SecuritySettingsSection(),
+          const SizedBox(height: 24),
+
+          // About Section
+          Text('About', style: theme.textTheme.titleMedium),
+          const SizedBox(height: 16),
+          const _AboutSection(),
+          const SizedBox(height: 48),
+        ],
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// APPEARANCE SECTION
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _AppearanceSection extends ConsumerWidget {
+  const _AppearanceSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final themeMode = ref.watch(themeModeProvider);
+
+    return FyndoCard(
+      padding: EdgeInsets.zero,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.brightness_6),
+            title: const Text('Theme'),
+            subtitle: Text(_getThemeModeLabel(themeMode)),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _showThemeDialog(context, ref, themeMode),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildSectionHeader(String title, IconData icon, ThemeData theme) {
-    return Row(
-      children: [
-        Icon(icon, color: theme.colorScheme.primary, size: 20),
-        const SizedBox(width: 12),
-        Text(
-          title,
-          style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: theme.colorScheme.primary,
-          ),
+  String _getThemeModeLabel(ThemeMode mode) {
+    switch (mode) {
+      case ThemeMode.light:
+        return 'Light';
+      case ThemeMode.dark:
+        return 'Dark';
+      case ThemeMode.system:
+        return 'System';
+    }
+  }
+
+  void _showThemeDialog(
+    BuildContext context,
+    WidgetRef ref,
+    ThemeMode currentMode,
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Choose Theme'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            RadioListTile<ThemeMode>(
+              title: const Text('Light'),
+              value: ThemeMode.light,
+              groupValue: currentMode,
+              onChanged: (mode) {
+                if (mode != null) {
+                  ref.read(themeModeProvider.notifier).setThemeMode(mode);
+                  Navigator.pop(context);
+                }
+              },
+            ),
+            RadioListTile<ThemeMode>(
+              title: const Text('Dark'),
+              value: ThemeMode.dark,
+              groupValue: currentMode,
+              onChanged: (mode) {
+                if (mode != null) {
+                  ref.read(themeModeProvider.notifier).setThemeMode(mode);
+                  Navigator.pop(context);
+                }
+              },
+            ),
+            RadioListTile<ThemeMode>(
+              title: const Text('System'),
+              value: ThemeMode.system,
+              groupValue: currentMode,
+              onChanged: (mode) {
+                if (mode != null) {
+                  ref.read(themeModeProvider.notifier).setThemeMode(mode);
+                  Navigator.pop(context);
+                }
+              },
+            ),
+          ],
         ),
-      ],
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
     );
   }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// WORKSPACE SECTION
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _WorkspaceSection extends ConsumerWidget {
+  const _WorkspaceSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final workspaceState = ref.watch(workspaceProvider).valueOrNull;
+    final rootPath = workspaceState?.rootPath ?? 'Not set';
+
+    return FyndoCard(
+      padding: EdgeInsets.zero,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.folder_open),
+            title: const Text('Current Workspace'),
+            subtitle: Text(
+              rootPath,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 2,
+            ),
+          ),
+          const Divider(height: 1),
+          ListTile(
+            leading: const Icon(Icons.swap_horiz),
+            title: const Text('Switch Workspace'),
+            subtitle: const Text('Choose a different workspace folder'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _switchWorkspace(context, ref),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _switchWorkspace(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Switch Workspace'),
+        content: const Text(
+          'Switching workspaces will lock the current workspace. '
+          'If the new folder is empty, you will be prompted to initialize it. '
+          'Make sure all your work is saved.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Continue'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) return;
+
+    try {
+      // Pick new workspace folder
+      final selectedDir = await getDirectoryPath(
+        confirmButtonText: 'Select Workspace',
+      );
+
+      if (selectedDir == null) return;
+
+      // Lock current workspace
+      ref.read(unlockedWorkspaceProvider.notifier).lock();
+
+      // Switch workspace using the provider
+      // This handles both initialized and uninitialized workspaces
+      await ref.read(workspaceProvider.notifier).switchWorkspace(selectedDir);
+
+      // Navigation will be handled by the router based on workspace state
+      // If initialized: will show unlock screen
+      // If uninitialized: will redirect to onboarding
+      if (context.mounted) {
+        context.go('/');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to switch workspace: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SYNC SECTION (moved from vault settings)
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _SyncSection extends ConsumerWidget {
+  const _SyncSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+
+    return FyndoCard(
+      padding: const EdgeInsets.all(FyndoTheme.padding),
+      child: Row(
+        children: [
+          Icon(
+            Icons.cloud_off_outlined,
+            size: 48,
+            color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Sync & Backup', style: theme.textTheme.titleSmall),
+                const SizedBox(height: 4),
+                Text(
+                  'Cloud sync and backup features are coming soon',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SECURITY SECTION
+// ═══════════════════════════════════════════════════════════════════════════
 
 class _SecuritySettingsSection extends ConsumerWidget {
   const _SecuritySettingsSection();
@@ -88,325 +343,70 @@ class _SecuritySettingsSection extends ConsumerWidget {
     final autoLockSettings = ref.watch(autoLockSettingsProvider);
     final isUnlocked = unlockedWorkspace != null;
 
-    return Container(
-      decoration: BoxDecoration(border: Border.all(color: theme.dividerColor)),
+    final durationMinutes = autoLockSettings.durationSeconds ~/ 60;
+    final durationText = autoLockSettings.enabled
+        ? 'Lock after idle time: ${durationMinutes} minutes'
+        : 'Lock after idle time: Disabled';
+
+    return FyndoCard(
+      padding: EdgeInsets.zero,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // Change Master Password
-          _buildSettingTile(
+          ListTile(
             key: FyndoKeys.btnSettingsChangePassword,
-            context: context,
-            title: 'Change Master Password',
-            subtitle: isUnlocked
-                ? 'Update your workspace password'
-                : 'Unlock workspace to change password',
-            icon: Icons.key,
+            leading: const Icon(Icons.key),
+            title: const Text('Change Master Password'),
+            subtitle: Text(
+              isUnlocked
+                  ? 'Update your workspace password'
+                  : 'Unlock workspace to change password',
+            ),
             enabled: isUnlocked,
+            trailing: isUnlocked ? const Icon(Icons.chevron_right) : null,
             onTap: isUnlocked
                 ? () => _showChangePasswordDialog(context, ref)
                 : null,
-            theme: theme,
           ),
-          Divider(height: 1, color: theme.dividerColor),
+          const Divider(height: 1),
 
           // Auto-Lock Duration
-          _buildAutoLockDurationTile(
+          ListTile(
             key: FyndoKeys.btnAutoLockTimer,
-            context: context,
-            theme: theme,
-            settings: autoLockSettings,
-            onChanged: (duration) {
-              ref.read(autoLockSettingsProvider.notifier).setDuration(duration);
-            },
+            leading: const Icon(Icons.timer),
+            title: const Text('Auto-Lock Timer'),
+            subtitle: Text(durationText),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _showAutoLockDurationDialog(
+              context,
+              autoLockSettings,
+              (duration) {
+                ref
+                    .read(autoLockSettingsProvider.notifier)
+                    .setDuration(duration);
+              },
+            ),
           ),
-          Divider(height: 1, color: theme.dividerColor),
+          const Divider(height: 1),
 
           // Lock on Background
-          _buildSwitchTile(
+          SwitchListTile(
             key: FyndoKeys.switchLockOnBackground,
-            context: context,
-            title: 'Lock on Background',
-            subtitle: 'Automatically lock when app goes to background',
-            icon: Icons.phonelink_lock,
+            secondary: const Icon(Icons.phonelink_lock),
+            title: const Text('Lock on Background'),
+            subtitle: const Text(
+              'Automatically lock when app goes to background',
+            ),
             value: autoLockSettings.lockOnBackground,
             onChanged: (value) {
               ref
                   .read(autoLockSettingsProvider.notifier)
                   .setLockOnBackground(value);
             },
-            theme: theme,
-          ),
-          Divider(height: 1, color: theme.dividerColor),
-
-          // Lock Now
-          _buildSettingTile(
-            key: FyndoKeys.btnLockWorkspaceNow,
-            context: context,
-            title: 'Lock Workspace Now',
-            subtitle: 'Immediately lock workspace',
-            icon: Icons.lock,
-            enabled: isUnlocked,
-            onTap: isUnlocked
-                ? () {
-                    ref.read(unlockedWorkspaceProvider.notifier).lock();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Workspace locked')),
-                    );
-                    Navigator.of(context).pop();
-                  }
-                : null,
-            theme: theme,
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildSettingTile({
-    Key? key,
-    required BuildContext context,
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required bool enabled,
-    VoidCallback? onTap,
-    required ThemeData theme,
-  }) {
-    return Material(
-      key: key,
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: enabled ? onTap : null,
-        child: Container(
-          padding: const EdgeInsets.all(FyndoTheme.padding),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: enabled
-                      ? theme.colorScheme.primaryContainer.withValues(
-                          alpha: 0.3,
-                        )
-                      : theme.colorScheme.surfaceContainerHighest,
-                  border: Border.all(
-                    color: enabled
-                        ? theme.colorScheme.primary
-                        : theme.dividerColor,
-                  ),
-                ),
-                child: Icon(
-                  icon,
-                  color: enabled
-                      ? theme.colorScheme.primary
-                      : theme.colorScheme.onSurfaceVariant,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        color: enabled
-                            ? theme.textTheme.titleSmall?.color
-                            : theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (enabled)
-                Icon(
-                  Icons.arrow_forward_ios,
-                  size: 16,
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAutoLockDurationTile({
-    Key? key,
-    required BuildContext context,
-    required ThemeData theme,
-    required AutoLockSettings settings,
-    required Function(int) onChanged,
-  }) {
-    final durationMinutes = settings.durationSeconds ~/ 60;
-    final durationText = settings.enabled
-        ? '${durationMinutes} minutes'
-        : 'Disabled';
-
-    return Material(
-      key: key,
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => _showAutoLockDurationDialog(context, settings, onChanged),
-        child: Container(
-          padding: const EdgeInsets.all(FyndoTheme.padding),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primaryContainer.withValues(
-                    alpha: 0.3,
-                  ),
-                  border: Border.all(color: theme.colorScheme.primary),
-                ),
-                child: Icon(
-                  Icons.timer,
-                  color: theme.colorScheme.primary,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Auto-Lock Timer', style: theme.textTheme.titleSmall),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Lock after idle time: ${durationText}',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(
-                Icons.arrow_forward_ios,
-                size: 16,
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSwitchTile({
-    Key? key,
-    required BuildContext context,
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required bool value,
-    required Function(bool) onChanged,
-    required ThemeData theme,
-  }) {
-    return Material(
-      key: key,
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => onChanged(!value),
-        child: Container(
-          padding: const EdgeInsets.all(FyndoTheme.padding),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primaryContainer.withValues(
-                    alpha: 0.3,
-                  ),
-                  border: Border.all(color: theme.colorScheme.primary),
-                ),
-                child: Icon(icon, color: theme.colorScheme.primary, size: 20),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: theme.textTheme.titleSmall),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Switch(value: value, onChanged: onChanged),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showAutoLockDurationDialog(
-    BuildContext context,
-    AutoLockSettings settings,
-    Function(int) onChanged,
-  ) {
-    final options = [
-      (0, 'Disabled', FyndoKeys.radioAutoLockDisabled),
-      (5, '5 minutes', FyndoKeys.radioAutoLock5Min),
-      (15, '15 minutes', FyndoKeys.radioAutoLock15Min),
-      (30, '30 minutes', FyndoKeys.radioAutoLock30Min),
-      (60, '60 minutes', FyndoKeys.radioAutoLock60Min),
-    ];
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        final currentMinutes = settings.durationSeconds ~/ 60;
-
-        return AlertDialog(
-          title: const Text('Auto-Lock Timer'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: options.map((option) {
-              final (minutes, label, key) = option;
-              final isSelected =
-                  (minutes == 0 && !settings.enabled) ||
-                  (minutes == currentMinutes && settings.enabled);
-
-              return RadioListTile<int>(
-                key: key,
-                title: Text(label),
-                value: minutes,
-                groupValue: isSelected ? minutes : -1,
-                onChanged: (_) {
-                  onChanged(minutes);
-                  Navigator.pop(context);
-                },
-              );
-            }).toList(),
-          ),
-          actions: [
-            TextButton(
-              key: FyndoKeys.btnAutoLockCancel,
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-          ],
-        );
-      },
     );
   }
 
@@ -418,16 +418,103 @@ class _SecuritySettingsSection extends ConsumerWidget {
   }
 }
 
-class _AboutSection extends StatelessWidget {
+void _showAutoLockDurationDialog(
+  BuildContext context,
+  AutoLockSettings settings,
+  Function(int) onChanged,
+) {
+  final options = [
+    (0, 'Disabled', FyndoKeys.radioAutoLockDisabled),
+    (5, '5 minutes', FyndoKeys.radioAutoLock5Min),
+    (15, '15 minutes', FyndoKeys.radioAutoLock15Min),
+    (30, '30 minutes', FyndoKeys.radioAutoLock30Min),
+    (60, '60 minutes', FyndoKeys.radioAutoLock60Min),
+  ];
+
+  showDialog(
+    context: context,
+    builder: (context) {
+      final currentMinutes = settings.durationSeconds ~/ 60;
+
+      return AlertDialog(
+        title: const Text('Auto-Lock Timer'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: options.map((option) {
+            final (minutes, label, key) = option;
+            final isSelected =
+                (minutes == 0 && !settings.enabled) ||
+                (minutes == currentMinutes && settings.enabled);
+
+            return RadioListTile<int>(
+              key: key,
+              title: Text(label),
+              value: minutes,
+              groupValue: isSelected ? minutes : -1,
+              onChanged: (_) {
+                onChanged(minutes);
+                Navigator.pop(context);
+              },
+            );
+          }).toList(),
+        ),
+        actions: [
+          TextButton(
+            key: FyndoKeys.btnAutoLockCancel,
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ABOUT SECTION
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _AboutSection extends StatefulWidget {
   const _AboutSection();
+
+  @override
+  State<_AboutSection> createState() => _AboutSectionState();
+}
+
+class _AboutSectionState extends State<_AboutSection> {
+  String _version = 'Loading...';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadVersionInfo();
+  }
+
+  Future<void> _loadVersionInfo() async {
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      if (mounted) {
+        setState(() {
+          _version =
+              'Version ${packageInfo.version} (${packageInfo.buildNumber})';
+        });
+      }
+    } catch (e) {
+      // Fallback if package_info_plus is not available on platform
+      if (mounted) {
+        setState(() {
+          _version = 'Version 0.1.0';
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Container(
+    return FyndoCard(
       padding: const EdgeInsets.all(FyndoTheme.padding),
-      decoration: BoxDecoration(border: Border.all(color: theme.dividerColor)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -470,7 +557,7 @@ class _AboutSection extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          Text('Version 0.1.0', style: theme.textTheme.bodySmall),
+          Text(_version, style: theme.textTheme.bodySmall),
           const SizedBox(height: 8),
           Text(
             'End-to-end encrypted notes with offline-first architecture.',
@@ -483,6 +570,10 @@ class _AboutSection extends StatelessWidget {
     );
   }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CHANGE PASSWORD DIALOG
+// ═══════════════════════════════════════════════════════════════════════════
 
 class _ChangePasswordDialog extends ConsumerStatefulWidget {
   const _ChangePasswordDialog();
