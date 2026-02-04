@@ -7,8 +7,7 @@
 // /                  - Welcome (unlock/create vault)
 // /home              - Home page (vault overview)
 // /vault/:id         - Vault settings
-// /notebook/:id      - Notebook notes list
-// /note/:id          - Note editor
+// /notebook/:id      - Notebook with embedded note editor
 // /notes             - All notes
 // /notes/pinned      - Pinned notes
 // /notes/archived    - Archived notes
@@ -126,16 +125,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/notebook/:id',
         name: 'notebook',
-        builder: (context, state) =>
-            NotebookPage(notebookId: state.pathParameters['id']!),
-      ),
-
-      // Note
-      GoRoute(
-        path: '/note/:id',
-        name: 'note',
-        builder: (context, state) =>
-            NotePage(noteId: state.pathParameters['id']!),
+        builder: (context, state) => NotebookPage(
+          notebookId: state.pathParameters['id']!,
+          initialNoteId: state.uri.queryParameters['noteId'],
+        ),
       ),
 
       // All notes
@@ -246,8 +239,8 @@ class _AllNotesPage extends ConsumerWidget {
       final note = await ref
           .read(noteOperationsProvider.notifier)
           .createNote(title: '', content: '');
-      if (context.mounted) {
-        context.push('/note/${note.id}');
+      if (context.mounted && note.notebookId != null) {
+        context.push('/notebook/${note.notebookId}?noteId=${note.id}');
       }
     } catch (e) {
       if (context.mounted) {
@@ -536,7 +529,11 @@ class _NotesGridView extends StatelessWidget {
           final note = notes[index];
           return _NoteGridCard(
             note: note,
-            onTap: () => context.push('/note/${note.id}'),
+            onTap: () {
+              if (note.notebookId != null) {
+                context.push('/notebook/${note.notebookId}?noteId=${note.id}');
+              }
+            },
             onLongPress: () => onNoteOptions(note),
           );
         }, childCount: notes.length),
