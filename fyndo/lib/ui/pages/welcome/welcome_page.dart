@@ -371,7 +371,7 @@ class _WorkspaceUnlockViewState extends ConsumerState<_WorkspaceUnlockView> {
             children: [
               Icon(
                 Icons.folder_outlined,
-                size: 20,
+                size: 40,
                 color: theme.colorScheme.primary,
               ),
               const SizedBox(width: 8),
