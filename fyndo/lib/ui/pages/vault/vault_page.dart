@@ -143,74 +143,6 @@ class _VaultPageContent extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
 
-          // Security settings
-          Text('Security', style: theme.textTheme.titleMedium),
-          const SizedBox(height: 16),
-          FyndoCard(
-            padding: EdgeInsets.zero,
-            child: Column(
-              children: [
-                ListTile(
-                  key: FyndoKeys.btnChangePassword,
-                  leading: const Icon(Icons.lock_reset),
-                  title: const Text('Change Password'),
-                  subtitle: const Text('Update your master password'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => _showChangePassword(context, ref),
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  key: FyndoKeys.btnRecoveryOptions,
-                  leading: const Icon(Icons.restore),
-                  title: const Text('Recovery Options'),
-                  subtitle: const Text('Set up recovery key'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => _showRecoveryOptions(context),
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  key: FyndoKeys.btnLinkedDevices,
-                  leading: const Icon(Icons.devices),
-                  title: const Text('Linked Devices'),
-                  subtitle: const Text('Manage device access'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => _showLinkedDevices(context),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // Sync settings
-          Text('Sync & Backup', style: theme.textTheme.titleMedium),
-          const SizedBox(height: 16),
-          FyndoCard(
-            padding: EdgeInsets.zero,
-            child: Column(
-              children: [
-                SwitchListTile(
-                  key: FyndoKeys.switchEnableSync,
-                  title: const Text('Enable Sync'),
-                  subtitle: const Text('Sync encrypted data across devices'),
-                  value: false,
-                  onChanged: (value) {
-                    // TODO: Enable sync
-                  },
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  key: FyndoKeys.btnBackupCloud,
-                  leading: const Icon(Icons.cloud_upload),
-                  title: const Text('Backup to Cloud'),
-                  subtitle: const Text('Not configured'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => _showBackupOptions(context),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-
           // Danger zone
           Text(
             'Danger Zone',
@@ -222,6 +154,7 @@ class _VaultPageContent extends ConsumerWidget {
           FyndoCard(
             padding: EdgeInsets.zero,
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 ListTile(
                   key: FyndoKeys.btnDeleteVault,
@@ -295,31 +228,6 @@ class _VaultPageContent extends ConsumerWidget {
         VaultExportDialog.show(context);
         break;
     }
-  }
-
-  void _showChangePassword(BuildContext context, WidgetRef ref) {
-    // TODO: Show change password dialog
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Change password coming soon')),
-    );
-  }
-
-  void _showRecoveryOptions(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Recovery options coming soon')),
-    );
-  }
-
-  void _showLinkedDevices(BuildContext context) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Linked devices coming soon')));
-  }
-
-  void _showBackupOptions(BuildContext context) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Backup options coming soon')));
   }
 
   void _confirmDeleteVault(BuildContext context, WidgetRef ref) async {

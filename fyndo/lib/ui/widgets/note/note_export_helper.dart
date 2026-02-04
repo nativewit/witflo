@@ -4,9 +4,11 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 import 'dart:convert';
+import 'dart:typed_data';
 
+import 'package:file_saver/file_saver.dart';
 import 'package:flutter/foundation.dart';
-import 'package:share_plus/share_plus.dart';
+import 'package:intl/intl.dart';
 
 /// Helper class for exporting notes.
 class NoteExportHelper {
@@ -22,14 +24,26 @@ class NoteExportHelper {
       tags: tags,
     );
 
-    final filename = _sanitizeFilename(title);
+    final filename = _generateUniqueFilename(title);
+    final bytes = Uint8List.fromList(utf8.encode(markdown));
 
-    if (kIsWeb) {
-      // For web, use share or download
-      await Share.share(markdown, subject: '$filename.md');
-    } else {
-      // For mobile/desktop, share as file
-      await Share.share(markdown, subject: filename);
+    try {
+      // Use saveAs which shows a file picker dialog on all platforms
+      final path = await FileSaver.instance.saveAs(
+        name: filename,
+        bytes: bytes,
+        ext: 'md',
+        mimeType: MimeType.text,
+      );
+
+      if (kDebugMode) {
+        print('File saved to: $path');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error exporting note: $e');
+      }
+      rethrow;
     }
   }
 
@@ -127,6 +141,13 @@ class NoteExportHelper {
     }
 
     return buffer.toString();
+  }
+
+  /// Generates a unique filename with timestamp to avoid conflicts.
+  static String _generateUniqueFilename(String title) {
+    final sanitized = _sanitizeFilename(title);
+    final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+    return '${sanitized}_$timestamp';
   }
 
   /// Sanitizes filename for export.
