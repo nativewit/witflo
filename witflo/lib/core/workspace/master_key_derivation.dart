@@ -88,8 +88,13 @@ class MasterKeyDerivation {
   /// This is the core operation for unlocking a workspace. The MUK is derived
   /// using Argon2id with the provided salt and parameters.
   ///
+  /// **PERFORMANCE NOTE**:
+  /// - Argon2id is CPU-intensive (~1 second) and runs on main thread
+  /// - This may cause brief UI freeze during unlock
+  /// - Isolates cannot be used due to FFI library limitations with sodium_libs
+  ///
   /// **SECURITY CRITICAL**:
-  /// - The [password] parameter is ZEROIZED after derivation (by Argon2id primitive)
+  /// - The [password] parameter is ZEROIZED after derivation
   /// - The returned [MasterUnlockKey] MUST be disposed after use
   /// - The MUK should never be persisted to disk
   /// - Cache MUK in memory only during active session
@@ -127,6 +132,7 @@ class MasterKeyDerivation {
     Uint8List salt,
     Argon2Params params,
   ) async {
+    // Use crypto service directly (cannot use isolates with FFI libraries)
     return _crypto.argon2id.deriveKey(
       password: password,
       salt: salt,
@@ -142,6 +148,12 @@ class MasterKeyDerivation {
   ///
   /// The benchmark tests different combinations of memory and iterations to
   /// find parameters that achieve approximately [targetDurationMs] milliseconds.
+  ///
+  /// **PERFORMANCE NOTE**:
+  /// - Argon2id benchmarking is CPU-intensive (5-10 seconds)
+  /// - Runs on main thread - may cause UI freeze
+  /// - Isolates cannot be used due to FFI library limitations with sodium_libs
+  /// - Show loading indicator to user during benchmark
   ///
   /// **When to call**:
   /// - First workspace initialization (no existing params)
@@ -183,6 +195,7 @@ class MasterKeyDerivation {
     int minMemoryKiB = 32768,
     int maxMemoryKiB = 131072,
   }) async {
+    // Use crypto service directly (cannot use isolates with FFI libraries)
     return _crypto.argon2id.benchmark(
       targetDurationMs: targetDurationMs,
       minMemoryKiB: minMemoryKiB,
