@@ -20,6 +20,7 @@ import 'package:witflo_app/providers/workspace_provider.dart';
 import 'package:witflo_app/ui/theme/app_theme.dart';
 import 'package:witflo_app/ui/widgets/common/password_field.dart';
 import 'package:witflo_app/ui/widgets/common/encryption_pattern_background.dart';
+import 'package:witflo_app/ui/widgets/common/app_logo.dart';
 import 'package:go_router/go_router.dart';
 import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart';
@@ -133,36 +134,19 @@ class _OnboardingWizardState extends ConsumerState<OnboardingWizard> {
   }
 
   Widget _buildHeader(ThemeData theme) {
-    return Column(
+    return const Column(
       children: [
         // Witflo logo with background infographic
-        Stack(
-          alignment: Alignment.center,
-          children: [
-            // Background infographic
-            EncryptionPatternBackground(width: 136, height: 136),
-            // Logo image
-            Image.asset(
-              'assets/images/logo_256.png',
-              width: 120,
-              height: 120,
-              filterQuality: FilterQuality.high,
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
+        AppLogo(size: AppLogoSize.small, showLockBadge: false),
+        SizedBox(height: 16),
         Text(
           'Welcome to Witflo',
-          style: theme.textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
+          style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         Text(
           'Let\'s set up your encrypted workspace',
-          style: theme.textTheme.bodyLarge?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
+          style: TextStyle(fontSize: 16),
           textAlign: TextAlign.center,
         ),
       ],
@@ -409,21 +393,33 @@ class _OnboardingWizardState extends ConsumerState<OnboardingWizard> {
     });
 
     try {
+      print('[OnboardingWizard] Starting workspace initialization...');
+      print(
+        '[OnboardingWizard] Selected workspace path: $_selectedWorkspacePath',
+      );
+
       // Spec-002 Section 3.1: Initialize workspace with master password
       final masterPassword = SecureBytes.fromList(utf8.encode(_password));
       final workspaceService = WorkspaceService();
+
+      print('[OnboardingWizard] Calling initializeWorkspace...');
       final unlockedWorkspace = await workspaceService.initializeWorkspace(
         rootPath: _selectedWorkspacePath!,
         masterPassword: masterPassword,
       );
+      print('[OnboardingWizard] Workspace initialized successfully');
+      print('[OnboardingWizard] Workspace initialized successfully');
 
       // Spec-002 Section 3.3: Create vault with random key
+      print('[OnboardingWizard] Generating vault key...');
       final crypto = ref.read(cryptoServiceProvider);
       final vaultKeyBytes = crypto.random.symmetricKey();
       final vaultKey = VaultKey(vaultKeyBytes);
       final vaultId = const Uuid().v4();
+      print('[OnboardingWizard] Vault ID: $vaultId');
 
       // Add vault to keyring
+      print('[OnboardingWizard] Adding vault to keyring...');
       final vaultKeyBase64 = base64Encode(vaultKeyBytes.bytes);
       unlockedWorkspace.keyring = unlockedWorkspace.keyring.addVault(
         vaultId,
@@ -431,10 +427,13 @@ class _OnboardingWizardState extends ConsumerState<OnboardingWizard> {
       );
 
       // Save updated keyring
+      print('[OnboardingWizard] Saving keyring...');
       await workspaceService.saveKeyring(unlockedWorkspace);
+      print('[OnboardingWizard] Keyring saved');
 
       // Create vault using vault service (spec-002 compliant)
       final vaultPath = p.join(_selectedWorkspacePath!, 'vaults', vaultId);
+      print('[OnboardingWizard] Creating vault at: $vaultPath');
       final vaultService = ref.read(vaultServiceProvider);
       await vaultService.createVault(
         vaultPath: vaultPath,
@@ -445,36 +444,50 @@ class _OnboardingWizardState extends ConsumerState<OnboardingWizard> {
         icon: '📓',
         color: '#3B82F6',
       );
+      print('[OnboardingWizard] Vault created');
 
       // Register vault in registry
+      print('[OnboardingWizard] Registering vault in registry...');
       await ref
           .read(vaultRegistryProvider.notifier)
           .registerVault(name: _vaultName, path: vaultPath, setAsDefault: true);
+      print('[OnboardingWizard] Vault registered');
 
       // Save workspace config to preferences
+      print('[OnboardingWizard] Saving workspace config...');
       final workspaceConfig = WorkspaceConfig.create(
         rootPath: unlockedWorkspace.rootPath,
       );
       await workspaceService.saveWorkspaceConfig(workspaceConfig);
+      print('[OnboardingWizard] Workspace config saved');
 
       // Force workspaceProvider to reload from preferences
       // This is critical - without invalidation, the router will still see
       // hasWorkspace=false and redirect back to onboarding
+      print('[OnboardingWizard] Invalidating workspaceProvider...');
       ref.invalidate(workspaceProvider);
 
       // Wait for workspaceProvider to finish rebuilding with the new config
       // The provider's build() method is async, so we need to wait for it
+      print('[OnboardingWizard] Waiting for workspaceProvider to rebuild...');
       await ref.read(workspaceProvider.future);
+      print('[OnboardingWizard] WorkspaceProvider rebuilt');
 
       // Store unlocked workspace in provider (CRITICAL!)
       // Without this, the router will redirect back to unlock screen
+      print('[OnboardingWizard] Storing unlocked workspace in provider...');
       ref.read(unlockedWorkspaceProvider.notifier).unlock(unlockedWorkspace);
+      print('[OnboardingWizard] Unlocked workspace stored');
 
       // Navigate to home (workspace is now initialized)
       if (mounted) {
+        print('[OnboardingWizard] Navigating to /home...');
         context.go('/home');
       }
-    } catch (e) {
+      print('[OnboardingWizard] Onboarding complete!');
+    } catch (e, stackTrace) {
+      print('[OnboardingWizard] ERROR during onboarding: $e');
+      print('[OnboardingWizard] Stack trace: $stackTrace');
       setState(() {
         _error = 'Failed to complete setup: ${e.toString()}';
         _isProcessing = false;

@@ -7,5 +7,6 @@ export 'app_bar.dart';
 export 'app_card.dart';
 export 'app_empty_state.dart';
 export 'app_list_tile.dart';
+export 'app_logo.dart';
 export 'password_field.dart';
 export 'security_badges.dart';

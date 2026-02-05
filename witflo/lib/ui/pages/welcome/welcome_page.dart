@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:witflo_app/core/agentic/app_keys.dart';
 import 'package:witflo_app/core/crypto/crypto.dart';
+import 'package:witflo_app/core/workspace/workspace_config.dart';
 import 'package:witflo_app/providers/crypto_providers.dart';
 import 'package:witflo_app/providers/unlocked_workspace_provider.dart';
 import 'package:witflo_app/providers/vault_registry.dart';
@@ -16,7 +17,7 @@ import 'package:witflo_app/providers/workspace_provider.dart';
 import 'package:witflo_app/ui/theme/app_theme.dart';
 import 'package:witflo_app/ui/widgets/common/password_field.dart';
 import 'package:witflo_app/ui/widgets/common/security_badges.dart';
-import 'package:witflo_app/ui/widgets/common/encryption_pattern_background.dart';
+import 'package:witflo_app/ui/widgets/common/app_logo.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
@@ -229,6 +230,28 @@ class _WorkspaceUnlockViewState extends ConsumerState<_WorkspaceUnlockView> {
       );
       print('[WelcomePage] DEBUG: unlockWorkspace() succeeded!');
 
+      // Save workspace config to remember this workspace for next app launch
+      // This ensures the workspace path is persisted even if the user
+      // manually browsed to it without going through onboarding
+      print('[WelcomePage] DEBUG: Saving workspace config...');
+      final currentConfig = await workspaceService.loadWorkspaceConfig();
+      if (currentConfig == null ||
+          currentConfig.rootPath != workspaceState.rootPath) {
+        // Either no config exists, or config points to a different workspace
+        // Save the current workspace path
+        final newConfig = WorkspaceConfig.create(
+          rootPath: workspaceState.rootPath!,
+          recentWorkspaces: currentConfig?.recentWorkspaces.toList() ?? [],
+        );
+        await workspaceService.saveWorkspaceConfig(newConfig);
+        print('[WelcomePage] DEBUG: Workspace config saved');
+      } else {
+        // Config exists and points to current workspace, just update timestamp
+        final updatedConfig = currentConfig.touch();
+        await workspaceService.saveWorkspaceConfig(updatedConfig);
+        print('[WelcomePage] DEBUG: Workspace config timestamp updated');
+      }
+
       // Store unlocked workspace in provider
       print('[WelcomePage] DEBUG: Updating unlockedWorkspaceProvider...');
       ref.read(unlockedWorkspaceProvider.notifier).unlock(unlockedWorkspace);
@@ -277,72 +300,7 @@ class _WorkspaceUnlockViewState extends ConsumerState<_WorkspaceUnlockView> {
             padding: EdgeInsets.all(isWide ? 48 : 24),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 460),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Logo
-                  _buildLogo(theme),
-                  const SizedBox(height: 48),
-
-                  // Unlock prompt
-                  Text(
-                    'Unlock Workspace',
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Enter your master password to access all vaults',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Workspace info
-                  _buildWorkspaceInfo(theme),
-                  const SizedBox(height: 24),
-
-                  // Password field
-                  PasswordField(
-                    key: AppKeys.inputMasterPassword,
-                    controller: _passwordController,
-                    labelText: 'Master Password',
-                    hintText: 'Enter your password',
-                    errorText: _error,
-                    autofocus: true,
-                    textInputAction: TextInputAction.done,
-                    onSubmitted: (_) => _unlock(),
-                    enabled: !_isUnlocking,
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Unlock button
-                  FilledButton(
-                    key: AppKeys.btnUnlockWorkspace,
-                    onPressed: _isUnlocking ? null : _unlock,
-                    child: _isUnlocking
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Text('Unlock'),
-                  ),
-
-                  const SizedBox(height: 48),
-
-                  // Security badges
-                  const SecurityBadges(),
-                ],
-              ),
+              child: _buildUnlockContent(theme),
             ),
           ),
         ),
@@ -473,85 +431,76 @@ class _WorkspaceUnlockViewState extends ConsumerState<_WorkspaceUnlockView> {
     }
   }
 
-  Widget _buildLogo(ThemeData theme) {
+  Widget _buildUnlockContent(ThemeData theme) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Witflo logo with lock overlay to indicate locked state
-        Stack(
-          alignment: Alignment.center,
-          children: [
-            // Background infographic
-            EncryptionPatternBackground(width: 256, height: 256),
-            // Logo image
-            Image.asset(
-              'assets/images/logo_512.png',
-              width: 240,
-              height: 240,
-              filterQuality: FilterQuality.high,
-            ),
-            // Lock badge overlay
-            Positioned(
-              bottom: 0,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surface,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: theme.colorScheme.primary,
-                    width: 2,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.1),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.lock,
-                      size: 16,
-                      color: theme.colorScheme.primary,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'LOCKED',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: theme.colorScheme.primary,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
+        // Logo with lock badge
+        const AppLogo(
+          size: AppLogoSize.medium,
+          showLockBadge: true,
+          showTitle: true,
+          subtitle: 'A safe space for your thoughts to flow',
         ),
-        const SizedBox(height: 32),
+        const SizedBox(height: 48),
+
+        // Unlock prompt
         Text(
-          'WITFLO',
-          style: theme.textTheme.headlineLarge?.copyWith(
-            fontWeight: FontWeight.w700,
-            letterSpacing: 4,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'A safe space for your thoughts to flow',
-          style: theme.textTheme.bodyLarge?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-            letterSpacing: 0.5,
+          'Unlock Workspace',
+          style: theme.textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.w600,
           ),
           textAlign: TextAlign.center,
         ),
+        const SizedBox(height: 8),
+        Text(
+          'Enter your master password to access all vaults',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 24),
+
+        // Workspace info
+        _buildWorkspaceInfo(theme),
+        const SizedBox(height: 24),
+
+        // Password field
+        PasswordField(
+          key: AppKeys.inputMasterPassword,
+          controller: _passwordController,
+          labelText: 'Master Password',
+          hintText: 'Enter your password',
+          errorText: _error,
+          autofocus: true,
+          textInputAction: TextInputAction.done,
+          onSubmitted: (_) => _unlock(),
+          enabled: !_isUnlocking,
+        ),
+        const SizedBox(height: 24),
+
+        // Unlock button
+        FilledButton(
+          key: AppKeys.btnUnlockWorkspace,
+          onPressed: _isUnlocking ? null : _unlock,
+          child: _isUnlocking
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : const Text('Unlock'),
+        ),
+
+        const SizedBox(height: 48),
+
+        // Security badges
+        const SecurityBadges(),
       ],
     );
   }
@@ -596,7 +545,7 @@ class _UnlockedWorkspaceView extends ConsumerWidget {
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 560),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // Workspace info
