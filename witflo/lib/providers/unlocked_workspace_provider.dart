@@ -20,15 +20,29 @@
 // - Never serialize UnlockedWorkspace
 // - Timer reset on user activity
 //
+// FILE MONITORING (Phase 5):
+// - WorkspaceFileWatcher: monitors workspace-level files
+// - VaultFileWatcher: monitors vault-level files for each unlocked vault
+// - VaultReloadService: reloads encrypted indices when files change
+// - Provider invalidation: triggers UI updates automatically
+//
 // Spec: docs/specs/spec-002-workspace-master-password.md (Section 3)
+// Spec: docs/specs/spec-005-live-sync.md (File monitoring)
 // ═══════════════════════════════════════════════════════════════════════════
 
 import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:witflo_app/core/logging/app_logger.dart';
+import 'package:witflo_app/core/vault/vault_file_watcher.dart';
+import 'package:witflo_app/core/vault/vault_reload_service.dart';
 import 'package:witflo_app/core/workspace/unlocked_workspace.dart';
+import 'package:witflo_app/core/workspace/workspace_file_watcher.dart';
 import 'package:witflo_app/providers/auto_lock_settings_provider.dart';
+import 'package:witflo_app/providers/crypto_providers.dart';
+import 'package:witflo_app/providers/note_providers.dart';
+import 'package:witflo_app/providers/notebook_providers.dart';
 
 /// Provider for unlocked workspace session state.
 ///
@@ -65,11 +79,18 @@ final unlockedWorkspaceProvider =
 /// 2. Implements auto-lock on app lifecycle changes
 /// 3. Implements auto-lock on idle timer
 /// 4. Ensures proper cleanup of cryptographic material
+/// 5. Monitors file changes and reloads indices automatically (Phase 5)
 class UnlockedWorkspaceNotifier extends StateNotifier<UnlockedWorkspace?>
     with WidgetsBindingObserver {
   final Ref _ref;
   Timer? _idleTimer;
   DateTime? _lastActivityTime;
+
+  // File monitoring (Phase 5)
+  final _log = AppLogger.get('UnlockedWorkspaceNotifier');
+  WorkspaceFileWatcher? _workspaceWatcher;
+  final Map<String, VaultFileWatcher> _vaultWatchers = {};
+  VaultReloadService? _reloadService;
 
   UnlockedWorkspaceNotifier(this._ref) : super(null) {
     // Register as app lifecycle observer
@@ -84,28 +105,27 @@ class UnlockedWorkspaceNotifier extends StateNotifier<UnlockedWorkspace?>
   /// When locking, the workspace will be disposed automatically.
   ///
   /// [workspace] - The unlocked workspace (must not be disposed)
-  void unlock(UnlockedWorkspace workspace) {
-    print('[UnlockedWorkspaceProvider] DEBUG: unlock() called');
+  Future<void> unlock(UnlockedWorkspace workspace) async {
+    _log.debug('unlock() called');
     // Lock any existing workspace first
     if (state != null) {
-      print(
-        '[UnlockedWorkspaceProvider] DEBUG: Locking existing workspace first',
-      );
-      lock();
+      _log.debug('Locking existing workspace first');
+      await lock();
     }
 
-    print(
-      '[UnlockedWorkspaceProvider] DEBUG: Setting state to unlocked workspace',
-    );
+    _log.debug('Setting state to unlocked workspace');
     state = workspace;
     _lastActivityTime = DateTime.now();
-    print(
-      '[UnlockedWorkspaceProvider] DEBUG: State set! state is now: ${state != null ? "NOT NULL" : "NULL"}',
+    _log.debug(
+      'State set! state is now: ${state != null ? "NOT NULL" : "NULL"}',
     );
+
+    // Initialize file monitoring (Phase 5)
+    await _startFileMonitoring(workspace);
 
     // Start idle timer if auto-lock is enabled
     _startIdleTimer();
-    print('[UnlockedWorkspaceProvider] DEBUG: unlock() completed');
+    _log.debug('unlock() completed');
   }
 
   /// Updates the workspace with a new instance (e.g., after keyring changes).
@@ -116,12 +136,12 @@ class UnlockedWorkspaceNotifier extends StateNotifier<UnlockedWorkspace?>
   ///
   /// [workspace] - The updated workspace with new keyring
   void update(UnlockedWorkspace workspace) {
-    print('[UnlockedWorkspaceProvider] DEBUG: update() called');
+    _log.debug('update() called');
     // Don't dispose the old workspace - the MUK is the same object
     // Just replace the state with the updated workspace
     state = workspace;
     _lastActivityTime = DateTime.now();
-    print('[UnlockedWorkspaceProvider] DEBUG: update() completed');
+    _log.debug('update() completed');
   }
 
   /// Locks the workspace by disposing all cryptographic material.
@@ -130,10 +150,14 @@ class UnlockedWorkspaceNotifier extends StateNotifier<UnlockedWorkspace?>
   /// 1. Disposes the UnlockedWorkspace (zeroizes MUK and vault keys)
   /// 2. Sets state to null (locked)
   /// 3. Cancels idle timer
+  /// 4. Stops all file monitoring (Phase 5)
   ///
   /// After calling this, user must unlock again with password.
-  void lock() {
+  Future<void> lock() async {
     _stopIdleTimer();
+
+    // Stop file monitoring (Phase 5)
+    await _stopFileMonitoring();
 
     // Dispose workspace (zeroizes all keys)
     state?.dispose();
@@ -147,6 +171,52 @@ class UnlockedWorkspaceNotifier extends StateNotifier<UnlockedWorkspace?>
 
   /// Checks if workspace is currently unlocked.
   bool get isUnlocked => state != null;
+
+  /// Registers a vault for file monitoring.
+  ///
+  /// This should be called by vault providers when a vault is accessed.
+  /// The watcher will monitor vault-level files and trigger reloads/invalidations.
+  ///
+  /// [vault] - The unlocked vault to monitor
+  Future<void> registerVaultWatcher(dynamic vault) async {
+    if (state == null || _reloadService == null) {
+      _log.warning('Cannot register vault watcher: workspace not unlocked');
+      return;
+    }
+
+    final vaultId = vault.header.vaultId as String;
+
+    // Skip if already watching
+    if (_vaultWatchers.containsKey(vaultId)) {
+      _log.debug('Vault $vaultId already being monitored');
+      return;
+    }
+
+    try {
+      _log.info('Starting file watcher for vault: $vaultId');
+
+      final watcher = VaultFileWatcher(
+        vault: vault,
+        onNotesIndexChange: () => _handleNotesIndexChange(vaultId, vault),
+        onNotebooksIndexChange: () =>
+            _handleNotebooksIndexChange(vaultId, vault),
+        onTagsIndexChange: () => _handleTagsIndexChange(vaultId),
+        onSyncCursorChange: () => _handleSyncCursorChange(vaultId),
+        onSyncOperation: (opPath) => _handleSyncOperation(vaultId, opPath),
+      );
+
+      await watcher.startWatching();
+      _vaultWatchers[vaultId] = watcher;
+
+      _log.info('Vault watcher started successfully for: $vaultId');
+    } catch (e, stack) {
+      _log.error(
+        'Failed to start vault watcher for $vaultId',
+        error: e,
+        stackTrace: stack,
+      );
+    }
+  }
 
   /// Resets the idle timer on user activity.
   ///
@@ -238,9 +308,206 @@ class UnlockedWorkspaceNotifier extends StateNotifier<UnlockedWorkspace?>
     _stopIdleTimer();
     WidgetsBinding.instance.removeObserver(this);
 
+    // Stop file monitoring (must be sync, so we don't await)
+    _stopFileMonitoring();
+
     // Dispose workspace if still unlocked
     state?.dispose();
 
     super.dispose();
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // File Monitoring (Phase 5)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// Starts file monitoring for workspace and all vaults.
+  Future<void> _startFileMonitoring(UnlockedWorkspace workspace) async {
+    try {
+      _log.info('Starting file monitoring...');
+
+      // Initialize reload service
+      final crypto = _ref.read(cryptoServiceProvider);
+      _reloadService = VaultReloadService(crypto: crypto);
+      _log.debug('VaultReloadService initialized');
+
+      // Start workspace-level watcher
+      _workspaceWatcher = WorkspaceFileWatcher(
+        workspaceRoot: workspace.rootPath,
+        onMetadataChange: _handleWorkspaceMetadataChange,
+        onKeyringChange: _handleKeyringChange,
+        onVaultDiscovered: _handleVaultDiscovered,
+      );
+      await _workspaceWatcher!.startWatching();
+      _log.info('WorkspaceFileWatcher started');
+
+      // Note: Vault watchers will be started lazily when vaults are accessed
+      // via registerVaultWatcher() to avoid circular dependencies
+      _log.info('File monitoring initialized successfully');
+    } catch (e, stack) {
+      _log.error(
+        'Failed to start file monitoring',
+        error: e,
+        stackTrace: stack,
+      );
+      // Don't throw - file monitoring is not critical for basic functionality
+    }
+  }
+
+  /// Stops all file monitoring.
+  Future<void> _stopFileMonitoring() async {
+    try {
+      _log.debug('Stopping file monitoring...');
+
+      // Stop workspace watcher
+      _workspaceWatcher?.dispose();
+      _workspaceWatcher = null;
+
+      // Stop all vault watchers
+      for (final watcher in _vaultWatchers.values) {
+        watcher.dispose();
+      }
+      _vaultWatchers.clear();
+
+      // Clear reload service
+      _reloadService = null;
+
+      _log.info('File monitoring stopped');
+    } catch (e, stack) {
+      _log.error('Error stopping file monitoring', error: e, stackTrace: stack);
+    }
+  }
+
+  /// Handles workspace metadata file changes.
+  Future<void> _handleWorkspaceMetadataChange() async {
+    _log.info('Workspace metadata changed externally');
+    // TODO: Invalidate workspace metadata provider when it exists
+    // For now, just log the event
+  }
+
+  /// Handles keyring file changes (CRITICAL).
+  Future<void> _handleKeyringChange() async {
+    _log.warning('Keyring changed externally - workspace must be re-unlocked');
+    // TODO: Show notification to user
+    // For now, lock the workspace to force re-unlock
+    await lock();
+  }
+
+  /// Handles discovery of new vaults.
+  Future<void> _handleVaultDiscovered(String vaultId) async {
+    _log.info('New vault discovered: $vaultId');
+    // TODO: Invalidate vault registry provider
+    // For now, just log the event
+  }
+
+  /// Handles notes index file changes.
+  Future<void> _handleNotesIndexChange(String vaultId, dynamic vault) async {
+    _log.info('Notes index changed for vault: $vaultId');
+
+    try {
+      // Get the note repository - it uses the active vault automatically
+      final noteRepo = await _ref.read(noteRepositoryProvider.future);
+
+      // Reload the notes index from disk
+      final success = await _reloadService!.reloadNotesIndex(
+        vault,
+        noteRepo.metadataCache,
+      );
+
+      if (success) {
+        _log.info('Notes index reloaded successfully for vault: $vaultId');
+
+        // The repository's metadata cache has been updated by reloadNotesIndex.
+        // Providers that watch the repository will automatically rebuild on next access.
+        // We don't need to explicitly invalidate them here to avoid circular dependency issues.
+
+        _log.debug(
+          'Notes index reloaded, providers will rebuild on next access',
+        );
+      } else {
+        _log.warning('Failed to reload notes index for vault: $vaultId');
+      }
+    } catch (e, stack) {
+      _log.error(
+        'Error handling notes index change for vault: $vaultId',
+        error: e,
+        stackTrace: stack,
+      );
+    }
+  }
+
+  /// Handles notebooks index file changes.
+  Future<void> _handleNotebooksIndexChange(
+    String vaultId,
+    dynamic vault,
+  ) async {
+    _log.info('Notebooks index changed for vault: $vaultId');
+
+    try {
+      // Get the notebook repository - it uses the active vault automatically
+      final notebookRepo = await _ref.read(notebookRepositoryProvider.future);
+
+      // Reload the notebooks index from disk
+      final success = await _reloadService!.reloadNotebooksIndex(
+        vault,
+        notebookRepo.notebookCache,
+      );
+
+      if (success) {
+        _log.info('Notebooks index reloaded successfully for vault: $vaultId');
+
+        // The repository's notebook cache has been updated by reloadNotebooksIndex.
+        // Providers that watch the repository will automatically rebuild on next access.
+        // We don't need to explicitly invalidate them here to avoid circular dependency issues.
+
+        _log.debug(
+          'Notebooks index reloaded, providers will rebuild on next access',
+        );
+      } else {
+        _log.warning('Failed to reload notebooks index for vault: $vaultId');
+      }
+    } catch (e, stack) {
+      _log.error(
+        'Error handling notebooks index change for vault: $vaultId',
+        error: e,
+        stackTrace: stack,
+      );
+    }
+  }
+
+  /// Handles tags index file changes.
+  Future<void> _handleTagsIndexChange(String vaultId) async {
+    _log.info('Tags index changed for vault: $vaultId');
+    // TODO: Reload tags when tag system is implemented
+  }
+
+  /// Handles sync cursor file changes.
+  Future<void> _handleSyncCursorChange(String vaultId) async {
+    _log.debug('Sync cursor changed for vault: $vaultId');
+    // TODO: Trigger sync when sync system is implemented
+  }
+
+  /// Handles new sync operations.
+  Future<void> _handleSyncOperation(String vaultId, String opPath) async {
+    _log.info('New sync operation detected: $opPath');
+
+    try {
+      // TODO: Implement full sync operation application in Phase 6
+      // For now, this is a placeholder that will be completed when:
+      // 1. SyncService is integrated with providers
+      // 2. Encrypted operation format is finalized
+      // 3. Full CRDT conflict resolution is tested
+
+      _log.debug('Sync operation handling not fully implemented yet: $opPath');
+
+      // The operation file will be picked up by the next sync() call
+      // when SyncService.sync() is triggered manually or on a schedule
+    } catch (e, stack) {
+      _log.error(
+        'Error handling sync operation',
+        error: e.toString(),
+        stackTrace: stack,
+      );
+    }
   }
 }

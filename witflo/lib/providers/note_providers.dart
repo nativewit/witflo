@@ -83,6 +83,11 @@ final unlockedActiveVaultProvider = FutureProvider.autoDispose<UnlockedVault>((
   );
   log.debug('Vault unlocked successfully');
 
+  // Register vault for file monitoring (Phase 5)
+  final workspaceNotifier = ref.read(unlockedWorkspaceProvider.notifier);
+  await workspaceNotifier.registerVaultWatcher(unlockedVault);
+  log.debug('Vault watcher registered');
+
   // Dispose the vault when the provider is disposed
   // NOTE: We do NOT dispose vaultKey here because it's owned by the workspace
   // The workspace manages the lifecycle of all vault keys and will dispose them
@@ -115,16 +120,10 @@ final notesMetadataProvider = FutureProvider<List<NoteMetadata>>((ref) async {
 });
 
 /// Provider for active (non-trashed, non-archived) notes.
+/// Uses optimized repository query method (Phase 3).
 final activeNotesProvider = FutureProvider<List<NoteMetadata>>((ref) async {
   final repo = await ref.watch(noteRepositoryProvider.future);
-  final all = await repo.listAll();
-  return all.where((n) => !n.isTrashed && !n.isArchived).toList()..sort((a, b) {
-    // Pinned first, then by modified date
-    if (a.isPinned != b.isPinned) {
-      return a.isPinned ? -1 : 1;
-    }
-    return b.modifiedAt.compareTo(a.modifiedAt);
-  });
+  return repo.getActiveNotes();
 });
 
 /// Provider for trashed notes.
@@ -134,27 +133,35 @@ final trashedNotesProvider = FutureProvider<List<NoteMetadata>>((ref) async {
 });
 
 /// Provider for archived notes.
+/// Uses optimized repository query method (Phase 3).
 final archivedNotesProvider = FutureProvider<List<NoteMetadata>>((ref) async {
   final repo = await ref.watch(noteRepositoryProvider.future);
-  final all = await repo.listAll();
-  return all.where((n) => n.isArchived && !n.isTrashed).toList()
-    ..sort((a, b) => b.modifiedAt.compareTo(a.modifiedAt));
+  return repo.getArchivedNotes();
+});
+
+/// Provider for pinned notes.
+/// Uses optimized repository query method (Phase 3).
+final pinnedNotesProvider = FutureProvider<List<NoteMetadata>>((ref) async {
+  final repo = await ref.watch(noteRepositoryProvider.future);
+  return repo.getPinnedNotes();
 });
 
 /// Provider for notes in a specific notebook.
+/// Uses optimized repository query method (Phase 3).
 final notebookNotesProvider =
     FutureProvider.family<List<NoteMetadata>, String?>((ref, notebookId) async {
       final repo = await ref.watch(noteRepositoryProvider.future);
-      return repo.listByNotebook(notebookId);
+      return repo.getNotesByNotebook(notebookId);
     });
 
 /// Provider for notes with a specific tag.
+/// Uses optimized repository query method (Phase 3).
 final tagNotesProvider = FutureProvider.family<List<NoteMetadata>, String>((
   ref,
   tag,
 ) async {
   final repo = await ref.watch(noteRepositoryProvider.future);
-  return repo.listByTag(tag);
+  return repo.getNotesByTag(tag);
 });
 
 /// Provider for a single note.

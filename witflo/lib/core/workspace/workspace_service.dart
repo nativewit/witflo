@@ -57,6 +57,10 @@ class WorkspaceService implements IWorkspaceService {
   String get _keyringFile => AppEnvironment.instance.workspaceKeyringFile;
   static const String _vaultsSubdir = 'vaults';
 
+  // Old Fyndo file names for migration
+  static const String _oldFyndoMarkerFile = '.fyndo-workspace';
+  static const String _oldFyndoKeyringFile = '.fyndo-keyring.enc';
+
   final FolderPicker _folderPicker;
   final CryptoService _crypto;
   final MasterKeyDerivation _keyDerivation;
@@ -167,9 +171,11 @@ class WorkspaceService implements IWorkspaceService {
         return false;
       }
 
-      // Check for marker file
+      // Check for marker file (support both old Fyndo and new Witflo)
       final markerFile = File(p.join(rootPath, _workspaceMarkerFile));
-      if (!await markerFile.exists()) {
+      final oldMarkerFile = File(p.join(rootPath, _oldFyndoMarkerFile));
+
+      if (!await markerFile.exists() && !await oldMarkerFile.exists()) {
         return false;
       }
 
@@ -343,48 +349,120 @@ class WorkspaceService implements IWorkspaceService {
     required String rootPath,
     required SecureBytes masterPassword,
   }) async {
+    print('[WorkspaceService] 🚀 Initializing workspace at: $rootPath');
+
     // Verify we can access the directory
+    print('[WorkspaceService] Checking directory access...');
     if (!await _folderPicker.canAccessDirectory(rootPath)) {
       // Try to create it
+      print(
+        '[WorkspaceService] Directory not accessible, attempting to create...',
+      );
       try {
         await Directory(rootPath).create(recursive: true);
+        print('[WorkspaceService] ✅ Directory created successfully');
       } catch (e) {
+        print('[WorkspaceService] ❌ Failed to create directory: $e');
         throw WorkspaceException(
           'Cannot access or create directory: $rootPath',
           e,
         );
       }
+    } else {
+      print('[WorkspaceService] ✅ Directory is accessible');
     }
+
+    // Verify directory actually exists and is writable
+    final dir = Directory(rootPath);
+    if (!await dir.exists()) {
+      print('[WorkspaceService] ❌ Directory does not exist after access check');
+      throw WorkspaceException('Directory does not exist: $rootPath');
+    }
+    print('[WorkspaceService] ✅ Directory exists confirmed');
 
     // Check if already initialized
     final markerFile = File(p.join(rootPath, _workspaceMarkerFile));
-    if (await markerFile.exists()) {
-      throw WorkspaceException('Workspace already initialized at: $rootPath');
+    print(
+      '[WorkspaceService] Checking for existing workspace marker: ${markerFile.path}',
+    );
+
+    // Check for old Fyndo workspace files and migrate them
+    final oldMarkerFile = File(p.join(rootPath, _oldFyndoMarkerFile));
+    final oldKeyringFile = File(p.join(rootPath, _oldFyndoKeyringFile));
+
+    if (await oldMarkerFile.exists()) {
+      print(
+        '[WorkspaceService] 📦 Found old Fyndo workspace - migrating to Witflo...',
+      );
+
+      // Migrate marker file
+      if (!await markerFile.exists()) {
+        print(
+          '[WorkspaceService] Renaming $_oldFyndoMarkerFile -> $_workspaceMarkerFile',
+        );
+        await oldMarkerFile.rename(markerFile.path);
+        print('[WorkspaceService] ✅ Marker file migrated');
+      }
+
+      // Migrate keyring file
+      final newKeyringFile = File(p.join(rootPath, _keyringFile));
+      if (await oldKeyringFile.exists() && !await newKeyringFile.exists()) {
+        print(
+          '[WorkspaceService] Renaming $_oldFyndoKeyringFile -> $_keyringFile',
+        );
+        await oldKeyringFile.rename(newKeyringFile.path);
+        print('[WorkspaceService] ✅ Keyring file migrated');
+      }
+
+      print(
+        '[WorkspaceService] ✅ Migration complete! Workspace is now Witflo-compatible',
+      );
+      throw WorkspaceException(
+        'This Fyndo workspace has been migrated to Witflo. Please try unlocking it again.',
+      );
     }
 
+    if (await markerFile.exists()) {
+      print('[WorkspaceService] ❌ Workspace already initialized');
+      throw WorkspaceException('Workspace already initialized at: $rootPath');
+    }
+    print('[WorkspaceService] ✅ No existing workspace found');
+
     try {
+      print('[WorkspaceService] Starting Argon2 benchmarking...');
       // 1. Benchmark Argon2id params for this device (target 1 second)
       final argon2Params = await _keyDerivation.benchmarkArgon2Params(
         targetDurationMs: 1000,
         minMemoryKiB: 32768, // 32 MiB
         maxMemoryKiB: 131072, // 128 MiB
       );
+      print(
+        '[WorkspaceService] ✅ Argon2 params: memory=${argon2Params.memoryKiB}KiB, iterations=${argon2Params.iterations}',
+      );
 
       // 2. Generate workspace salt
+      print('[WorkspaceService] Generating workspace salt...');
       final salt = _keyDerivation.generateWorkspaceSalt();
+      print('[WorkspaceService] ✅ Salt generated: ${salt.length} bytes');
 
       // 3. Derive MUK (this will zeroize masterPassword)
+      print('[WorkspaceService] Deriving MUK...');
       final muk = await _keyDerivation.deriveMasterUnlockKey(
         masterPassword,
         salt,
         argon2Params,
       );
+      print('[WorkspaceService] ✅ MUK derived');
 
       try {
         // 4. Create empty keyring
+        print('[WorkspaceService] Creating empty keyring...');
         final keyring = WorkspaceKeyring.empty();
+        print('[WorkspaceService] ✅ Empty keyring created');
+        print('[WorkspaceService] ✅ Empty keyring created');
 
         // 5. Encrypt keyring with MUK
+        print('[WorkspaceService] Encrypting keyring...');
         final keyringJson = jsonEncode(keyring.toJson());
         final keyringPlaintext = SecureBytes.fromList(utf8.encode(keyringJson));
 
@@ -396,8 +474,10 @@ class WorkspaceService implements IWorkspaceService {
           key: muk,
           nonce: nonce,
         );
+        print('[WorkspaceService] ✅ Keyring encrypted');
 
         // 6. Create workspace metadata
+        print('[WorkspaceService] Creating workspace metadata...');
         final workspaceId = const Uuid().v4();
         final cryptoParams = WorkspaceCryptoParams(
           (b) => b
@@ -410,22 +490,50 @@ class WorkspaceService implements IWorkspaceService {
           workspaceId: workspaceId,
           crypto: cryptoParams,
         );
+        print('[WorkspaceService] ✅ Metadata created with ID: $workspaceId');
 
         // 7. Write files
-        await markerFile.writeAsString(
-          jsonEncode(metadata.toJson()),
-          flush: true,
+        print(
+          '[WorkspaceService] Writing workspace marker file: ${markerFile.path}',
         );
+        try {
+          await markerFile.writeAsString(
+            jsonEncode(metadata.toJson()),
+            flush: true,
+          );
+          print('[WorkspaceService] ✅ Workspace marker written');
+        } catch (e) {
+          print('[WorkspaceService] ❌ Failed to write marker file: $e');
+          print('[WorkspaceService] File path: ${markerFile.path}');
+          print(
+            '[WorkspaceService] Directory exists: ${await Directory(rootPath).exists()}',
+          );
+          print('[WorkspaceService] Directory path: $rootPath');
+          rethrow;
+        }
 
-        await File(
-          p.join(rootPath, _keyringFile),
-        ).writeAsBytes(encryptedKeyring.ciphertext, flush: true);
+        final keyringFilePath = p.join(rootPath, _keyringFile);
+        print('[WorkspaceService] Writing keyring file: $keyringFilePath');
+        try {
+          await File(
+            keyringFilePath,
+          ).writeAsBytes(encryptedKeyring.ciphertext, flush: true);
+          print('[WorkspaceService] ✅ Keyring file written');
+        } catch (e) {
+          print('[WorkspaceService] ❌ Failed to write keyring file: $e');
+          rethrow;
+        }
 
         // 8. Create vaults directory
         final vaultsDir = Directory(p.join(rootPath, _vaultsSubdir));
+        print(
+          '[WorkspaceService] Creating vaults directory: ${vaultsDir.path}',
+        );
         await vaultsDir.create(recursive: true);
+        print('[WorkspaceService] ✅ Vaults directory created');
 
         // 9. Return unlocked workspace
+        print('[WorkspaceService] ✅ Workspace initialization complete!');
         return UnlockedWorkspace(
           muk: muk,
           keyring: keyring,
@@ -433,10 +541,14 @@ class WorkspaceService implements IWorkspaceService {
         );
       } catch (e) {
         // Dispose MUK on error
+        print(
+          '[WorkspaceService] ❌ Error in workspace creation, disposing MUK: $e',
+        );
         muk.dispose();
         rethrow;
       }
     } catch (e) {
+      print('[WorkspaceService] ❌ Failed to initialize workspace: $e');
       throw WorkspaceException('Failed to initialize workspace', e);
     }
   }
@@ -464,15 +576,40 @@ class WorkspaceService implements IWorkspaceService {
     print('[WorkspaceService] 🔓 Starting unlock process...');
     print('[WorkspaceService] 📁 Root path: $rootPath');
 
+    // Check for old Fyndo workspace and migrate if needed
+    final oldMarkerFile = File(p.join(rootPath, _oldFyndoMarkerFile));
+    final oldKeyringFile = File(p.join(rootPath, _oldFyndoKeyringFile));
+    final markerFile = File(p.join(rootPath, _workspaceMarkerFile));
+    final keyringFile = File(p.join(rootPath, _keyringFile));
+
+    if (await oldMarkerFile.exists() && !await markerFile.exists()) {
+      print('[WorkspaceService] 📦 Migrating old Fyndo workspace to Witflo...');
+
+      // Migrate marker file
+      print(
+        '[WorkspaceService] Renaming $_oldFyndoMarkerFile -> $_workspaceMarkerFile',
+      );
+      await oldMarkerFile.rename(markerFile.path);
+
+      // Migrate keyring file
+      if (await oldKeyringFile.exists() && !await keyringFile.exists()) {
+        print(
+          '[WorkspaceService] Renaming $_oldFyndoKeyringFile -> $_keyringFile',
+        );
+        await oldKeyringFile.rename(keyringFile.path);
+      }
+
+      print('[WorkspaceService] ✅ Migration complete!');
+    }
+
     // 1. Read workspace metadata
-    final metadataFile = File(p.join(rootPath, _workspaceMarkerFile));
-    if (!await metadataFile.exists()) {
+    if (!await markerFile.exists()) {
       throw WorkspaceException('Not a valid workspace: $rootPath');
     }
 
     print('[WorkspaceService] ✅ Metadata file found');
     final metadataJson =
-        jsonDecode(await metadataFile.readAsString()) as Map<String, dynamic>;
+        jsonDecode(await markerFile.readAsString()) as Map<String, dynamic>;
     final metadata = WorkspaceMetadata.fromJson(metadataJson);
     print('[WorkspaceService] ✅ Metadata parsed, version: ${metadata.version}');
 
@@ -511,21 +648,44 @@ class WorkspaceService implements IWorkspaceService {
         throw WorkspaceException('Keyring file not found: $_keyringFile');
       }
 
-      final encryptedKeyring = await keyringFile.readAsBytes();
+      final encryptedKeyringWithNonce = await keyringFile.readAsBytes();
       print(
-        '[WorkspaceService] ✅ Keyring file read: ${encryptedKeyring.length} bytes',
+        '[WorkspaceService] ✅ Keyring file read: ${encryptedKeyringWithNonce.length} bytes',
       );
 
       // 6. Decrypt keyring
-      // Note: The ciphertext already has the nonce prepended by encryptWithNonce()
-      // during initialization, so we use decrypt() which extracts it automatically.
+      // Try two formats for backwards compatibility:
+      // 1. New format: [nonce (24) || encrypted_data || tag (16)] - use decrypt()
+      // 2. Old format: [encrypted_data || tag (16)] with nonce in metadata - use decryptWithNonce()
       print(
         '[WorkspaceService] 🔐 Decrypting keyring with XChaCha20-Poly1305...',
       );
-      final decryptedBytes = _crypto.xchacha20.decrypt(
-        ciphertext: encryptedKeyring,
-        key: muk,
-      );
+
+      SecureBytes decryptedBytes;
+      try {
+        // Try new format first (nonce prepended)
+        decryptedBytes = _crypto.xchacha20.decrypt(
+          ciphertext: encryptedKeyringWithNonce,
+          key: muk,
+        );
+        print(
+          '[WorkspaceService] ✅ Decrypted using new format (nonce prepended)',
+        );
+      } catch (e) {
+        // Fall back to old format (nonce in metadata only)
+        print(
+          '[WorkspaceService] ⚠️  New format failed, trying old format (nonce in metadata): $e',
+        );
+        decryptedBytes = _crypto.xchacha20.decryptWithNonce(
+          ciphertext: encryptedKeyringWithNonce,
+          key: muk,
+          nonce: nonce,
+        );
+        print(
+          '[WorkspaceService] ✅ Decrypted using old format (nonce in metadata)',
+        );
+      }
+
       print(
         '[WorkspaceService] ✅ Keyring decrypted successfully! (${decryptedBytes.unsafeBytes.length} bytes)',
       );

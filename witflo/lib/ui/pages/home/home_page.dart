@@ -18,6 +18,7 @@ import 'package:witflo_app/ui/widgets/common/app_empty_state.dart';
 import 'package:witflo_app/ui/widgets/common/app_list_tile.dart';
 import 'package:witflo_app/ui/widgets/notebook/notebook_create_dialog.dart';
 import 'package:witflo_app/ui/widgets/notebook/notebook_menu.dart';
+import 'package:witflo_app/ui/widgets/sync/sync_button.dart';
 import 'package:witflo_app/ui/widgets/vault/vault_card.dart';
 import 'package:witflo_app/ui/widgets/vault/vault_create_dialog.dart';
 import 'package:go_router/go_router.dart';
@@ -70,6 +71,7 @@ class _HomePageContent extends ConsumerWidget {
         title: AppBarTitle(AppEnvironment.instance.appName),
         leading: const SizedBox(width: 16),
         actions: [
+          const SyncButton(),
           IconButton(
             key: AppKeys.navSettings,
             icon: const Icon(Icons.settings),

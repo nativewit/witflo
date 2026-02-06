@@ -59,9 +59,10 @@ class NotebooksNotifier extends AsyncNotifier<NotebooksState> {
   @override
   Future<NotebooksState> build() async {
     // Load notebooks from repository on initialization
+    // Uses optimized repository query method (Phase 3)
     try {
       final repo = await ref.watch(notebookRepositoryProvider.future);
-      final notebooks = await repo.listAll();
+      final notebooks = await repo.getAllNotebooks();
 
       return NotebooksState(
         (b) => b
@@ -80,12 +81,13 @@ class NotebooksNotifier extends AsyncNotifier<NotebooksState> {
   }
 
   /// Loads notebooks from storage.
+  /// Uses optimized repository query method (Phase 3).
   Future<void> loadNotebooks() async {
     state = const AsyncValue.loading();
 
     try {
       final repo = await ref.read(notebookRepositoryProvider.future);
-      final notebooks = await repo.listAll();
+      final notebooks = await repo.getAllNotebooks();
 
       state = AsyncValue.data(
         NotebooksState(

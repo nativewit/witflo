@@ -163,4 +163,50 @@ class EncryptedNotebookRepository {
     await _ensureIndexLoaded();
     return _notebookCache.values.where((n) => !n.isArchived).length;
   }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // LIVE FILE SYNC SUPPORT - Phase 2
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// Exposes notebook cache for VaultReloadService.
+  ///
+  /// This allows the reload service to update the cache when index files
+  /// change externally (e.g., from cloud sync).
+  Map<String, Notebook> get notebookCache => _notebookCache;
+
+  /// Reloads the notebook index from disk.
+  ///
+  /// Call this when the index file changes externally (detected by file watcher).
+  /// This will decrypt and reload the entire index, replacing the cache.
+  ///
+  /// Returns true if successful, false if the index doesn't exist or is corrupted.
+  Future<bool> reloadIndex() async {
+    try {
+      // Clear the loaded flag to force reload
+      _indexLoaded = false;
+      _notebookCache.clear();
+
+      // Load fresh from disk
+      await _ensureIndexLoaded();
+      return true;
+    } catch (e) {
+      print('Error reloading notebooks index: $e');
+      return false;
+    }
+  }
+
+  /// Gets all notebooks (alias for listAll for consistency).
+  Future<List<Notebook>> getAllNotebooks() async {
+    return await listAll();
+  }
+
+  /// Gets count of notes in a notebook.
+  ///
+  /// Note: This requires access to note metadata to be accurate.
+  /// The noteCount field on Notebook is computed separately.
+  Future<int> getNoteCount(String notebookId) async {
+    await _ensureIndexLoaded();
+    final notebook = _notebookCache[notebookId];
+    return notebook?.noteCount ?? 0;
+  }
 }

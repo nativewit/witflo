@@ -176,6 +176,86 @@ class EncryptedNoteRepository {
         .toList();
   }
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // LIVE FILE SYNC SUPPORT - Phase 2
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// Exposes metadata cache for VaultReloadService.
+  ///
+  /// This allows the reload service to update the cache when index files
+  /// change externally (e.g., from cloud sync).
+  Map<String, NoteMetadata> get metadataCache => _metadataCache;
+
+  /// Reloads the note index from disk.
+  ///
+  /// Call this when the index file changes externally (detected by file watcher).
+  /// This will decrypt and reload the entire index, replacing the cache.
+  ///
+  /// Returns true if successful, false if the index doesn't exist or is corrupted.
+  Future<bool> reloadIndex() async {
+    try {
+      // Clear the loaded flag to force reload
+      _indexLoaded = false;
+      _metadataCache.clear();
+
+      // Load fresh from disk
+      await _ensureIndexLoaded();
+      return true;
+    } catch (e) {
+      print('Error reloading notes index: $e');
+      return false;
+    }
+  }
+
+  /// Gets active (non-trashed, non-archived) notes.
+  ///
+  /// This is the primary query for displaying notes in the main view.
+  Future<List<NoteMetadata>> getActiveNotes() async {
+    await _ensureIndexLoaded();
+    return _metadataCache.values
+        .where((m) => !m.isTrashed && !m.isArchived)
+        .toList();
+  }
+
+  /// Gets pinned notes (excluding trashed/archived).
+  Future<List<NoteMetadata>> getPinnedNotes() async {
+    await _ensureIndexLoaded();
+    return _metadataCache.values
+        .where((m) => m.isPinned && !m.isTrashed && !m.isArchived)
+        .toList();
+  }
+
+  /// Gets archived notes (excluding trashed).
+  Future<List<NoteMetadata>> getArchivedNotes() async {
+    await _ensureIndexLoaded();
+    return _metadataCache.values
+        .where((m) => m.isArchived && !m.isTrashed)
+        .toList();
+  }
+
+  /// Gets notes by notebook ID (excluding trashed).
+  /// Pass null to get notes without a notebook.
+  Future<List<NoteMetadata>> getNotesByNotebook(String? notebookId) async {
+    await _ensureIndexLoaded();
+    return _metadataCache.values
+        .where((m) => m.notebookId == notebookId && !m.isTrashed)
+        .toList();
+  }
+
+  /// Gets notes by tag (excluding trashed).
+  Future<List<NoteMetadata>> getNotesByTag(String tag) async {
+    await _ensureIndexLoaded();
+    return _metadataCache.values
+        .where((m) => m.tags.contains(tag) && !m.isTrashed)
+        .toList();
+  }
+
+  /// Gets total note count.
+  Future<int> getNoteCount() async {
+    await _ensureIndexLoaded();
+    return _metadataCache.length;
+  }
+
   /// Ensures the metadata index is loaded.
   Future<void> _ensureIndexLoaded() async {
     if (_indexLoaded) return;

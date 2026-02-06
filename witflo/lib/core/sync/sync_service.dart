@@ -30,11 +30,14 @@ import 'dart:typed_data';
 
 import 'package:witflo_app/core/crypto/crypto.dart';
 import 'package:witflo_app/core/identity/identity.dart';
+import 'package:witflo_app/core/logging/app_logger.dart';
 import 'package:witflo_app/core/sync/sync_backend.dart';
 import 'package:witflo_app/core/sync/sync_operation.dart';
-import 'package:witflo_app/core/sync/sync_service_interface.dart';
+import 'package:witflo_app/core/sync/sync_operation_applicator.dart';
 import 'package:witflo_app/core/sync/backends/local_only_backend.dart';
 import 'package:witflo_app/core/vault/vault.dart';
+import 'package:witflo_app/features/notes/data/note_repository.dart';
+import 'package:witflo_app/features/notes/data/notebook_repository.dart';
 import 'package:witflo_app/platform/storage/storage_provider.dart';
 
 /// Sync state for a vault.
@@ -66,6 +69,9 @@ class SyncService {
   final UnlockedVault _vault;
   final CryptoService _crypto;
   final DeviceIdentity _deviceIdentity;
+  final EncryptedNoteRepository _noteRepo;
+  final EncryptedNotebookRepository _notebookRepo;
+  final _log = AppLogger.get('SyncService');
 
   /// The sync backend to use (pluggable)
   SyncBackend _backend;
@@ -76,30 +82,30 @@ class SyncService {
   // Current sync state
   // ignore: prefer_final_fields
   SyncState _state = SyncState.idle;
-  @override
   SyncState get state => _state;
 
   // Sync cursor
   SyncCursor _cursor = SyncCursor.initial();
-  @override
   SyncCursor get cursor => _cursor;
 
   SyncService({
     required UnlockedVault vault,
     required CryptoService crypto,
     required DeviceIdentity deviceIdentity,
+    required EncryptedNoteRepository noteRepository,
+    required EncryptedNotebookRepository notebookRepository,
     SyncBackend? backend,
   }) : _vault = vault,
        _crypto = crypto,
        _deviceIdentity = deviceIdentity,
+       _noteRepo = noteRepository,
+       _notebookRepo = notebookRepository,
        _backend = backend ?? LocalOnlySyncBackend();
 
   /// Gets the current backend.
-  @override
   SyncBackend get backend => _backend;
 
   /// Sets a new sync backend.
-  @override
   Future<void> setBackend(SyncBackend backend) async {
     await _backend.dispose();
     _backend = backend;
@@ -186,12 +192,55 @@ class SyncService {
       int pulled = 0;
       if (pullResult.success) {
         pulled = pullResult.operations.length;
-        // Apply pulled operations
+        _log.info('Pulled ${pullResult.operations.length} operations');
+
+        // Apply pulled operations with CRDT conflict resolution
         for (final encryptedOp in pullResult.operations) {
           final op = await _decryptOperation(encryptedOp);
-          // TODO: Apply operation to local state
+
+          // Create applicator
+          final applicator = SyncOperationApplicator(
+            vault: _vault,
+            crypto: _crypto,
+            noteRepo: _noteRepo,
+            notebookRepo: _notebookRepo,
+          );
+
+          // Initialize applicator's Lamport clock with our current value
+          applicator.updateClock(_lamportClock);
+
+          // Apply operation with conflict resolution
+          final result = await applicator.apply(op);
+
+          if (!result.success) {
+            // Log error but continue with other operations
+            _log.error(
+              'Failed to apply operation ${op.opId} (${op.type})',
+              error: result.message ?? 'Unknown error',
+            );
+            continue;
+          }
+
+          if (result.conflictType != ConflictType.noConflict) {
+            _log.warning(
+              'Conflict resolved for operation ${op.opId} (${op.type}): ${result.conflictType.name} - ${result.message}',
+            );
+          } else {
+            _log.debug(
+              'Applied operation ${op.opId} (${op.type}) successfully',
+            );
+          }
+
+          // Update Lamport clock
+          _lamportClock = applicator.lamportClock;
+
+          // Advance cursor
           await advanceCursor(timestamp: op.timestamp, opId: op.opId);
         }
+
+        // Persist updated Lamport clock
+        await _saveLamportClock();
+        _log.info('Sync completed: pulled $pulled operations');
       }
 
       stopwatch.stop();

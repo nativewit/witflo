@@ -67,6 +67,7 @@ dependencies:
   marionette_flutter: ^0.3.0       # MCP server for runtime testing
   mcp_toolkit: ^0.4.0
   package_info_plus: ^9.0.0
+  crypto: ^3.0.7
 
 dev_dependencies:
   flutter_test:
