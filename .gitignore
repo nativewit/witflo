@@ -62,3 +62,14 @@ app.*.map.json
 
 # Web
 **/web/sqlite3.wasm
+
+# OpenCode
+.opencode/
+opencode.json
+
+# Documentation
+docs/
+specs/
+
+# Test files
+test_*
