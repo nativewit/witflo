@@ -30,6 +30,10 @@ jobs:
         working-directory: witflo
         run: flutter pub get
       
+      - name: Run code generation
+        working-directory: witflo
+        run: dart run build_runner build --delete-conflicting-outputs
+      
       - name: Build macOS DMG
         working-directory: witflo
         run: |
@@ -62,6 +66,10 @@ jobs:
       - name: Install dependencies
         working-directory: witflo
         run: flutter pub get
+      
+      - name: Run code generation
+        working-directory: witflo
+        run: dart run build_runner build --delete-conflicting-outputs
       
       - name: Build Windows
         working-directory: witflo
@@ -102,6 +110,10 @@ jobs:
       - name: Install Flutter dependencies
         working-directory: witflo
         run: flutter pub get
+      
+      - name: Run code generation
+        working-directory: witflo
+        run: dart run build_runner build --delete-conflicting-outputs
       
       - name: Build Linux
         working-directory: witflo
