@@ -2,6 +2,8 @@
 
 This directory contains the official Witflo documentation site built with [VitePress](https://vitepress.dev/).
 
+**Live documentation:** https://nativewit.github.io/witflo/
+
 ## Development
 
 ### Local Development
