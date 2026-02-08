@@ -1,0 +1,172 @@
+name: Desktop Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., v0.0.1)'
+        required: true
+        type: string
+
+jobs:
+  build-macos:
+    name: Build macOS
+    runs-on: macos-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.7'
+          channel: 'stable'
+      
+      - name: Install dependencies
+        working-directory: witflo
+        run: flutter pub get
+      
+      - name: Build macOS DMG
+        working-directory: witflo
+        run: |
+          flutter build macos --release
+          # Create DMG (using create-dmg or similar tool)
+          # For now, we'll zip the .app bundle
+          cd build/macos/Build/Products/Release
+          zip -r Witflo-macOS.zip Witflo.app
+      
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Witflo-macOS
+          path: witflo/build/macos/Build/Products/Release/Witflo-macOS.zip
+
+  build-windows:
+    name: Build Windows
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.7'
+          channel: 'stable'
+      
+      - name: Install dependencies
+        working-directory: witflo
+        run: flutter pub get
+      
+      - name: Build Windows
+        working-directory: witflo
+        run: flutter build windows --release
+      
+      - name: Create Windows installer
+        working-directory: witflo
+        shell: pwsh
+        run: |
+          # Package the build directory
+          Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath Witflo-Windows.zip
+      
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Witflo-Windows
+          path: witflo/Witflo-Windows.zip
+
+  build-linux:
+    name: Build Linux
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.7'
+          channel: 'stable'
+      
+      - name: Install Flutter dependencies
+        working-directory: witflo
+        run: flutter pub get
+      
+      - name: Build Linux
+        working-directory: witflo
+        run: flutter build linux --release
+      
+      - name: Package Linux build
+        working-directory: witflo
+        run: |
+          cd build/linux/x64/release/bundle
+          tar -czf ../../../../../Witflo-Linux.tar.gz *
+      
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Witflo-Linux
+          path: witflo/Witflo-Linux.tar.gz
+
+  create-release:
+    name: Create GitHub Release
+    needs: [build-macos, build-windows, build-linux]
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      
+      - name: Get version
+        id: get_version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "VERSION=${{ inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.get_version.outputs.VERSION }}
+          name: Witflo ${{ steps.get_version.outputs.VERSION }}
+          draft: false
+          prerelease: ${{ contains(steps.get_version.outputs.VERSION, 'alpha') || contains(steps.get_version.outputs.VERSION, 'beta') }}
+          files: |
+            artifacts/Witflo-macOS/Witflo-macOS.zip
+            artifacts/Witflo-Windows/Witflo-Windows.zip
+            artifacts/Witflo-Linux/Witflo-Linux.tar.gz
+          body: |
+            ## Witflo ${{ steps.get_version.outputs.VERSION }}
+            
+            **Zero-Trust, Privacy-First, Offline-First Notes**
+            
+            ### Downloads
+            
+            - **macOS**: Download `Witflo-macOS.zip`, extract, and drag to Applications
+            - **Windows**: Download `Witflo-Windows.zip`, extract, and run `witflo.exe`
+            - **Linux**: Download `Witflo-Linux.tar.gz`, extract, and run `./witflo`
+            
+            ### What's New
+            
+            See the commit history for changes in this release.
+            
+            ---
+            
+            **Note**: This is an early release. Please report issues on GitHub.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
