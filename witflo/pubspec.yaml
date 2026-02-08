@@ -2,6 +2,7 @@ name: witflo_app
 description: "Witflo - Zero-Trust, Privacy-First, Offline-First Notes OS"
 publish_to: 'none'
 version: 0.0.1+1
+license: MPL-2.0
 
 environment:
   sdk: ^3.10.7

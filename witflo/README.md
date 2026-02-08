@@ -3,7 +3,7 @@
 **Zero-Trust, Privacy-First, Offline-First Notes OS**
 
 [![Flutter](https://img.shields.io/badge/Flutter-3.10+-blue.svg)](https://flutter.dev)
-[![License](https://img.shields.io/badge/License-TBD-green.svg)]()
+[![License](https://img.shields.io/badge/License-MPL--2.0-blue.svg)](https://opensource.org/licenses/MPL-2.0)
 [![Security](https://img.shields.io/badge/Security-Zero%20Trust-red.svg)]()
 
 ---
@@ -372,7 +372,7 @@ Contributions are welcome! Please read our security guidelines before submitting
 
 ## 📜 License
 
-[To be determined]
+Witflo is licensed under the [Mozilla Public License 2.0 (MPL-2.0)](LICENSE).
 
 ---
 
