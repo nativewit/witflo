@@ -105,7 +105,7 @@ class KeyStore extends Table {
 @DriftDatabase(tables: [Notes, Notebooks, NoteFts, SyncState, KeyStore])
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor])
-    : super(executor ?? _openConnection('fyndo_vault'));
+    : super(executor ?? _openConnection('witflo_vault'));
 
   AppDatabase.withName(String name) : super(_openConnection(name));
 

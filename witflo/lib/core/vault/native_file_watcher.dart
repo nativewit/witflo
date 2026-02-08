@@ -248,6 +248,20 @@ class NativeFileWatcher implements FileChangeNotifier {
     );
   }
 
+  /// Clear the hash cache for a specific file.
+  /// Call this when you write to a file to ensure the next change is detected.
+  void clearHashForFile(String filePath) {
+    _lastKnownHashes.remove(filePath);
+    print('[NativeFileWatcher] Cleared hash cache for: $filePath');
+  }
+
+  /// Clear all hash caches.
+  /// Useful when the app writes multiple files.
+  void clearAllHashes() {
+    _lastKnownHashes.clear();
+    print('[NativeFileWatcher] Cleared all hash caches');
+  }
+
   @override
   void dispose() {
     _stopWatching();

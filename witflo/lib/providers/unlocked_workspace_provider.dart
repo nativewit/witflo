@@ -31,14 +31,21 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 import 'dart:async';
+import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:witflo_app/core/crypto/crypto.dart';
 import 'package:witflo_app/core/logging/app_logger.dart';
+import 'package:witflo_app/core/sync/sync_operation.dart';
+import 'package:witflo_app/core/sync/sync_operation_applicator.dart';
 import 'package:witflo_app/core/vault/vault_file_watcher.dart';
 import 'package:witflo_app/core/vault/vault_reload_service.dart';
+import 'package:witflo_app/core/vault/vault_service.dart';
 import 'package:witflo_app/core/workspace/unlocked_workspace.dart';
 import 'package:witflo_app/core/workspace/workspace_file_watcher.dart';
+import 'package:witflo_app/platform/storage/storage_provider.dart';
 import 'package:witflo_app/providers/auto_lock_settings_provider.dart';
 import 'package:witflo_app/providers/crypto_providers.dart';
 import 'package:witflo_app/providers/note_providers.dart';
@@ -92,9 +99,30 @@ class UnlockedWorkspaceNotifier extends StateNotifier<UnlockedWorkspace?>
   final Map<String, VaultFileWatcher> _vaultWatchers = {};
   VaultReloadService? _reloadService;
 
+  // Stream controllers for notifying UI of external changes
+  // These avoid circular dependencies by using streams instead of provider invalidation
+  final _notesChangedController = StreamController<String>.broadcast();
+  final _notebooksChangedController = StreamController<String>.broadcast();
+
+  /// Stream that emits vault ID when notes index changes externally.
+  Stream<String> get onNotesChanged => _notesChangedController.stream;
+
+  /// Stream that emits vault ID when notebooks index changes externally.
+  Stream<String> get onNotebooksChanged => _notebooksChangedController.stream;
+
   UnlockedWorkspaceNotifier(this._ref) : super(null) {
     // Register as app lifecycle observer
     WidgetsBinding.instance.addObserver(this);
+  }
+
+  /// Notify listeners that notes have changed externally.
+  void _notifyNotesChanged(String vaultId) {
+    _notesChangedController.add(vaultId);
+  }
+
+  /// Notify listeners that notebooks have changed externally.
+  void _notifyNotebooksChanged(String vaultId) {
+    _notebooksChangedController.add(vaultId);
   }
 
   /// Unlocks the workspace and starts auto-lock monitoring.
@@ -311,6 +339,10 @@ class UnlockedWorkspaceNotifier extends StateNotifier<UnlockedWorkspace?>
     // Stop file monitoring (must be sync, so we don't await)
     _stopFileMonitoring();
 
+    // Close stream controllers
+    _notesChangedController.close();
+    _notebooksChangedController.close();
+
     // Dispose workspace if still unlocked
     state?.dispose();
 
@@ -417,13 +449,15 @@ class UnlockedWorkspaceNotifier extends StateNotifier<UnlockedWorkspace?>
       if (success) {
         _log.info('Notes index reloaded successfully for vault: $vaultId');
 
-        // The repository's metadata cache has been updated by reloadNotesIndex.
-        // Providers that watch the repository will automatically rebuild on next access.
-        // We don't need to explicitly invalidate them here to avoid circular dependency issues.
+        // Notify listeners that notes have changed via a separate stream/notifier
+        // We can't invalidate note providers here due to circular dependency
+        // (noteRepositoryProvider depends on unlockedActiveVaultProvider which
+        // depends on unlockedWorkspaceProvider)
+        //
+        // Instead, use a separate notification mechanism
+        _notifyNotesChanged(vaultId);
 
-        _log.debug(
-          'Notes index reloaded, providers will rebuild on next access',
-        );
+        _log.debug('Notes index reloaded, notified listeners of change');
       } else {
         _log.warning('Failed to reload notes index for vault: $vaultId');
       }
@@ -456,13 +490,11 @@ class UnlockedWorkspaceNotifier extends StateNotifier<UnlockedWorkspace?>
       if (success) {
         _log.info('Notebooks index reloaded successfully for vault: $vaultId');
 
-        // The repository's notebook cache has been updated by reloadNotebooksIndex.
-        // Providers that watch the repository will automatically rebuild on next access.
-        // We don't need to explicitly invalidate them here to avoid circular dependency issues.
+        // Notify listeners that notebooks have changed via stream
+        // (to avoid circular dependency with notebook providers)
+        _notifyNotebooksChanged(vaultId);
 
-        _log.debug(
-          'Notebooks index reloaded, providers will rebuild on next access',
-        );
+        _log.debug('Notebooks index reloaded, notified listeners of change');
       } else {
         _log.warning('Failed to reload notebooks index for vault: $vaultId');
       }
@@ -488,26 +520,218 @@ class UnlockedWorkspaceNotifier extends StateNotifier<UnlockedWorkspace?>
   }
 
   /// Handles new sync operations.
+  ///
+  /// This is the core of the CRDT sync implementation (Phase 6).
+  /// When a new `.op.enc` file is detected in the vault's sync/pending directory,
+  /// this method:
+  /// 1. Reads and decrypts the operation file
+  /// 2. Parses the SyncOperation
+  /// 3. Creates a SyncOperationApplicator
+  /// 4. Applies the operation with CRDT conflict resolution
+  /// 5. Deletes the operation file after successful processing
+  ///
+  /// The operation file can be:
+  /// - Encrypted: Real sync operations from other devices (uses vault's sync key)
+  /// - Plaintext JSON: For testing with CLI tools (auto-detected)
   Future<void> _handleSyncOperation(String vaultId, String opPath) async {
     _log.info('New sync operation detected: $opPath');
 
     try {
-      // TODO: Implement full sync operation application in Phase 6
-      // For now, this is a placeholder that will be completed when:
-      // 1. SyncService is integrated with providers
-      // 2. Encrypted operation format is finalized
-      // 3. Full CRDT conflict resolution is tested
+      // Get the vault for this operation
+      final vault = _vaultWatchers[vaultId]?.vault;
+      if (vault == null) {
+        _log.error(
+          'Cannot process sync operation: vault not found: $vaultId',
+          error: StateError('Vault not found'),
+        );
+        return;
+      }
 
-      _log.debug('Sync operation handling not fully implemented yet: $opPath');
+      // Read the operation file
+      final opBytes = await storageProvider.readFile(opPath);
+      if (opBytes == null) {
+        _log.warning(
+          'Sync operation file not found or already processed: $opPath',
+        );
+        return;
+      }
 
-      // The operation file will be picked up by the next sync() call
-      // when SyncService.sync() is triggered manually or on a schedule
+      // Parse the sync operation (try encrypted first, then plaintext)
+      SyncOperation? operation;
+      try {
+        operation = await _decryptSyncOperation(vault, opBytes);
+      } catch (decryptError) {
+        _log.debug(
+          'Encrypted decryption failed, trying plaintext: $decryptError',
+        );
+        // Try parsing as plaintext JSON (for CLI testing)
+        operation = _parsePlaintextOperation(opBytes);
+      }
+
+      if (operation == null) {
+        _log.error(
+          'Failed to parse sync operation from: $opPath',
+          error: FormatException('Invalid operation format'),
+        );
+        return;
+      }
+
+      _log.info(
+        'Parsed sync operation: ${operation.type.name} for ${operation.targetId}',
+      );
+
+      // Get repositories for the applicator
+      final noteRepo = await _ref.read(noteRepositoryProvider.future);
+      final notebookRepo = await _ref.read(notebookRepositoryProvider.future);
+      final crypto = _ref.read(cryptoServiceProvider);
+
+      // Create the applicator and apply the operation
+      final applicator = SyncOperationApplicator(
+        vault: vault,
+        crypto: crypto,
+        noteRepo: noteRepo,
+        notebookRepo: notebookRepo,
+      );
+
+      final result = await applicator.apply(operation);
+
+      if (result.success) {
+        _log.info(
+          'Sync operation applied successfully: ${operation.type.name} '
+          '(conflict: ${result.conflictType.name}${result.message != null ? ", ${result.message}" : ""})',
+        );
+
+        // Invalidate providers to trigger UI updates for the synced changes
+        _invalidateProvidersForOperation(operation);
+
+        // Delete the operation file after successful processing
+        await storageProvider.deleteFile(opPath);
+        _log.debug('Deleted processed operation file: $opPath');
+
+        // Also delete the companion .op.json file if it exists (from CLI testing)
+        final jsonPath = opPath.replaceAll('.op.enc', '.op.json');
+        if (await storageProvider.exists(jsonPath)) {
+          await storageProvider.deleteFile(jsonPath);
+          _log.debug('Deleted companion JSON file: $jsonPath');
+        }
+      } else {
+        _log.error(
+          'Sync operation failed: ${operation.type.name} - ${result.message}',
+          error: StateError(result.message ?? 'Unknown error'),
+        );
+        // Don't delete failed operations - they may need manual intervention
+      }
     } catch (e, stack) {
       _log.error(
         'Error handling sync operation',
         error: e.toString(),
         stackTrace: stack,
       );
+    }
+  }
+
+  /// Decrypts a sync operation from encrypted bytes.
+  ///
+  /// Uses the vault's sync key (HKDF derived from vault key) to decrypt.
+  Future<SyncOperation> _decryptSyncOperation(
+    UnlockedVault vault,
+    Uint8List encryptedBytes,
+  ) async {
+    final crypto = _ref.read(cryptoServiceProvider);
+
+    // Derive the sync key from vault key
+    final syncKey = ContentKey(
+      crypto.hkdf.deriveKey(
+        inputKey: vault.vaultKey,
+        info: 'witflo.sync.operations.v1',
+      ),
+      context: 'sync',
+    );
+
+    try {
+      // The encrypted file format is: [nonce (24)] [ciphertext] [auth tag (16)]
+      // With AAD = op_id (but we don't have op_id yet, try without AAD first)
+      // Note: For external sync operations, we may need to read the op_id from a wrapper
+
+      // Try to decrypt (no AAD for externally written files)
+      final plaintext = crypto.xchacha20.decrypt(
+        ciphertext: encryptedBytes,
+        key: syncKey,
+      );
+
+      try {
+        final json =
+            jsonDecode(utf8.decode(plaintext.unsafeBytes))
+                as Map<String, dynamic>;
+        return SyncOperation.fromJson(json);
+      } finally {
+        plaintext.dispose();
+      }
+    } finally {
+      syncKey.dispose();
+    }
+  }
+
+  /// Parses a sync operation from plaintext JSON bytes.
+  ///
+  /// Used for testing with CLI tools that write plaintext JSON.
+  SyncOperation? _parsePlaintextOperation(Uint8List bytes) {
+    try {
+      final jsonString = utf8.decode(bytes);
+      final json = jsonDecode(jsonString) as Map<String, dynamic>;
+      return SyncOperation.fromJson(json);
+    } catch (e) {
+      _log.debug('Failed to parse plaintext operation: $e');
+      return null;
+    }
+  }
+
+  /// Invalidates providers based on the sync operation type.
+  ///
+  /// This triggers UI updates for any widgets watching these providers,
+  /// ensuring live sync updates are reflected immediately.
+  void _invalidateProvidersForOperation(SyncOperation operation) {
+    _log.debug(
+      'Invalidating providers for operation: ${operation.type.name} on ${operation.targetId}',
+    );
+
+    switch (operation.type) {
+      case SyncOpType.createNote:
+      case SyncOpType.updateNote:
+      case SyncOpType.deleteNote:
+      case SyncOpType.moveNote:
+        // Invalidate the specific note provider
+        _ref.invalidate(noteProvider(operation.targetId));
+        // Also invalidate list providers that may include this note
+        _ref.invalidate(notesMetadataProvider);
+        _ref.invalidate(activeNotesProvider);
+        _ref.invalidate(pinnedNotesProvider);
+        _ref.invalidate(archivedNotesProvider);
+        _ref.invalidate(trashedNotesProvider);
+        // Invalidate notebook notes if we can extract notebookId from payload
+        final payload = operation.payload;
+        if (payload is Map<String, dynamic>) {
+          final notebookId = payload['notebook_id'] as String?;
+          if (notebookId != null) {
+            _ref.invalidate(notebookNotesProvider(notebookId));
+          }
+        }
+        // Also invalidate orphan notes
+        _ref.invalidate(notebookNotesProvider(null));
+
+      case SyncOpType.createNotebook:
+      case SyncOpType.updateNotebook:
+      case SyncOpType.deleteNotebook:
+        _ref.invalidate(notebooksProvider);
+        _ref.invalidate(activeNotebooksProvider);
+        _ref.invalidate(notebookProvider(operation.targetId));
+
+      case SyncOpType.addTag:
+      case SyncOpType.removeTag:
+        // Tag operations affect notes
+        _ref.invalidate(noteProvider(operation.targetId));
+        _ref.invalidate(notesMetadataProvider);
+        _ref.invalidate(activeNotesProvider);
     }
   }
 }

@@ -104,7 +104,8 @@ class VaultRegistryState {
 
 /// Notifier for vault registry management.
 class VaultRegistryNotifier extends AsyncNotifier<VaultRegistryState> {
-  static const _storageKey = 'fyndo_vault_registry';
+  static const _storageKey = 'witflo_vault_registry';
+  static const _oldStorageKey = 'fyndo_vault_registry'; // For migration
 
   @override
   Future<VaultRegistryState> build() async {
@@ -114,7 +115,17 @@ class VaultRegistryNotifier extends AsyncNotifier<VaultRegistryState> {
   Future<VaultRegistryState> _loadRegistry() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final jsonStr = prefs.getString(_storageKey);
+      var jsonStr = prefs.getString(_storageKey);
+
+      // Migration: try old Fyndo key if new key not found
+      if (jsonStr == null) {
+        jsonStr = prefs.getString(_oldStorageKey);
+        if (jsonStr != null) {
+          // Migrate to new key
+          await prefs.setString(_storageKey, jsonStr);
+          await prefs.remove(_oldStorageKey);
+        }
+      }
 
       if (jsonStr == null) {
         // Check if there's a default vault from the old system

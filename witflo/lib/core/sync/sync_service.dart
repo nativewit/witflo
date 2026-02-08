@@ -327,7 +327,7 @@ class SyncService {
     return ContentKey(
       _crypto.hkdf.deriveKey(
         inputKey: _vault.vaultKey,
-        info: 'fyndo.sync.operations.v1',
+        info: 'witflo.sync.operations.v1',
       ),
       context: 'sync',
     );

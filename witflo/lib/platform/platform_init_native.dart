@@ -36,7 +36,7 @@ Future<void> initializePlatform() async {
 /// Get the application documents directory path.
 Future<String> getAppDocumentsPath() async {
   final appDir = await getApplicationDocumentsDirectory();
-  final vaultDir = Directory('${appDir.path}/fyndo_vault');
+  final vaultDir = Directory('${appDir.path}/witflo_vault');
   if (!await vaultDir.exists()) {
     await vaultDir.create(recursive: true);
   }

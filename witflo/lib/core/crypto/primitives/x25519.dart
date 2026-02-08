@@ -17,7 +17,7 @@
 // 1. Alice wants to share notebook NK with Bob
 // 2. Alice has Bob's X25519 public key
 // 3. Alice computes: sharedSecret = X25519(Alice.secret, Bob.public)
-// 4. Alice derives: wrapKey = HKDF(sharedSecret, "fyndo.wrap.v1")
+// 4. Alice derives: wrapKey = HKDF(sharedSecret, "witflo.wrap.v1")
 // 5. Alice encrypts: wrappedNK = AEAD(wrapKey, NK)
 // 6. Server stores: {recipientPubKey, wrappedNK} (no plaintext NK)
 // 7. Bob decrypts: sharedSecret = X25519(Bob.secret, Alice.public)
@@ -303,7 +303,7 @@ class X25519KeyExchange {
     required Uint8List ephemeralPublicKey,
     required Uint8List recipientPublicKey,
   }) {
-    final prefix = utf8.encode('fyndo.wrap.v1');
+    final prefix = utf8.encode('witflo.wrap.v1');
     final context = Uint8List(
       prefix.length + ephemeralPublicKey.length + recipientPublicKey.length,
     );

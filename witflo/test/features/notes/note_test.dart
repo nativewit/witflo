@@ -25,7 +25,7 @@ void main() {
   });
 
   setUp(() async {
-    tempDir = await Directory.systemTemp.createTemp('fyndo_note_test_');
+    tempDir = await Directory.systemTemp.createTemp('witflo_note_test_');
   });
 
   tearDown(() async {

@@ -1,4 +1,4 @@
-package com.fyndo.fyndo_app
+package com.witflo.app
 
 import io.flutter.embedding.android.FlutterActivity
 

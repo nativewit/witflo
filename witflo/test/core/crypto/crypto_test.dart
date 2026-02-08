@@ -94,9 +94,9 @@ void main() {
 
     test('ContentKey should store context', () {
       final bytes = SecureBytes(Uint8List(32));
-      final ck = ContentKey(bytes, context: 'fyndo.content.note123.v1');
+      final ck = ContentKey(bytes, context: 'witflo.content.note123.v1');
 
-      expect(ck.context, equals('fyndo.content.note123.v1'));
+      expect(ck.context, equals('witflo.content.note123.v1'));
 
       ck.dispose();
     });

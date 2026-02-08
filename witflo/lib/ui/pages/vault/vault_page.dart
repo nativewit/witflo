@@ -13,6 +13,7 @@ import 'package:witflo_app/providers/vault_selection_providers.dart';
 import 'package:witflo_app/ui/theme/app_theme.dart';
 import 'package:witflo_app/ui/widgets/common/app_bar.dart';
 import 'package:witflo_app/ui/widgets/common/app_card.dart';
+import 'package:witflo_app/core/config/feature_flags.dart';
 import 'package:witflo_app/ui/widgets/note/note_share_dialog.dart';
 import 'package:witflo_app/ui/widgets/vault/vault_delete_dialog.dart';
 import 'package:witflo_app/ui/widgets/vault/vault_export_dialog.dart';
@@ -58,14 +59,15 @@ class _VaultPageContent extends ConsumerWidget {
             icon: const Icon(Icons.more_vert),
             onSelected: (value) => _handleMenuAction(context, ref, value),
             itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'share',
-                child: ListTile(
-                  leading: Icon(Icons.share),
-                  title: Text('Share Vault'),
-                  contentPadding: EdgeInsets.zero,
+              if (FeatureFlags.shareEnabled)
+                const PopupMenuItem(
+                  value: 'share',
+                  child: ListTile(
+                    leading: Icon(Icons.share),
+                    title: Text('Share Vault'),
+                    contentPadding: EdgeInsets.zero,
+                  ),
                 ),
-              ),
               const PopupMenuItem(
                 value: 'export',
                 child: ListTile(
@@ -211,18 +213,20 @@ class _VaultPageContent extends ConsumerWidget {
   void _handleMenuAction(BuildContext context, WidgetRef ref, String action) {
     switch (action) {
       case 'share':
-        ShareDialog.show(
-          context,
-          itemName: 'My Vault',
-          itemType: ShareItemType.vault,
-          onGenerateLink: () async {
-            // TODO: Generate share link
-            return 'https://fyndo.app/share/vault/abc123';
-          },
-          onShareWithUser: (email, role) {
-            // TODO: Share with user
-          },
-        );
+        if (FeatureFlags.shareEnabled) {
+          ShareDialog.show(
+            context,
+            itemName: 'My Vault',
+            itemType: ShareItemType.vault,
+            onGenerateLink: () async {
+              // TODO: Generate share link
+              return 'https://witflo.app/share/vault/abc123';
+            },
+            onShareWithUser: (email, role) {
+              // TODO: Share with user
+            },
+          );
+        }
         break;
       case 'export':
         VaultExportDialog.show(context);

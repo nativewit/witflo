@@ -1,11 +1,11 @@
 {
-    "name": "witflo_app",
+    "name": "Witflo",
     "short_name": "Witflo",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#1a1a2e",
+    "theme_color": "#6366F1",
+    "description": "Zero-Trust, Privacy-First, Offline-First Notes OS",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

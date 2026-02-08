@@ -5,7 +5,7 @@
 //
 // SECURITY MODEL:
 // - Notes are encrypted with ContentKey derived from VaultKey
-// - Each note has its own ContentKey: HKDF(VK, "fyndo.content.{noteId}.v1")
+// - Each note has its own ContentKey: HKDF(VK, "witflo.content.{noteId}.v1")
 // - Encrypted note is stored in /objects/ with hash-based path
 // - Note index stores metadata (also encrypted)
 //
@@ -304,6 +304,11 @@ class EncryptedNoteRepository {
 
   /// Persists the metadata index to disk.
   Future<void> _persistMetadataIndex() async {
+    final indexPath = _vault.filesystem.paths.notesIndex;
+    print(
+      '[EncryptedNoteRepository] Writing notes index to: $indexPath (vault: ${_vault.header.vaultId})',
+    );
+
     // Build JSONL content
     final lines = _metadataCache.values
         .map((m) => jsonEncode(m.toJson()))
@@ -321,10 +326,9 @@ class EncryptedNoteRepository {
     );
 
     // Write atomically
-    await _vault.filesystem.writeAtomic(
-      _vault.filesystem.paths.notesIndex,
-      encrypted.ciphertext,
-    );
+    await _vault.filesystem.writeAtomic(indexPath, encrypted.ciphertext);
+
+    print('[EncryptedNoteRepository] Notes index written successfully');
   }
 
   /// Gets statistics about stored notes.

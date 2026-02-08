@@ -5,7 +5,7 @@
 //
 // SECURITY MODEL:
 // - Notebooks are encrypted with SearchIndexKey derived from VaultKey
-// - SearchIndexKey: HKDF(VK, "fyndo.search_index.v1")
+// - SearchIndexKey: HKDF(VK, "witflo.search_index.v1")
 // - Notebook metadata stored in /refs/notebooks.jsonl.enc
 //
 // STORAGE:

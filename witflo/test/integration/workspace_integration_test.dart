@@ -22,7 +22,7 @@ void main() {
   });
 
   setUp(() async {
-    tempDir = await Directory.systemTemp.createTemp('fyndo_integration_');
+    tempDir = await Directory.systemTemp.createTemp('witflo_integration_');
     workspaceService = WorkspaceService();
   });
 

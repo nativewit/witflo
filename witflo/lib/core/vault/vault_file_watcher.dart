@@ -111,16 +111,28 @@ class VaultFileWatcher {
 
   /// Start watching sync directory for cursor and operation changes.
   Future<void> _startSyncWatcher() async {
-    final syncDir = vault.filesystem.paths.syncDir;
+    // Watch the pending ops directory directly, not the sync root
+    // This ensures we catch file events even if the directory was created after
+    // the parent sync directory was being watched
+    final pendingOpsDir = vault.filesystem.paths.pendingOpsDir;
+
+    print(
+      '[VaultFileWatcher] Starting sync watcher for: $pendingOpsDir (vault: ${vault.header.vaultId})',
+    );
 
     _syncWatcher = NativeFileWatcher(
-      directoryPath: syncDir,
-      filePatterns: ['cursor.enc', '*.op.enc'],
+      directoryPath: pendingOpsDir,
+      filePatterns: ['*.op.enc'],
       debounceInterval: const Duration(milliseconds: 500),
     );
 
     _syncSub = _syncWatcher!.changes.listen(
-      _handleSyncChange,
+      (change) {
+        print(
+          '[VaultFileWatcher] Sync file change detected: ${change.path} (type: ${change.type})',
+        );
+        _handleSyncChange(change);
+      },
       onError: (error, stack) {
         print('Vault sync watcher error (${vault.header.vaultId}): $error');
       },
@@ -129,24 +141,38 @@ class VaultFileWatcher {
 
   /// Handle index file changes in refs directory.
   Future<void> _handleRefChange(FileChange change) async {
+    final fileName = p.basename(change.path);
+
+    print(
+      '[VaultFileWatcher] Ref file change: $fileName (type: ${change.type}, vault: ${vault.header.vaultId})',
+    );
+
     if (change.type == FileChangeType.deleted) {
       // Index file deleted - this is critical but unusual
       print('Warning: Index file deleted: ${change.path}');
       return;
     }
 
-    final fileName = p.basename(change.path);
-
     switch (fileName) {
       case 'notes.jsonl.enc':
+        print('[VaultFileWatcher] Triggering notes index change handler...');
         if (onNotesIndexChange != null) {
           await onNotesIndexChange!();
+          print('[VaultFileWatcher] Notes index change handler completed');
+        } else {
+          print(
+            '[VaultFileWatcher] WARNING: No notes index change handler registered!',
+          );
         }
         break;
 
       case 'notebooks.jsonl.enc':
+        print(
+          '[VaultFileWatcher] Triggering notebooks index change handler...',
+        );
         if (onNotebooksIndexChange != null) {
           await onNotebooksIndexChange!();
+          print('[VaultFileWatcher] Notebooks index change handler completed');
         }
         break;
 
@@ -158,6 +184,7 @@ class VaultFileWatcher {
 
       default:
         // Unknown ref file - ignore
+        print('[VaultFileWatcher] Ignoring unknown ref file: $fileName');
         break;
     }
   }

@@ -1,107 +1,73 @@
-# Witflo Platform
+# Witflo
 
-A zero-trust, privacy-first, offline-first notes and LifeOS platform.
+**Zero-trust, privacy-first, offline-first encrypted notes.**
 
-## Repository Structure
+All data is end-to-end encrypted on your device. The server — if you sync at all — only sees ciphertext.
 
-This is a monorepo containing multiple packages:
+Built with Flutter for iOS, Android, macOS, Linux, Windows, and Web.
 
-```
-witflo-platform/
-├── witflo/              # Flutter app (iOS, Android, macOS, Linux, Windows, Web)
-│   ├── lib/            # Dart source code
-│   ├── android/        # Android platform code
-│   ├── ios/            # iOS platform code
-│   ├── macos/          # macOS platform code
-│   ├── linux/          # Linux platform code
-│   ├── windows/        # Windows platform code
-│   ├── web/            # Web platform code
-│   ├── test/           # Tests
-│   └── docs/           # Product documentation
-└── README.md           # This file
-```
+## Features
 
-## Packages
+- **Zero-trust encryption** — All crypto happens client-side with libsodium
+- **Offline-first** — Works fully without internet
+- **Multi-workspace / Multi-vault** — Isolated encrypted containers
+- **Rich text editor** — Quill-based with markdown support
+- **Notebooks** — Color-coded organization
+- **Auto-lock** — Configurable idle timeout
+- **Dark/Light themes** — Warm paper aesthetic
+- **Export** — Markdown and JSON
 
-### witflo/ - Flutter App
-
-The main Witflo application built with Flutter. Supports all platforms.
+## Quick Start
 
 ```bash
-cd witflo
+git clone https://github.com/nativewit/witflo.git
+cd witflo/witflo
+
+# Requires FVM (Flutter Version Management)
+fvm install && fvm use
 fvm flutter pub get
-fvm flutter run
-```
-
-See [witflo/README.md](witflo/README.md) for more details.
-
-## Development
-
-### For AI Agents
-
-**📖 Start Here:** [`docs/README.md`](docs/README.md) - Complete documentation index
-
-**Quick Links:**
-- **Connect to running app:** [`docs/flutter-ai-agent-guide.md`](docs/flutter-ai-agent-guide.md)
-- **Coding patterns:** [`.opencode/skills/flutter-patterns/SKILL.md`](.opencode/skills/flutter-patterns/SKILL.md)
-- **MCP Quick Reference:** [`docs/flutter-ai-mcp-reference.md`](docs/flutter-ai-mcp-reference.md)
-
-**AI-First Development Features:**
-- ✅ Marionette MCP for runtime UI testing
-- ✅ Screenshot capture (1600x1200 PNG)
-- ✅ Interactive element inspection
-- ✅ UI interaction simulation (tap, scroll, text)
-- ✅ Application log monitoring
-
-### Prerequisites
-
-- [Flutter](https://flutter.dev/docs/get-started/install) (3.38.7+)
-- [FVM](https://fvm.app/) - Flutter Version Management (**required**)
-- Xcode (for iOS/macOS)
-- Android Studio (for Android)
-- Marionette MCP (for AI development) - auto-installed via `dart pub global activate marionette_mcp`
-
-### Quick Start
-
-```bash
-# Clone the repository
-git clone https://github.com/yourusername/witflo-platform.git
-cd witflo-platform
-
-# Navigate to the Flutter app
-cd witflo
-
-# Install FVM and set Flutter version
-fvm install
-fvm use
-
-# Get dependencies
-fvm flutter pub get
-
-# Run the app
 fvm flutter run
 ```
 
 ## Architecture
 
-Witflo follows a zero-trust security model:
+```
+Master Password
+    ↓ Argon2id
+Master Unlock Key (memory-only)
+    ↓ decrypts
+Workspace Keyring
+    ↓ HKDF
+Per-note derived keys
+    ↓ XChaCha20-Poly1305
+Encrypted files on disk
+```
 
-- **Client-side encryption**: All data is encrypted on-device before storage or sync
-- **No server trust**: Servers only see ciphertext
-- **Local-first**: Works fully offline
-- **Key hierarchy**: Password → MUK → VaultKey → ContentKeys
+All storage is file-based — notes are encrypted blobs in a content-addressed layout.
 
-See [witflo/docs/PRODUCT.md](witflo/docs/PRODUCT.md) for detailed architecture documentation.
+See [SYSTEM_DESIGN.md](SYSTEM_DESIGN.md) for details.
 
-## Future Packages
+## Tech Stack
 
-This monorepo is structured to accommodate future packages:
+| Component | Technology |
+|-----------|-----------|
+| Framework | Flutter 3.38+ |
+| Crypto | libsodium |
+| State | Riverpod |
+| Models | built_value |
+| Editor | Flutter Quill |
 
-- `witflo-server/` - Optional sync server (stores only ciphertext)
-- `witflo-cli/` - Command-line tools
-- `witflo-web/` - Web-only lightweight client
-- `packages/` - Shared Dart packages
+## Security
+
+- Password is never stored
+- Keys exist only in memory while unlocked
+- All keys zeroized on lock
+- Authenticated encryption (AEAD)
+
+## Contributing
+
+See [SYSTEM_DESIGN.md](SYSTEM_DESIGN.md) for architecture. PRs welcome.
 
 ## License
 
-[Add your license here]
+[AGPL-3.0](LICENSE)

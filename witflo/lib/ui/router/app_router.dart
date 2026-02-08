@@ -11,7 +11,6 @@
 // /notes             - All notes
 // /notes/pinned      - Pinned notes
 // /notes/archived    - Archived notes
-// /trash             - Trash
 // /settings          - Settings
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -19,6 +18,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:witflo_app/features/notes/models/note.dart';
 import 'package:witflo_app/providers/note_providers.dart';
+import 'package:witflo_app/providers/notebook_providers.dart';
 import 'package:witflo_app/providers/unlocked_workspace_provider.dart';
 import 'package:witflo_app/ui/consumers/note_consumer.dart';
 import 'package:witflo_app/ui/pages/pages.dart';
@@ -29,6 +29,7 @@ import 'package:witflo_app/ui/theme/app_theme.dart';
 import 'package:witflo_app/ui/widgets/common/app_bar.dart';
 import 'package:witflo_app/ui/widgets/common/app_empty_state.dart';
 import 'package:witflo_app/ui/widgets/note/note_share_dialog.dart';
+import 'package:witflo_app/core/config/feature_flags.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
@@ -148,13 +149,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const _ArchivedNotesPage(),
           ),
         ],
-      ),
-
-      // Trash
-      GoRoute(
-        path: '/trash',
-        name: 'trash',
-        builder: (context, state) => const _TrashPage(),
       ),
 
       // Settings
@@ -327,118 +321,6 @@ class _ArchivedNotesPage extends ConsumerWidget {
   }
 }
 
-class _TrashPage extends ConsumerWidget {
-  const _TrashPage();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Scaffold(
-      appBar: AppAppBar(
-        title: const AppBarTitle('Trash'),
-        actions: [
-          TextButton(
-            onPressed: () => _emptyTrash(context, ref),
-            child: const Text('Empty Trash'),
-          ),
-        ],
-      ),
-      body: TrashedNotesConsumer(
-        builder: (context, notesAsync, _) {
-          return notesAsync.when(
-            data: (notes) {
-              if (notes.isEmpty) {
-                return const AppEmptyState(
-                  icon: Icons.delete_outline,
-                  title: 'Trash is Empty',
-                  description: 'Deleted notes will appear here.',
-                );
-              }
-              return _NotesGridView(
-                notes: notes,
-                onNoteOptions: (note) => _showTrashOptions(context, ref, note),
-              );
-            },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, _) => Center(child: Text('Error: $error')),
-          );
-        },
-      ),
-    );
-  }
-
-  void _emptyTrash(BuildContext context, WidgetRef ref) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Empty Trash?'),
-        content: const Text(
-          'All notes in trash will be permanently deleted. '
-          'This cannot be undone.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // TODO: Implement empty trash
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text('Trash emptied')));
-            },
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.error,
-            ),
-            child: const Text('Empty Trash'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showTrashOptions(
-    BuildContext context,
-    WidgetRef ref,
-    NoteMetadata note,
-  ) {
-    final theme = Theme.of(context);
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.restore),
-              title: const Text('Restore'),
-              onTap: () {
-                Navigator.pop(context);
-                ref.read(noteOperationsProvider.notifier).restoreNote(note.id);
-              },
-            ),
-            ListTile(
-              leading: Icon(
-                Icons.delete_forever,
-                color: theme.colorScheme.error,
-              ),
-              title: Text(
-                'Delete Permanently',
-                style: TextStyle(color: theme.colorScheme.error),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                ref.read(noteOperationsProvider.notifier).deleteNote(note.id);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 // ═══════════════════════════════════════════════════════════════════════════
 // SHARED WIDGETS
 // ═══════════════════════════════════════════════════════════════════════════
@@ -529,15 +411,29 @@ class _NotesGridView extends StatelessWidget {
           final note = notes[index];
           return _NoteGridCard(
             note: note,
-            onTap: () {
-              if (note.notebookId != null) {
-                context.push('/notebook/${note.notebookId}?noteId=${note.id}');
-              }
-            },
+            onTap: () => _openNote(context, note),
             onLongPress: () => onNoteOptions(note),
           );
         }, childCount: notes.length),
       ),
+    );
+  }
+
+  /// Opens a note - if it has a notebook, navigate to it; otherwise show a dialog
+  void _openNote(BuildContext context, NoteMetadata note) {
+    if (note.notebookId != null) {
+      context.push('/notebook/${note.notebookId}?noteId=${note.id}');
+    } else {
+      // Note has no notebook - show dialog to assign one
+      _showAssignNotebookDialog(context, note);
+    }
+  }
+
+  /// Shows a dialog to assign an orphan note to a notebook
+  void _showAssignNotebookDialog(BuildContext context, NoteMetadata note) {
+    showDialog(
+      context: context,
+      builder: (context) => _AssignNotebookDialog(note: note),
     );
   }
 }
@@ -679,6 +575,126 @@ class _NoteGridCard extends StatelessWidget {
   }
 }
 
+/// Dialog to assign an orphan note (without notebook) to a notebook.
+///
+/// Shows when user taps on a note in "All Notes" that doesn't belong to any
+/// notebook. Lets user choose a notebook before opening the note.
+class _AssignNotebookDialog extends ConsumerWidget {
+  final NoteMetadata note;
+
+  const _AssignNotebookDialog({required this.note});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final notebooks = ref.watch(activeNotebooksProvider);
+
+    return AlertDialog(
+      title: const Text('Assign to Notebook'),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'This note is not in any notebook. Choose a notebook to organize it:',
+              style: theme.textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 16),
+            if (notebooks.isEmpty)
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.book_outlined,
+                      size: 48,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'No notebooks yet',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Create a notebook first to organize your notes.',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 300),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: notebooks.length,
+                  itemBuilder: (context, index) {
+                    final notebook = notebooks[index];
+                    return ListTile(
+                      leading: Icon(
+                        Icons.book,
+                        color: notebook.color != null
+                            ? Color(int.parse(notebook.color!, radix: 16))
+                            : theme.colorScheme.primary,
+                      ),
+                      title: Text(notebook.name),
+                      subtitle: notebook.description?.isNotEmpty == true
+                          ? Text(
+                              notebook.description!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            )
+                          : null,
+                      onTap: () =>
+                          _assignAndNavigate(context, ref, notebook.id),
+                    );
+                  },
+                ),
+              ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _assignAndNavigate(
+    BuildContext context,
+    WidgetRef ref,
+    String notebookId,
+  ) async {
+    // Close the dialog first
+    Navigator.pop(context);
+
+    // Move the note to the selected notebook
+    final result = await ref
+        .read(noteOperationsProvider.notifier)
+        .moveToNotebook(note.id, notebookId);
+
+    if (result != null && context.mounted) {
+      // Navigate to the notebook with the note selected
+      context.push('/notebook/$notebookId?noteId=${note.id}');
+    }
+  }
+}
+
 /// Bottom sheet for note options
 class _NoteOptionsSheet {
   static void show(BuildContext context, WidgetRef ref, NoteMetadata note) {
@@ -699,18 +715,19 @@ class _NoteOptionsSheet {
                 ref.read(noteOperationsProvider.notifier).togglePin(note.id);
               },
             ),
-            ListTile(
-              leading: const Icon(Icons.share),
-              title: const Text('Share'),
-              onTap: () {
-                Navigator.pop(context);
-                ShareDialog.show(
-                  context,
-                  itemName: note.title.isEmpty ? 'Untitled' : note.title,
-                  itemType: ShareItemType.note,
-                );
-              },
-            ),
+            if (FeatureFlags.shareEnabled)
+              ListTile(
+                leading: const Icon(Icons.share),
+                title: const Text('Share'),
+                onTap: () {
+                  Navigator.pop(context);
+                  ShareDialog.show(
+                    context,
+                    itemName: note.title.isEmpty ? 'Untitled' : note.title,
+                    itemType: ShareItemType.note,
+                  );
+                },
+              ),
             ListTile(
               leading: const Icon(Icons.archive),
               title: const Text('Archive'),
@@ -722,16 +739,86 @@ class _NoteOptionsSheet {
             ListTile(
               leading: Icon(Icons.delete, color: theme.colorScheme.error),
               title: Text(
-                'Move to Trash',
+                'Delete',
                 style: TextStyle(color: theme.colorScheme.error),
               ),
               onTap: () {
                 Navigator.pop(context);
-                ref.read(noteOperationsProvider.notifier).trashNote(note.id);
+                _showDeleteConfirmation(context, ref, note, theme);
               },
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  static void _showDeleteConfirmation(
+    BuildContext context,
+    WidgetRef ref,
+    NoteMetadata note,
+    ThemeData theme,
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.warning, color: theme.colorScheme.error),
+            const SizedBox(width: 12),
+            const Text('Delete Permanently?'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'This note will be permanently deleted:',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.errorContainer.withValues(alpha: 0.3),
+                border: Border.all(color: theme.colorScheme.error),
+              ),
+              child: Text(
+                note.title.isEmpty ? 'Untitled' : note.title,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'This action cannot be undone. The note and all its contents will be permanently removed.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.error,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(context);
+              ref.read(noteOperationsProvider.notifier).deleteNote(note.id);
+            },
+            style: FilledButton.styleFrom(
+              backgroundColor: theme.colorScheme.error,
+            ),
+            child: const Text('Delete Permanently'),
+          ),
+        ],
       ),
     );
   }

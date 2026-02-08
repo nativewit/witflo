@@ -37,7 +37,7 @@ void main() {
 
   setUp(() async {
     service = WorkspaceService();
-    tempDir = await Directory.systemTemp.createTemp('fyndo_workspace_test_');
+    tempDir = await Directory.systemTemp.createTemp('witflo_workspace_test_');
     testPassword = SecureBytes.fromList(utf8.encode('test-password-123'));
   });
 

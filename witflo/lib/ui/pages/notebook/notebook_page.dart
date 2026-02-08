@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:witflo_app/features/notes/models/note.dart';
 import 'package:witflo_app/providers/note_providers.dart';
 import 'package:witflo_app/providers/notebook_providers.dart';
+import 'package:witflo_app/providers/unlocked_workspace_provider.dart';
 import 'package:witflo_app/ui/consumers/note_consumer.dart';
 import 'package:witflo_app/ui/consumers/notebook_consumer.dart';
 import 'package:witflo_app/ui/theme/app_theme.dart';
@@ -18,6 +19,7 @@ import 'package:witflo_app/ui/widgets/common/app_empty_state.dart';
 import 'package:witflo_app/ui/widgets/note/note_editor.dart';
 import 'package:witflo_app/ui/widgets/note/note_export_helper.dart';
 import 'package:witflo_app/ui/widgets/note/note_share_dialog.dart';
+import 'package:witflo_app/core/config/feature_flags.dart';
 import 'package:witflo_app/ui/widgets/notebook/notebook_menu.dart';
 import 'package:intl/intl.dart';
 
@@ -77,6 +79,11 @@ class _NotebookPageContentState extends ConsumerState<_NotebookPageContent>
   bool _hasChanges = false;
   bool _isSaving = false;
   DateTime? _lastSavedAt;
+  DateTime? _lastLocalSaveAt; // Track when we last saved locally
+  String? _lastSavedNoteId; // Track which note we last saved
+
+  // Stream subscription for external notes changes (live sync)
+  StreamSubscription<String>? _notesChangedSubscription;
 
   Notebook get notebook => widget.notebook;
 
@@ -88,10 +95,108 @@ class _NotebookPageContentState extends ConsumerState<_NotebookPageContent>
     if (widget.initialNoteId != null) {
       _selectedNoteId = widget.initialNoteId;
     }
+
+    // Subscribe to external notes changes for live sync
+    // This refreshes the notes list when another app instance makes changes
+    final workspaceNotifier = ref.read(unlockedWorkspaceProvider.notifier);
+    _log.debug(
+      'Setting up external notes change listener for vault in workspace',
+    );
+    _notesChangedSubscription = workspaceNotifier.onNotesChanged.listen(
+      _handleExternalNotesChange,
+    );
+  }
+
+  /// Handles external notes changes (from another app instance via file watcher)
+  void _handleExternalNotesChange(String vaultId) async {
+    _log.info(
+      'External notes change event received for vault: $vaultId '
+      '(isSaving=$_isSaving, hasChanges=$_hasChanges, selectedNoteId=$_selectedNoteId)',
+    );
+
+    // Ignore file changes while we're actively saving
+    // This prevents the editor from resetting when detecting our own writes
+    if (_isSaving || _hasChanges) {
+      _log.debug(
+        'Ignoring external change - currently saving or have local changes',
+      );
+      return;
+    }
+
+    _log.info('Processing external notes change - will refresh notes list');
+
+    // Invalidate the notes list for this notebook to trigger a rebuild
+    ref.invalidate(notebookNotesProvider(notebook.id));
+
+    // If we have a note selected, reload it from disk and update the editor
+    if (_selectedNoteId != null && _currentNote != null) {
+      // Check if this is the same note we just saved recently
+      // Only apply 2-second window if it's the SAME note (to ignore our own write)
+      if (_lastSavedNoteId == _selectedNoteId && _lastLocalSaveAt != null) {
+        final timeSinceLastSave = DateTime.now().difference(_lastLocalSaveAt!);
+        if (timeSinceLastSave.inSeconds < 2) {
+          _log.debug(
+            'Ignoring external change for note $_selectedNoteId - '
+            'we saved it ${timeSinceLastSave.inMilliseconds}ms ago',
+          );
+          return;
+        }
+      }
+
+      try {
+        _log.debug(
+          'Invalidating and reloading note ${_selectedNoteId} from disk...',
+        );
+
+        // Invalidate the provider to force a fresh read from disk
+        ref.invalidate(noteProvider(_selectedNoteId!));
+
+        final updatedNote = await ref.read(
+          noteProvider(_selectedNoteId!).future,
+        );
+
+        if (updatedNote == null) {
+          _log.warning(
+            'Note ${_selectedNoteId} not found after external change',
+          );
+          return;
+        }
+
+        _log.debug(
+          'Loaded note: modifiedAt=${updatedNote.modifiedAt}, '
+          'current modifiedAt=${_currentNote!.modifiedAt}, '
+          'content length=${updatedNote.content.length}',
+        );
+
+        if (updatedNote.modifiedAt != _currentNote!.modifiedAt && mounted) {
+          _log.info(
+            'External update detected for note ${updatedNote.id}, updating editor content',
+          );
+          // Update editor with external changes
+          _editorKey?.currentState?.setContent(updatedNote.content);
+          _titleController.text = updatedNote.title;
+          setState(() {
+            _currentNote = updatedNote;
+          });
+        } else {
+          _log.debug('Note timestamps match, no update needed');
+        }
+      } catch (e, stack) {
+        _log.error(
+          'Failed to reload note after external change',
+          error: e,
+          stackTrace: stack,
+        );
+      }
+    } else {
+      _log.debug('No note currently selected, only refreshed list');
+    }
   }
 
   @override
   void dispose() {
+    // Cancel stream subscription for live sync
+    _notesChangedSubscription?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     if (_hasChanges && !_isSaving) {
       _saveNoteSync();
@@ -129,6 +234,10 @@ class _NotebookPageContentState extends ConsumerState<_NotebookPageContent>
   Future<void> _saveNote() async {
     if (_currentNote == null || !_hasChanges || _isSaving) return;
 
+    _log.debug(
+      'Starting save for note ${_currentNote!.id}: '
+      'hasChanges=$_hasChanges, isSaving=$_isSaving',
+    );
     setState(() => _isSaving = true);
 
     try {
@@ -145,18 +254,27 @@ class _NotebookPageContentState extends ConsumerState<_NotebookPageContent>
       );
 
       await ref.read(noteOperationsProvider.notifier).updateNote(updatedNote);
+      _log.debug('Note saved successfully: ${updatedNote.id}');
 
       if (mounted) {
-        // Invalidate providers to refresh cached data
+        // Invalidate the notes LIST to refresh it
+        // But DON'T invalidate the individual note provider - that would reset the editor
         ref.invalidate(notebookNotesProvider(notebook.id));
-        ref.invalidate(noteProvider(updatedNote.id));
+        // Don't call: ref.invalidate(noteProvider(updatedNote.id));
+
         setState(() {
           _hasChanges = false;
           _currentNote = updatedNote;
           _lastSavedAt = DateTime.now();
+          _lastLocalSaveAt = DateTime.now(); // Track local save time
+          _lastSavedNoteId = updatedNote.id; // Track which note we saved
         });
+        _log.debug(
+          'Save completed, state updated: hasChanges=$_hasChanges, isSaving=$_isSaving',
+        );
       }
     } catch (e) {
+      _log.error('Failed to save note', error: e);
       if (mounted) {
         ScaffoldMessenger.of(
           context,
@@ -560,10 +678,44 @@ class _NotebookPageContentState extends ConsumerState<_NotebookPageContent>
       );
     }
 
+    // Use local state for rendering to avoid unnecessary rebuilds
+    // We only update from the provider when external changes are detected
     if (_currentNote == null) {
-      return const Center(child: CircularProgressIndicator());
+      // Initial load - fetch the note
+      return FutureBuilder<Note?>(
+        future: ref.read(noteProvider(_selectedNoteId!).future),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+          final note = snapshot.data;
+          if (note == null) {
+            return const Center(child: Text('Note not found'));
+          }
+
+          // Initialize local state
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && _currentNote == null) {
+              setState(() {
+                _currentNote = note;
+                _titleController.text = note.title;
+              });
+            }
+          });
+
+          return _buildEditorContent(theme, note);
+        },
+      );
     }
 
+    return _buildEditorContent(theme, _currentNote!);
+  }
+
+  /// Builds the actual editor content (extracted from original _buildEditorArea)
+  Widget _buildEditorContent(ThemeData theme, Note note) {
     return Container(
       decoration: BoxDecoration(
         color: theme.scaffoldBackgroundColor,
@@ -600,15 +752,13 @@ class _NotebookPageContentState extends ConsumerState<_NotebookPageContent>
                 IconButton(
                   key: AppKeys.btnNotePin,
                   icon: Icon(
-                    _currentNote!.isPinned
-                        ? Icons.push_pin
-                        : Icons.push_pin_outlined,
+                    note.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
                     size: 20,
                   ),
                   onPressed: () => ref
                       .read(noteOperationsProvider.notifier)
-                      .togglePin(_currentNote!.id),
-                  tooltip: _currentNote!.isPinned ? 'Unpin note' : 'Pin note',
+                      .togglePin(note.id),
+                  tooltip: note.isPinned ? 'Unpin note' : 'Pin note',
                   padding: const EdgeInsets.all(8),
                   constraints: const BoxConstraints(),
                 ),
@@ -616,7 +766,7 @@ class _NotebookPageContentState extends ConsumerState<_NotebookPageContent>
                 // Export button
                 IconButton(
                   icon: const Icon(Icons.download_outlined, size: 20),
-                  onPressed: () => _exportNoteAsMarkdown(_currentNote!.id),
+                  onPressed: () => _exportNoteAsMarkdown(note.id),
                   tooltip: 'Export as Markdown',
                   padding: const EdgeInsets.all(8),
                   constraints: const BoxConstraints(),
@@ -625,7 +775,7 @@ class _NotebookPageContentState extends ConsumerState<_NotebookPageContent>
                 // Duplicate button
                 IconButton(
                   icon: const Icon(Icons.copy_outlined, size: 20),
-                  onPressed: () => _duplicateNote(_currentNote!.id),
+                  onPressed: () => _duplicateNote(note.id),
                   tooltip: 'Duplicate',
                   padding: const EdgeInsets.all(8),
                   constraints: const BoxConstraints(),
@@ -637,7 +787,7 @@ class _NotebookPageContentState extends ConsumerState<_NotebookPageContent>
                   onPressed: () {
                     ref
                         .read(noteOperationsProvider.notifier)
-                        .archiveNote(_currentNote!.id);
+                        .archiveNote(note.id);
                     setState(() {
                       _selectedNoteId = null;
                       _currentNote = null;
@@ -656,26 +806,39 @@ class _NotebookPageContentState extends ConsumerState<_NotebookPageContent>
                     color: theme.colorScheme.error,
                   ),
                   onPressed: () => _confirmDeleteNote(context),
-                  tooltip: 'Move to Trash',
+                  tooltip: 'Delete',
                   padding: const EdgeInsets.all(8),
                   constraints: const BoxConstraints(),
                 ),
+                if (FeatureFlags.shareEnabled) ...[
+                  const SizedBox(width: 4),
+                  // Share button
+                  IconButton(
+                    icon: const Icon(Icons.share_outlined, size: 20),
+                    onPressed: () {
+                      ShareDialog.show(
+                        context,
+                        itemName: note.title.isEmpty ? 'Untitled' : note.title,
+                        itemType: ShareItemType.note,
+                      );
+                    },
+                    tooltip: 'Share',
+                    padding: const EdgeInsets.all(8),
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
               ],
             ),
           ),
+          // Note title
           Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppTheme.padding,
-              AppTheme.padding,
-              AppTheme.padding,
-              AppTheme.paddingSmall,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: AppTheme.padding),
             child: TextField(
-              key: const Key('input_note_title_embedded'),
+              key: AppKeys.inputNoteTitle,
               controller: _titleController,
-              onChanged: _onTitleChanged,
+              onChanged: (value) => _onContentChanged(value),
               style: theme.textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.bold,
               ),
               decoration: const InputDecoration(
                 hintText: 'Untitled',
@@ -696,9 +859,9 @@ class _NotebookPageContentState extends ConsumerState<_NotebookPageContent>
           Expanded(
             child: NoteEditor(
               key: _editorKey,
-              initialContent: _currentNote!.content,
+              initialContent: note.content,
               onContentChanged: _onContentChanged,
-              autofocus: _currentNote!.title.isEmpty,
+              autofocus: note.title.isEmpty,
               placeholder: 'Start writing...',
             ),
           ),
@@ -720,7 +883,7 @@ class _NotebookPageContentState extends ConsumerState<_NotebookPageContent>
           children: [
             Icon(Icons.warning, color: theme.colorScheme.error),
             const SizedBox(width: 12),
-            const Text('Move to Trash?'),
+            const Text('Delete Permanently?'),
           ],
         ),
         content: Column(
@@ -728,7 +891,7 @@ class _NotebookPageContentState extends ConsumerState<_NotebookPageContent>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'This note will be moved to trash:',
+              'This note will be permanently deleted:',
               style: theme.textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
@@ -749,9 +912,10 @@ class _NotebookPageContentState extends ConsumerState<_NotebookPageContent>
             ),
             const SizedBox(height: 16),
             Text(
-              'You can restore it from trash within 30 days. After that, it will be permanently deleted.',
+              'This action cannot be undone. The note and all its contents will be permanently removed.',
               style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+                color: theme.colorScheme.error,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ],
@@ -764,7 +928,7 @@ class _NotebookPageContentState extends ConsumerState<_NotebookPageContent>
           FilledButton(
             onPressed: () {
               Navigator.pop(context);
-              ref.read(noteOperationsProvider.notifier).trashNote(note.id);
+              ref.read(noteOperationsProvider.notifier).deleteNote(note.id);
               setState(() {
                 _selectedNoteId = null;
                 _currentNote = null;
@@ -773,7 +937,7 @@ class _NotebookPageContentState extends ConsumerState<_NotebookPageContent>
             style: FilledButton.styleFrom(
               backgroundColor: theme.colorScheme.error,
             ),
-            child: const Text('Move to Trash'),
+            child: const Text('Delete Permanently'),
           ),
         ],
       ),
@@ -843,6 +1007,83 @@ class _NotebookPageContentState extends ConsumerState<_NotebookPageContent>
     );
   }
 
+  void _confirmDeleteNoteFromMenu(
+    BuildContext context,
+    WidgetRef ref,
+    NoteMetadata note,
+  ) {
+    final theme = Theme.of(context);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.warning, color: theme.colorScheme.error),
+            const SizedBox(width: 12),
+            const Text('Delete Permanently?'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'This note will be permanently deleted:',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.errorContainer.withValues(alpha: 0.3),
+                border: Border.all(color: theme.colorScheme.error),
+              ),
+              child: Text(
+                note.title.isEmpty ? 'Untitled' : note.title,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'This action cannot be undone. The note and all its contents will be permanently removed.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.error,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(context);
+              ref.read(noteOperationsProvider.notifier).deleteNote(note.id);
+              if (note.id == _selectedNoteId) {
+                setState(() {
+                  _selectedNoteId = null;
+                  _currentNote = null;
+                });
+              }
+            },
+            style: FilledButton.styleFrom(
+              backgroundColor: theme.colorScheme.error,
+            ),
+            child: const Text('Delete Permanently'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showNoteOptions(
     BuildContext context,
     WidgetRef ref,
@@ -866,18 +1107,19 @@ class _NotebookPageContentState extends ConsumerState<_NotebookPageContent>
                 ref.read(noteOperationsProvider.notifier).togglePin(note.id);
               },
             ),
-            ListTile(
-              leading: const Icon(Icons.share),
-              title: const Text('Share'),
-              onTap: () {
-                Navigator.pop(context);
-                ShareDialog.show(
-                  context,
-                  itemName: note.title.isEmpty ? 'Untitled' : note.title,
-                  itemType: ShareItemType.note,
-                );
-              },
-            ),
+            if (FeatureFlags.shareEnabled)
+              ListTile(
+                leading: const Icon(Icons.share),
+                title: const Text('Share'),
+                onTap: () {
+                  Navigator.pop(context);
+                  ShareDialog.show(
+                    context,
+                    itemName: note.title.isEmpty ? 'Untitled' : note.title,
+                    itemType: ShareItemType.note,
+                  );
+                },
+              ),
             ListTile(
               leading: const Icon(Icons.download),
               title: const Text('Export as Markdown'),
@@ -911,18 +1153,12 @@ class _NotebookPageContentState extends ConsumerState<_NotebookPageContent>
             ListTile(
               leading: Icon(Icons.delete, color: theme.colorScheme.error),
               title: Text(
-                'Move to Trash',
+                'Delete',
                 style: TextStyle(color: theme.colorScheme.error),
               ),
               onTap: () {
                 Navigator.pop(context);
-                ref.read(noteOperationsProvider.notifier).trashNote(note.id);
-                if (note.id == _selectedNoteId) {
-                  setState(() {
-                    _selectedNoteId = null;
-                    _currentNote = null;
-                  });
-                }
+                _confirmDeleteNoteFromMenu(context, ref, note);
               },
             ),
           ],

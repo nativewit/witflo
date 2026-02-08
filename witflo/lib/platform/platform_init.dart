@@ -24,7 +24,7 @@ Future<void> initializePlatform() async {
 
 /// Get the application documents directory path.
 Future<String> getAppDocumentsPath() async {
-  return '/fyndo_vault';
+  return '/witflo_vault';
 }
 
 /// Check if running on web.

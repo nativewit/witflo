@@ -49,7 +49,7 @@ import 'package:witflo_app/core/workspace/master_key_derivation.dart';
 /// Spec: docs/specs/spec-001-workspace-management.md (Section 4.2)
 /// Spec: docs/specs/spec-002-workspace-master-password.md (Section 3)
 class WorkspaceService implements IWorkspaceService {
-  static const String _workspaceConfigKey = 'fyndo_workspace_config';
+  static const String _workspaceConfigKey = 'witflo_workspace_config';
 
   // Use environment config for file names
   String get _workspaceMarkerFile =>
@@ -57,9 +57,11 @@ class WorkspaceService implements IWorkspaceService {
   String get _keyringFile => AppEnvironment.instance.workspaceKeyringFile;
   static const String _vaultsSubdir = 'vaults';
 
-  // Old Fyndo file names for migration
+  // Old file names for migration (supports both Fyndo and early Witflo)
   static const String _oldFyndoMarkerFile = '.fyndo-workspace';
   static const String _oldFyndoKeyringFile = '.fyndo-keyring.enc';
+  // Also support migration from old config key
+  static const String _oldConfigKey = 'fyndo_workspace_config';
 
   final FolderPicker _folderPicker;
   final CryptoService _crypto;
@@ -212,11 +214,22 @@ class WorkspaceService implements IWorkspaceService {
   /// Loads workspace configuration from SharedPreferences.
   ///
   /// Returns null if no workspace has been configured yet.
+  /// Supports migration from old 'fyndo_workspace_config' key.
   @override
   Future<WorkspaceConfig?> loadWorkspaceConfig() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final json = prefs.getString(_workspaceConfigKey);
+      var json = prefs.getString(_workspaceConfigKey);
+
+      // Migration: Check for old config key if new one doesn't exist
+      if (json == null) {
+        json = prefs.getString(_oldConfigKey);
+        if (json != null) {
+          // Migrate to new key
+          await prefs.setString(_workspaceConfigKey, json);
+          await prefs.remove(_oldConfigKey);
+        }
+      }
 
       if (json == null) {
         return null; // No workspace configured
@@ -232,11 +245,13 @@ class WorkspaceService implements IWorkspaceService {
   /// Clears the workspace configuration from SharedPreferences.
   ///
   /// Use when user wants to switch to a different workspace.
+  /// Also clears old config key for complete cleanup.
   @override
   Future<void> clearWorkspaceConfig() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_workspaceConfigKey);
+      await prefs.remove(_oldConfigKey); // Also clear old key
     } catch (e) {
       throw WorkspaceException('Failed to clear workspace configuration', e);
     }

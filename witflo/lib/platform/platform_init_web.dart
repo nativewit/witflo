@@ -27,7 +27,7 @@ Future<void> initializePlatform() async {
 /// Get the application documents directory path.
 /// On web, we use a virtual path since storage is IndexedDB-based.
 Future<String> getAppDocumentsPath() async {
-  return '/fyndo_vault';
+  return '/witflo_vault';
 }
 
 /// Check if running on web.

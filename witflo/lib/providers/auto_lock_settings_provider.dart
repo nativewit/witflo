@@ -27,7 +27,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:witflo_app/core/workspace/auto_lock_settings.dart';
 
 /// SharedPreferences key for auto-lock settings.
-const _kAutoLockSettingsKey = 'fyndo_auto_lock_settings';
+const _kAutoLockSettingsKey = 'witflo_auto_lock_settings';
+
+/// Old key for migration from Fyndo.
+const _kOldAutoLockSettingsKey = 'fyndo_auto_lock_settings';
 
 /// Provider for auto-lock settings.
 ///
@@ -56,7 +59,17 @@ class AutoLockSettingsNotifier extends StateNotifier<AutoLockSettings> {
   Future<void> _loadSettings() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final jsonString = prefs.getString(_kAutoLockSettingsKey);
+      var jsonString = prefs.getString(_kAutoLockSettingsKey);
+
+      // Migration: try old Fyndo key if new key not found
+      if (jsonString == null) {
+        jsonString = prefs.getString(_kOldAutoLockSettingsKey);
+        if (jsonString != null) {
+          // Migrate to new key
+          await prefs.setString(_kAutoLockSettingsKey, jsonString);
+          await prefs.remove(_kOldAutoLockSettingsKey);
+        }
+      }
 
       if (jsonString == null) {
         // No settings saved, use standard

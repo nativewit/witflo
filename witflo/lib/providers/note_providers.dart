@@ -17,6 +17,7 @@ import 'package:witflo_app/core/logging/app_logger.dart';
 import 'package:witflo_app/features/notes/data/note_repository.dart';
 import 'package:witflo_app/features/notes/models/note.dart';
 import 'package:witflo_app/providers/crypto_providers.dart';
+import 'package:witflo_app/providers/sync_providers.dart';
 import 'package:witflo_app/providers/unlocked_workspace_provider.dart';
 import 'package:witflo_app/providers/vault_providers.dart';
 import 'package:witflo_app/providers/vault_selection_providers.dart';
@@ -198,8 +199,31 @@ final noteSearchProvider = FutureProvider.family<List<NoteMetadata>, String>((
 
 /// Notifier for note operations.
 class NoteOperationsNotifier extends AsyncNotifier<void> {
+  static final _log = AppLogger.get('NoteOperationsNotifier');
+
   @override
   Future<void> build() async {}
+
+  /// Helper to create a sync operation for note changes.
+  /// This writes an encrypted operation to sync/pending/ for other app instances.
+  Future<void> _createSyncOperation({
+    required SyncOpType type,
+    required String targetId,
+    required Map<String, dynamic> payload,
+  }) async {
+    try {
+      final syncService = await ref.read(syncServiceProvider.future);
+      await syncService.createOperation(
+        type: type,
+        targetId: targetId,
+        payload: payload,
+      );
+      _log.debug('Created sync operation: $type for $targetId');
+    } catch (e) {
+      // Log but don't fail the operation - sync is best-effort
+      _log.warning('Failed to create sync operation: $e');
+    }
+  }
 
   /// Creates a new note.
   Future<Note> createNote({
@@ -217,6 +241,20 @@ class NoteOperationsNotifier extends AsyncNotifier<void> {
     );
     final saved = await repo.save(note);
 
+    // Create sync operation for other app instances
+    await _createSyncOperation(
+      type: SyncOpType.createNote,
+      targetId: saved.id,
+      payload: {
+        'title': saved.title,
+        'content': saved.content,
+        'notebook_id': saved.notebookId,
+        'tags': saved.tags,
+        'created_at': saved.createdAt.toIso8601String(),
+        'modified_at': saved.modifiedAt.toIso8601String(),
+      },
+    );
+
     // Invalidate related providers
     ref.invalidate(notesMetadataProvider);
     ref.invalidate(activeNotesProvider);
@@ -233,15 +271,39 @@ class NoteOperationsNotifier extends AsyncNotifier<void> {
 
   /// Updates an existing note.
   Future<Note> updateNote(Note note) async {
+    _log.debug('[NoteOperationsNotifier] Starting updateNote: ${note.id}');
     final repo = await ref.read(noteRepositoryProvider.future);
     final updated = note.copyWith(modifiedAt: DateTime.now().toUtc());
     final saved = await repo.save(updated);
+    _log.debug(
+      '[NoteOperationsNotifier] Note saved to repository: ${saved.id}',
+    );
+
+    // Create sync operation for other app instances
+    await _createSyncOperation(
+      type: SyncOpType.updateNote,
+      targetId: saved.id,
+      payload: {
+        'title': saved.title,
+        'content': saved.content,
+        'notebook_id': saved.notebookId,
+        'tags': saved.tags,
+        'is_pinned': saved.isPinned,
+        'is_archived': saved.isArchived,
+        'is_trashed': saved.isTrashed,
+        'modified_at': saved.modifiedAt.toIso8601String(),
+      },
+    );
+    _log.debug(
+      '[NoteOperationsNotifier] Sync operation created for: ${saved.id}',
+    );
 
     // Invalidate related providers
     ref.invalidate(noteProvider(note.id));
     ref.invalidate(notesMetadataProvider);
     ref.invalidate(activeNotesProvider);
 
+    _log.info('[NoteOperationsNotifier] updateNote completed: ${saved.id}');
     return saved;
   }
 
@@ -250,7 +312,19 @@ class NoteOperationsNotifier extends AsyncNotifier<void> {
     final repo = await ref.read(noteRepositoryProvider.future);
     final note = await repo.load(noteId);
     if (note != null) {
-      await repo.save(note.trash());
+      final trashed = note.trash();
+      await repo.save(trashed);
+
+      // Create sync operation for other app instances
+      await _createSyncOperation(
+        type: SyncOpType.updateNote,
+        targetId: noteId,
+        payload: {
+          'is_trashed': true,
+          'trashed_at': trashed.trashedAt?.toIso8601String(),
+          'modified_at': trashed.modifiedAt.toIso8601String(),
+        },
+      );
 
       ref.invalidate(noteProvider(noteId));
       ref.invalidate(notesMetadataProvider);
@@ -268,7 +342,19 @@ class NoteOperationsNotifier extends AsyncNotifier<void> {
     final repo = await ref.read(noteRepositoryProvider.future);
     final note = await repo.load(noteId);
     if (note != null) {
-      await repo.save(note.restore());
+      final restored = note.restore();
+      await repo.save(restored);
+
+      // Create sync operation for other app instances
+      await _createSyncOperation(
+        type: SyncOpType.updateNote,
+        targetId: noteId,
+        payload: {
+          'is_trashed': false,
+          'trashed_at': null,
+          'modified_at': restored.modifiedAt.toIso8601String(),
+        },
+      );
 
       ref.invalidate(noteProvider(noteId));
       ref.invalidate(notesMetadataProvider);
@@ -288,6 +374,13 @@ class NoteOperationsNotifier extends AsyncNotifier<void> {
     final note = await repo.load(noteId);
     await repo.delete(noteId);
 
+    // Create sync operation for other app instances
+    await _createSyncOperation(
+      type: SyncOpType.deleteNote,
+      targetId: noteId,
+      payload: {'deleted_at': DateTime.now().toUtc().toIso8601String()},
+    );
+
     ref.invalidate(noteProvider(noteId));
     ref.invalidate(notesMetadataProvider);
     ref.invalidate(activeNotesProvider);
@@ -303,7 +396,21 @@ class NoteOperationsNotifier extends AsyncNotifier<void> {
     final repo = await ref.read(noteRepositoryProvider.future);
     final note = await repo.load(noteId);
     if (note != null) {
-      await repo.save(note.copyWith(isPinned: !note.isPinned));
+      final updated = note.copyWith(
+        isPinned: !note.isPinned,
+        modifiedAt: DateTime.now().toUtc(),
+      );
+      await repo.save(updated);
+
+      // Create sync operation for other app instances
+      await _createSyncOperation(
+        type: SyncOpType.updateNote,
+        targetId: noteId,
+        payload: {
+          'is_pinned': updated.isPinned,
+          'modified_at': updated.modifiedAt.toIso8601String(),
+        },
+      );
 
       ref.invalidate(noteProvider(noteId));
       ref.invalidate(notesMetadataProvider);
@@ -319,7 +426,18 @@ class NoteOperationsNotifier extends AsyncNotifier<void> {
     final repo = await ref.read(noteRepositoryProvider.future);
     final note = await repo.load(noteId);
     if (note != null) {
-      await repo.save(note.archive());
+      final archived = note.archive();
+      await repo.save(archived);
+
+      // Create sync operation for other app instances
+      await _createSyncOperation(
+        type: SyncOpType.updateNote,
+        targetId: noteId,
+        payload: {
+          'is_archived': true,
+          'modified_at': archived.modifiedAt.toIso8601String(),
+        },
+      );
 
       ref.invalidate(noteProvider(noteId));
       ref.invalidate(notesMetadataProvider);
@@ -336,7 +454,18 @@ class NoteOperationsNotifier extends AsyncNotifier<void> {
     final repo = await ref.read(noteRepositoryProvider.future);
     final note = await repo.load(noteId);
     if (note != null) {
-      await repo.save(note.unarchive());
+      final unarchived = note.unarchive();
+      await repo.save(unarchived);
+
+      // Create sync operation for other app instances
+      await _createSyncOperation(
+        type: SyncOpType.updateNote,
+        targetId: noteId,
+        payload: {
+          'is_archived': false,
+          'modified_at': unarchived.modifiedAt.toIso8601String(),
+        },
+      );
 
       ref.invalidate(noteProvider(noteId));
       ref.invalidate(notesMetadataProvider);
@@ -346,6 +475,47 @@ class NoteOperationsNotifier extends AsyncNotifier<void> {
         ref.invalidate(notebookNotesProvider(note.notebookId));
       }
     }
+  }
+
+  /// Moves a note to a different notebook.
+  ///
+  /// Used when assigning orphan notes (notes without a notebook) to a notebook,
+  /// or when reorganizing notes between notebooks.
+  Future<Note?> moveToNotebook(String noteId, String notebookId) async {
+    final repo = await ref.read(noteRepositoryProvider.future);
+    final note = await repo.load(noteId);
+    if (note == null) return null;
+
+    final oldNotebookId = note.notebookId;
+    final updated = note.copyWith(
+      notebookId: notebookId,
+      modifiedAt: DateTime.now().toUtc(),
+    );
+    final saved = await repo.save(updated);
+
+    // Create sync operation for other app instances
+    await _createSyncOperation(
+      type: SyncOpType.moveNote,
+      targetId: noteId,
+      payload: {
+        'old_notebook_id': oldNotebookId,
+        'new_notebook_id': notebookId,
+        'modified_at': saved.modifiedAt.toIso8601String(),
+      },
+    );
+
+    // Invalidate related providers
+    ref.invalidate(noteProvider(noteId));
+    ref.invalidate(notesMetadataProvider);
+    ref.invalidate(activeNotesProvider);
+    ref.invalidate(notebookNotesProvider(notebookId));
+    if (oldNotebookId != null) {
+      ref.invalidate(notebookNotesProvider(oldNotebookId));
+    }
+    // Also invalidate the null notebook provider (orphan notes)
+    ref.invalidate(notebookNotesProvider(null));
+
+    return saved;
   }
 }
 

@@ -11,8 +11,8 @@
 //
 // DERIVATION:
 // User Identity Key is derived from Vault Key via HKDF:
-// - Signing: HKDF(VK, "fyndo.identity.signing.v1") → Ed25519 seed
-// - Encryption: HKDF(VK, "fyndo.identity.encryption.v1") → X25519 seed
+// - Signing: HKDF(VK, "witflo.identity.signing.v1") → Ed25519 seed
+// - Encryption: HKDF(VK, "witflo.identity.encryption.v1") → X25519 seed
 //
 // This means:
 // - UIK is deterministic from VK (recoverable with password)
@@ -87,7 +87,7 @@ class UserPublicIdentity {
   /// Creates a shareable string representation.
   String toShareableString() {
     final data = {
-      'type': 'fyndo_identity',
+      'type': 'witflo_identity',
       'version': 1,
       'signing': base64Encode(signingPublicKey),
       'encryption': base64Encode(encryptionPublicKey),
@@ -100,7 +100,8 @@ class UserPublicIdentity {
     final json =
         jsonDecode(utf8.decode(base64Decode(encoded))) as Map<String, dynamic>;
 
-    if (json['type'] != 'fyndo_identity') {
+    // Support both old 'fyndo_identity' and new 'witflo_identity' for backward compatibility
+    if (json['type'] != 'witflo_identity' && json['type'] != 'fyndo_identity') {
       throw FormatException('Invalid identity format');
     }
 
@@ -139,14 +140,14 @@ class UserIdentityService implements IUserIdentityService {
     // Derive signing key seed
     final signingSeed = _crypto.hkdf.deriveKey(
       inputKey: vaultKey,
-      info: 'fyndo.identity.signing.v1',
+      info: 'witflo.identity.signing.v1',
       outputLength: 32,
     );
 
     // Derive encryption key seed
     final encryptionSeed = _crypto.hkdf.deriveKey(
       inputKey: vaultKey,
-      info: 'fyndo.identity.encryption.v1',
+      info: 'witflo.identity.encryption.v1',
       outputLength: 32,
     );
 

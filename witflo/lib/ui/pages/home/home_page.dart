@@ -21,6 +21,7 @@ import 'package:witflo_app/ui/widgets/notebook/notebook_menu.dart';
 import 'package:witflo_app/ui/widgets/sync/sync_button.dart';
 import 'package:witflo_app/ui/widgets/vault/vault_card.dart';
 import 'package:witflo_app/ui/widgets/vault/vault_create_dialog.dart';
+import 'package:witflo_app/core/config/feature_flags.dart';
 import 'package:go_router/go_router.dart';
 
 /// Home page showing vault overview and notebooks.
@@ -71,7 +72,7 @@ class _HomePageContent extends ConsumerWidget {
         title: AppBarTitle(AppEnvironment.instance.appName),
         leading: const SizedBox(width: 16),
         actions: [
-          const SyncButton(),
+          if (FeatureFlags.syncEnabled) const SyncButton(),
           IconButton(
             key: AppKeys.navSettings,
             icon: const Icon(Icons.settings),
@@ -114,26 +115,27 @@ class _HomePageContent extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Search field
-        Padding(
-          padding: const EdgeInsets.all(AppTheme.padding),
-          child: TextField(
-            key: AppKeys.btnSearch,
-            decoration: InputDecoration(
-              hintText: 'Search...',
-              prefixIcon: const Icon(Icons.search, size: 20),
-              isDense: true,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: AppTheme.paddingSmall,
-                vertical: AppTheme.paddingSmall,
+        // Search field (hidden until search is implemented)
+        if (FeatureFlags.encryptedSearchEnabled)
+          Padding(
+            padding: const EdgeInsets.all(AppTheme.padding),
+            child: TextField(
+              key: AppKeys.btnSearch,
+              decoration: InputDecoration(
+                hintText: 'Search...',
+                prefixIcon: const Icon(Icons.search, size: 20),
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: AppTheme.paddingSmall,
+                  vertical: AppTheme.paddingSmall,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
+              onSubmitted: (value) => _showSearch(context),
             ),
-            onSubmitted: (value) => _showSearch(context),
           ),
-        ),
         // Quick links
         Padding(
           padding: const EdgeInsets.all(AppTheme.padding),
@@ -241,41 +243,23 @@ class _HomePageContent extends ConsumerWidget {
           ),
         ),
         const Divider(),
-        // Lock and Trash actions
+        // Lock action
         Padding(
           padding: const EdgeInsets.all(AppTheme.paddingSmall),
-          child: Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  key: const Key('btn_lock_vault_sidebar'),
-                  onPressed: () => _handleMenuAction(context, ref, 'lock'),
-                  icon: const Icon(Icons.lock, size: 18),
-                  label: const Text('Lock'),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppTheme.paddingSmall,
-                      vertical: AppTheme.paddingSmall,
-                    ),
-                  ),
+          child: SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              key: const Key('btn_lock_vault_sidebar'),
+              onPressed: () => _handleMenuAction(context, ref, 'lock'),
+              icon: const Icon(Icons.lock, size: 18),
+              label: const Text('Lock Vault'),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppTheme.paddingSmall,
+                  vertical: AppTheme.paddingSmall,
                 ),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: OutlinedButton.icon(
-                  key: const Key('btn_trash_sidebar'),
-                  onPressed: () => _handleMenuAction(context, ref, 'trash'),
-                  icon: const Icon(Icons.delete, size: 18),
-                  label: const Text('Trash'),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppTheme.paddingSmall,
-                      vertical: AppTheme.paddingSmall,
-                    ),
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ],
@@ -390,9 +374,6 @@ class _HomePageContent extends ConsumerWidget {
         // Lock immediately without confirmation for quick access
         ref.read(unlockedWorkspaceProvider.notifier).lock();
         context.go('/');
-        break;
-      case 'trash':
-        context.push('/trash');
         break;
     }
   }

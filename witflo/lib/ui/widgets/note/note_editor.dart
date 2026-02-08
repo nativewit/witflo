@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:witflo_app/ui/theme/app_colors.dart';
 import 'package:witflo_app/ui/theme/app_theme.dart';
+import 'package:witflo_app/ui/widgets/common/dotted_paper_background.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 /// A rich text editor using Quill.
@@ -146,8 +147,8 @@ class NoteEditorState extends State<NoteEditor> {
         if (widget.showToolbar && !widget.readOnly)
           _buildToolbar(theme, isDark),
         Expanded(
-          child: Container(
-            color: theme.scaffoldBackgroundColor,
+          child: DottedPaperBackground(
+            backgroundColor: theme.scaffoldBackgroundColor,
             child: QuillEditor(
               controller: _controller,
               focusNode: _focusNode,

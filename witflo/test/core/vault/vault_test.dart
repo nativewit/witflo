@@ -33,7 +33,7 @@ void main() {
 
   setUp(() async {
     // Create a fresh temp directory for each test
-    tempDir = await Directory.systemTemp.createTemp('fyndo_test_');
+    tempDir = await Directory.systemTemp.createTemp('witflo_test_');
   });
 
   tearDown(() async {

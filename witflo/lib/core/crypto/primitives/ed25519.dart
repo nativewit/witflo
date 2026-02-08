@@ -72,7 +72,7 @@ class Ed25519Signing {
   /// Generates a key pair from a seed (deterministic).
   ///
   /// Use for deriving identity key from vault key:
-  /// UIK = Ed25519.fromSeed(HKDF(VK, "fyndo.identity.signing.v1"))
+  /// UIK = Ed25519.fromSeed(HKDF(VK, "witflo.identity.signing.v1"))
   Ed25519KeyPair generateKeyPairFromSeed(SecureBytes seed) {
     if (seed.length != 32) {
       throw ArgumentError('Seed must be 32 bytes');

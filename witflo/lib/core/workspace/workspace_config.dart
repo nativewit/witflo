@@ -19,7 +19,7 @@ abstract class WorkspaceConfig
   /// Absolute path to the current workspace root directory.
   ///
   /// Example (Desktop): `/Users/alice/WitfloWorkspace`
-  /// Example (Mobile): `/data/data/com.fyndo.app/files/workspace`
+  /// Example (Mobile): `/data/data/com.witflo.app/files/workspace`
   ///
   /// This directory contains:
   /// - Workspace marker file (.witflo-workspace)
