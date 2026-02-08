@@ -99,6 +99,10 @@ class VaultFileWatcher {
         'tags.jsonl.enc',
       ],
       debounceInterval: const Duration(milliseconds: 500),
+      // Disable hash deduplication for index files to detect ALL changes
+      // This ensures live sync works correctly even when multiple apps
+      // write the same content (timestamps differ but content may be same)
+      useHashDeduplication: false,
     );
 
     _refsSub = _refsWatcher!.changes.listen(

@@ -131,10 +131,11 @@ class _NotebookPageContentState extends ConsumerState<_NotebookPageContent>
     // If we have a note selected, reload it from disk and update the editor
     if (_selectedNoteId != null && _currentNote != null) {
       // Check if this is the same note we just saved recently
-      // Only apply 2-second window if it's the SAME note (to ignore our own write)
+      // Only apply 500ms window if it's the SAME note (to ignore our own write)
+      // This matches the file watcher debounce interval
       if (_lastSavedNoteId == _selectedNoteId && _lastLocalSaveAt != null) {
         final timeSinceLastSave = DateTime.now().difference(_lastLocalSaveAt!);
-        if (timeSinceLastSave.inSeconds < 2) {
+        if (timeSinceLastSave.inMilliseconds < 500) {
           _log.debug(
             'Ignoring external change for note $_selectedNoteId - '
             'we saved it ${timeSinceLastSave.inMilliseconds}ms ago',

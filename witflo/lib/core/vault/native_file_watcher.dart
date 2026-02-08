@@ -59,6 +59,11 @@ class NativeFileWatcher implements FileChangeNotifier {
   /// If null, uses Dart's built-in SHA256 for hashing.
   final CryptoService? _crypto;
 
+  /// Whether to use content hash deduplication.
+  /// If false, all file changes are emitted regardless of content changes.
+  /// Useful for files that need precise monitoring (like sync index files).
+  final bool useHashDeduplication;
+
   /// Stream controller for emitting file changes.
   StreamController<FileChange>? _controller;
 
@@ -79,6 +84,7 @@ class NativeFileWatcher implements FileChangeNotifier {
     required this.filePatterns,
     CryptoService? crypto,
     this.debounceInterval = const Duration(milliseconds: 300),
+    this.useHashDeduplication = true,
   }) : _crypto = crypto;
 
   @override
@@ -218,13 +224,18 @@ class NativeFileWatcher implements FileChangeNotifier {
           contentHash = digest.toString();
         }
 
-        // Check if hash changed (deduplication)
-        if (_lastKnownHashes[event.path] == contentHash) {
-          // File content unchanged (e.g., metadata-only change)
-          return;
-        }
+        // Check if hash changed (deduplication) - only if enabled
+        if (useHashDeduplication) {
+          if (_lastKnownHashes[event.path] == contentHash) {
+            // File content unchanged (e.g., metadata-only change)
+            print(
+              '[NativeFileWatcher] Hash unchanged for ${event.path}, skipping event',
+            );
+            return;
+          }
 
-        _lastKnownHashes[event.path] = contentHash;
+          _lastKnownHashes[event.path] = contentHash;
+        }
       } catch (e) {
         // File might be locked or mid-write
         // Skip this event, we'll catch the next change
