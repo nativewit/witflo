@@ -146,7 +146,33 @@ Witflo runs on:
 - Dart 3.10.7+
 - FVM (Flutter Version Management)
 
-### Installation
+## 📥 Installation
+
+### For Users
+
+Download the latest release for your platform from [GitHub Releases](https://github.com/nativewit/witflo/releases).
+
+#### macOS
+1. Download `Witflo-macOS.zip`
+2. Extract and drag `Witflo.app` to Applications folder
+3. **First launch**: Right-click → **"Open"** (due to unsigned app)
+4. Click **"Open"** in the security dialog
+
+> **Why the security warning?** The app is not yet code-signed with an Apple Developer certificate. This is safe to bypass - the source code is open and auditable. We're working on code signing for future releases.
+
+#### Windows
+1. Download `Witflo-Windows.zip`
+2. Extract to your preferred location
+3. Run `witflo.exe`
+
+#### Linux
+1. Download `Witflo-Linux.tar.gz`
+2. Extract: `tar -xzf Witflo-Linux.tar.gz`
+3. Run: `./witflo`
+
+### For Developers
+
+#### Installation
 
 ```bash
 # Clone the repository

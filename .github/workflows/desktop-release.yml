@@ -169,9 +169,23 @@ jobs:
             
             ### Downloads
             
-            - **macOS**: Download `Witflo-macOS.zip`, extract, and drag to Applications
-            - **Windows**: Download `Witflo-Windows.zip`, extract, and run `witflo.exe`
-            - **Linux**: Download `Witflo-Linux.tar.gz`, extract, and run `./witflo`
+            #### macOS
+            1. Download `Witflo-macOS.zip`
+            2. Extract and drag `Witflo.app` to Applications folder
+            3. **Important**: Right-click the app → **"Open"** (first time only)
+            4. Click **"Open"** in the security dialog
+            
+            > **Note**: The app is not yet code-signed. macOS will show a security warning on first launch. This is expected for unsigned apps. We're working on code signing for future releases.
+            
+            #### Windows
+            1. Download `Witflo-Windows.zip`
+            2. Extract to desired location
+            3. Run `witflo.exe`
+            
+            #### Linux
+            1. Download `Witflo-Linux.tar.gz`
+            2. Extract: `tar -xzf Witflo-Linux.tar.gz`
+            3. Run: `./witflo`
             
             ### What's New
             
