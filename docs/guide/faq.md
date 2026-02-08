@@ -152,6 +152,24 @@ The only network activity is sync (when enabled and it's E2E encrypted).
 </details>
 
 <details>
+<summary>Can AI companies or cloud providers read my notes?</summary>
+
+**No.** Your notes are encrypted on your device before they're saved. Only you have the keys to decrypt them.
+
+Unlike cloud note apps where your data lives in readable form on company servers, Witflo uses **zero-knowledge encryption**:
+
+- We literally cannot read your notes
+- AI models can't train on encrypted bytes they can't decrypt
+- Cloud providers (if you use sync) only see encrypted data
+- Even in a data breach, your notes are useless without your password
+
+Your notes never exist in readable form outside your device. Not on our servers, not in AI training datasets, not anywhere.
+
+[Learn more about encryption →](/security/encryption)
+
+</details>
+
+<details>
 <summary>Are there any trackers?</summary>
 
 No. Zero trackers. No ads. No analytics. No telemetry. Nothing.

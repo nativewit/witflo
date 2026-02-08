@@ -122,8 +122,6 @@ Automatically lock workspaces after inactivity to protect your data:
 - **Memory protection** - Sensitive data cleared after use
 - **Screenshot protection** - Optional (mobile platforms)
 
-[View our threat model →](/security/threat-model)
-
 </div>
 
 ---
@@ -191,8 +189,8 @@ We're actively working on these features:
     <strong style="color: #2c3e50;">🔐 Security Details</strong>
     <p style="margin: 0.5rem 0 0 0; color: #476582;">How your data is protected</p>
   </a>
-  <a href="/security/threat-model" style="display: block; padding: 1.5rem; background: #f8f9fa; border-radius: 8px; border-left: 3px solid #f093fb; text-decoration: none; color: inherit;">
-    <strong style="color: #2c3e50;">🛡️ Threat Model</strong>
-    <p style="margin: 0.5rem 0 0 0; color: #476582;">What we protect against</p>
+  <a href="/security/privacy" style="display: block; padding: 1.5rem; background: #f8f9fa; border-radius: 8px; border-left: 3px solid #f093fb; text-decoration: none; color: inherit;">
+    <strong style="color: #2c3e50;">🔒 Privacy</strong>
+    <p style="margin: 0.5rem 0 0 0; color: #476582;">Your data stays private</p>
   </a>
 </div>

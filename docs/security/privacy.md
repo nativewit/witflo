@@ -1,311 +1,298 @@
 # Privacy Guarantees
 
-What Witflo does and doesn't collect, and how we protect your privacy.
+How Witflo protects your privacy and what data practices we follow.
 
 ## Core Privacy Principles
 
 1. **Zero data collection** - We don't collect analytics, telemetry, or usage data
-2. **Zero knowledge** - We cannot access your notes, even if we wanted to
+2. **Zero knowledge** - Your notes are encrypted on your device with keys only you have
 3. **No tracking** - No cookies, pixels, or third-party trackers
-4. **Offline-first** - Works completely without internet
+4. **Offline-first** - Works completely without internet connection
 5. **Open source** - Code is auditable by anyone
 
-## What Witflo Does NOT Collect
+## Your Data Stays Private
 
-### ❌ Personal Information
-- No name, email, or contact information
-- No account registration required
-- No user profiles
+### Everything Is Encrypted Locally
 
-### ❌ Usage Data
-- No analytics (Google Analytics, etc.)
-- No telemetry
-- No feature usage tracking
-- No crash reports (unless manually shared)
-
-### ❌ Note Content
-- Your notes never leave your device unencrypted
-- Server (if using sync) only sees ciphertext
-- No search queries logged
-- No content indexing
-
-### ❌ Metadata
-- No timestamp tracking
-- No device fingerprinting
-- No IP address logging
-- No geolocation
-
-### ❌ Technical Data
-- No error reporting (automatic)
-- No performance metrics
-- No A/B testing
-- No behavioral analytics
-
-## What Witflo DOES Store
-
-### ✅ Locally on Your Device
-
-All data is stored **encrypted on your device**:
+All your data is stored **encrypted on your device**:
 
 | Data Type | Location | Encrypted |
 |-----------|----------|-----------|
 | Note content | Local file system | ✅ Yes |
+| Note titles | SQLite database | ✅ Yes |
 | Note metadata | SQLite database | ✅ Yes |
+| Tags & Notebooks | SQLite database | ✅ Yes |
 | Workspace settings | Local config | ✅ Yes |
-| App preferences | Local config | ❌ No (non-sensitive) |
+| App preferences | Local config | Only non-sensitive data |
 
-**Where?**
+**Storage Locations:**
 - macOS: `~/Library/Application Support/witflo/`
 - Linux: `~/.local/share/witflo/`
 - Windows: `%APPDATA%/witflo/`
 - iOS: App sandbox
 - Android: App-private storage
 
-### ⚠️ On Sync Server (When Sync is Enabled)
+## What We Collect
 
-**Only encrypted data**:
-- Encrypted note blobs (ciphertext only)
-- Encrypted metadata (ciphertext only)
+### The Short Answer: Nothing
+
+Witflo is designed to collect zero information about you or your usage.
+
+**Personal Information**
+- No name, email, or contact information required
+- No account registration
+- No user profiles
+
+**Usage Data**
+- No analytics (Google Analytics, etc.)
+- No telemetry
+- No feature usage tracking
+- No crash reports sent automatically
+
+**Note Content**
+- Your notes stay on your device, encrypted
+- We never see your note content
+- No search queries logged
+- No content indexing on our servers
+
+**Metadata**
+- No timestamp tracking on our servers
+- No device fingerprinting
+- No IP address logging
+- No geolocation tracking
+
+**Technical Data**
+- No automatic error reporting
+- No performance metrics collection
+- No A/B testing
+- No behavioral analytics
+
+## How Sync Works (When Enabled)
+
+### Only Encrypted Data Leaves Your Device
+
+When you enable sync (optional feature):
+
+**What the server receives:**
+- Encrypted note blobs (unreadable ciphertext)
+- Encrypted metadata (unreadable ciphertext)
 - Sync timestamps (for conflict resolution)
 - Workspace ID (random UUID, non-identifying)
 
-**Server cannot see**:
-- Your password
-- Note content (plaintext)
-- Note titles
-- Tags or notebooks
+**What the server never sees:**
+- Your password or encryption keys
+- Note content in readable form
+- Note titles in readable form
+- Tags or notebook names in readable form
 - Any personal information
 
-## Network Activity
+### Network Activity
 
-### When Does Witflo Connect to the Internet?
+Witflo is **offline-first** and connects to the internet only for:
 
-Witflo is **offline-first** and only uses the network for:
+**1. Sync (Optional)**
+- Only when you enable and configure sync
+- Only encrypted data transmitted
+- End-to-end encrypted before leaving your device
 
-1. **Sync** (optional, when enabled)
-   - Only encrypted data transmitted
-   - End-to-end encrypted
+**2. Updates (Optional)**
+- Checks for new app versions
+- Connects to GitHub API (not controlled by us)
+- Can be disabled in settings
 
-2. **Updates** (optional)
-   - Check for new versions
-   - Sent to GitHub API (not controlled by us)
-
-3. **Nothing else**
-   - No analytics requests
-   - No telemetry
-   - No tracking pixels
-
-### Network Requests Breakdown
-
-When sync is enabled:
-
-```
-POST https://sync.witflo.app/v1/sync
-Content-Type: application/octet-stream
-Body: <encrypted blob>
-
-Response: 
-{
-  "status": "ok",
-  "timestamp": "2025-02-08T12:00:00Z"
-}
-```
-
-That's it. No cookies, no tracking headers, no analytics.
+**3. Nothing Else**
+- No analytics requests
+- No telemetry transmissions
+- No tracking pixels or beacons
 
 ### Self-Hosting
 
-You can run your own sync server:
-- Full control over your data
+Take complete control of your data:
+- Run your own sync server
 - No third-party involvement
-- Open-source sync server (coming soon)
+- Full ownership of all data
+- Open-source sync server code (coming soon)
 
-## Browser/Web Version
+## Browser & Web Version
 
-### Cookies
-- ❌ No third-party cookies
-- ✅ Local session storage (encrypted workspace state)
+### Local Storage Only
 
-### Local Storage
-- Only encrypted data stored in IndexedDB
-- Cleared when workspace is locked
+**What's stored in your browser:**
+- Encrypted workspace state in IndexedDB
+- Session storage for encrypted data
+- Cleared automatically when you lock the workspace
 
-### Web Analytics
-- ❌ None
+**What's NOT in your browser:**
+- Third-party cookies
+- Tracking scripts
+- Analytics code
+- Any unencrypted note data
 
 ## Mobile Apps
 
-### Permissions
+### Minimal Permissions
+
+Witflo only requests permissions it actually needs:
 
 | Permission | Required? | Why? |
 |------------|-----------|------|
-| Storage | ✅ Yes | Store encrypted notes |
-| Network | ⚠️ Optional | Sync only |
-| Biometric | ⚠️ Optional | Biometric unlock |
-| Camera | ❌ No | Not used |
-| Microphone | ❌ No | Not used |
-| Location | ❌ No | Not used |
-| Contacts | ❌ No | Not used |
+| Storage | ✅ Yes | Store your encrypted notes |
+| Network | Optional | Only if using sync |
+| Biometric | Optional | Biometric unlock feature |
+| Camera | ❌ Never | Not used |
+| Microphone | ❌ Never | Not used |
+| Location | ❌ Never | Not used |
+| Contacts | ❌ Never | Not used |
 
 ### App Store Privacy Labels
 
-**iOS Privacy Nutrition Label**:
+**iOS Privacy Nutrition Label:**
 - Data collected: **None**
 - Data linked to you: **None**
 - Data used to track you: **None**
 
-**Google Play Data Safety**:
+**Google Play Data Safety:**
 - No data shared with third parties
 - No data collected
 
 ## Third-Party Services
 
-### What Third Parties Does Witflo Use?
+### What We Use
 
-**None** for core functionality.
+**For core functionality:** Nothing
 
-Optional:
-- **GitHub** (for updates, if enabled)
-- **Your self-hosted sync server** (if configured)
+**Optional services:**
+- **GitHub** - For app updates only (if you enable update checks)
+- **Your sync server** - If you configure self-hosted sync
 
-### No Third-Party SDKs
+### What We Don't Use
 
-Witflo does not include:
-- ❌ Google Analytics
-- ❌ Firebase
-- ❌ Sentry
-- ❌ Crashlytics
-- ❌ Facebook SDK
-- ❌ Ad networks
-- ❌ Any tracking SDKs
+Witflo includes zero third-party tracking or analytics:
+
+- No Google Analytics
+- No Firebase Analytics
+- No Sentry crash reporting
+- No Crashlytics
+- No Facebook SDK
+- No advertising networks
+- No tracking SDKs of any kind
 
 ## Data Retention
 
-### How Long is Data Kept?
+### On Your Device
 
-**On your device**: Indefinitely (until you delete it)
+Your data stays on your device until you delete it:
+- Stored indefinitely in encrypted form
+- Removed when you delete a workspace
+- Completely erased when you uninstall the app
 
-**On sync server** (if using sync):
-- Deleted notes: 30 days (soft delete for conflict resolution)
-- Inactive workspaces: No automatic deletion
-- After account deletion: Immediate (all data purged)
+### On Sync Server (If Using Sync)
 
-### Deleting Your Data
+**Active data:**
+- Stored encrypted on the sync server
+- Only you can decrypt it
 
-**Locally**:
-1. Delete workspace → Data immediately removed
-2. Uninstall app → All data removed
+**Deleted notes:**
+- Soft deleted for 30 days (for conflict resolution)
+- Permanently removed after 30 days
 
-**On sync server**:
-1. Delete workspace in app → Soft delete (30-day recovery)
-2. Request permanent deletion → Immediate purge
+**Account deletion:**
+- All data immediately purged from sync server
+- No recovery possible after deletion
 
-## Compliance
+## Privacy Compliance
 
-### GDPR (General Data Protection Regulation)
+### GDPR (Europe)
 
-Witflo is GDPR-friendly:
+Witflo is GDPR-compliant by design:
 - ✅ No personal data collected
-- ✅ Data minimization (only what's needed)
-- ✅ Encryption by design
-- ✅ Right to deletion (built-in)
+- ✅ Data minimization (only what's necessary)
+- ✅ Encryption by design and default
+- ✅ Right to deletion (built into the app)
 - ✅ Data portability (export feature)
 - ✅ No automated decision-making
 
-### CCPA (California Consumer Privacy Act)
+### CCPA (California)
 
-- ✅ No personal information sold
+Witflo respects your privacy rights:
+- ✅ No personal information sold (we don't collect it)
 - ✅ No personal information shared
 - ✅ No personal information collected
 
 ### Other Regulations
 
-- **HIPAA**: Not HIPAA-compliant (not audited)
-- **COPPA**: No data collection, but under-13 use discouraged
+- **HIPAA**: Not certified (independent audit not performed)
+- **COPPA**: No data collection, suitable for all ages
 - **SOC 2**: Not certified (small project)
 
 ## Privacy Comparison
 
+See how Witflo compares to other note-taking apps:
+
 | Feature | Witflo | Evernote | Notion | Apple Notes |
 |---------|--------|----------|--------|-------------|
-| E2E Encryption | ✅ Yes | ❌ No | ❌ No | ⚠️ Partial |
-| Zero-knowledge | ✅ Yes | ❌ No | ❌ No | ⚠️ Partial |
-| Analytics | ❌ None | ✅ Yes | ✅ Yes | ⚠️ Limited |
+| E2E Encryption | ✅ Yes | ❌ No | ❌ No | Partial |
+| Zero-knowledge | ✅ Yes | ❌ No | ❌ No | Partial |
+| Analytics | ❌ None | ✅ Yes | ✅ Yes | Limited |
 | Open source | ✅ Yes | ❌ No | ❌ No | ❌ No |
 | Self-hosting | ✅ Yes | ❌ No | ❌ No | ❌ No |
 
-## Transparency
+## Transparency Commitment
 
 ### How We Ensure Privacy
 
-1. **Open source** - All code is public and auditable
-2. **No accounts** - No registration or login required
-3. **Local-first** - Data stays on your device
-4. **Minimal network** - Only encrypted sync traffic
-5. **No telemetry** - Zero data collection
+1. **Open source code** - All code is public and auditable on GitHub
+2. **No accounts needed** - No registration or login required
+3. **Local-first architecture** - Data stays on your device
+4. **Minimal network use** - Only encrypted sync traffic when enabled
+5. **Zero telemetry** - No data collection infrastructure
 
-### Privacy Policy (TL;DR)
+### Our Privacy Promise
 
-> We don't collect, store, or transmit any personal information. Your notes are encrypted on your device. We cannot read them, and we don't want to.
+Your notes are encrypted on your device. Only you have the keys to decrypt them. We build privacy into every feature from day one.
 
-Full privacy policy: [witflo.app/privacy](https://witflo.app/privacy) (coming soon)
+## Common Questions
 
-## Questions & Concerns
+### Can Witflo read my notes?
 
-### Can Witflo see my notes?
+No. Your notes are encrypted on your device before storage or sync. We only ever see encrypted data that is useless without your password.
 
-**No.** Your notes are encrypted on your device before being stored or synced. We only ever see encrypted ciphertext.
+### What about government requests?
 
-### Can government agencies access my notes?
-
-Not through us. We don't have your encryption keys or password. However, if they have physical access to your device and your password, they could unlock it (like any encrypted system).
-
-### What if Witflo is subpoenaed?
-
-We can only provide:
-- Encrypted blobs (useless without password)
+We only have encrypted data and cannot decrypt it. If legally required to provide data, we can only share:
+- Encrypted data blobs (unreadable without your password)
 - Sync timestamps
-- Workspace IDs (random UUIDs)
+- Workspace IDs (random, non-identifying)
 
-We cannot provide:
-- Passwords (we don't have them)
-- Note content (encrypted)
+We never have access to:
+- Your password or encryption keys
+- Readable note content
 - Personal information (we don't collect it)
 
 ### Can you recover my password?
 
-**No.** By design, we cannot recover passwords. This is a feature, not a bug. No backdoors means no one (including us) can access your data without your password.
+No. By design, we have no way to recover passwords. This is a security feature. No backdoors means complete privacy - no one (including us) can access your data without your password.
 
-### What data do you share with law enforcement?
-
-Only what we're legally required to provide:
-- Encrypted data (which they cannot decrypt)
-- Public metadata (timestamps, UUIDs)
-
-We do NOT share (because we don't have):
-- Passwords
-- Decryption keys
-- Plaintext notes
-
-### Will this change in the future?
+### Will privacy practices change?
 
 We commit to:
 - ✅ Never collecting personal data
-- ✅ Never selling data
+- ✅ Never selling any data
 - ✅ Never adding tracking
-- ✅ Remaining open source
+- ✅ Remaining open source forever
 
-If we ever need to collect data (e.g., for fraud prevention), we will:
-1. Announce it publicly
-2. Update privacy policy
-3. Make it optional
-4. Keep it minimal
+If we ever need to collect any data (for example, to prevent fraud), we will:
+1. Announce changes publicly
+2. Update the privacy policy
+3. Make collection optional
+4. Keep data collection minimal
 
 ## Contact
 
-Privacy concerns? Email: privacy@witflo.app (coming soon)
+Have privacy concerns or questions?
 
-Or open a discussion: [GitHub Discussions](https://github.com/nativewit/witflo/discussions)
+- Email: privacy@witflo.app (coming soon)
+- Open source: [View code on GitHub](https://github.com/nativewit/witflo)
 
 ---
 

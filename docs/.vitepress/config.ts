@@ -7,6 +7,12 @@ export default withMermaid(defineConfig({
   description: "Zero-trust, privacy-first, offline-first encrypted notes",
   base: '/',
   
+  // Ignore dead links in README.md (not part of docs site)
+  ignoreDeadLinks: [
+    /^http:\/\/localhost/,
+    /\.\.\/LICENSE/
+  ],
+  
   head: [
     ['link', { rel: 'icon', href: '/favicon.ico' }]
   ],
@@ -38,7 +44,6 @@ export default withMermaid(defineConfig({
           text: 'Security & Privacy',
           items: [
             { text: 'Encryption', link: '/security/encryption' },
-            { text: 'Threat Model', link: '/security/threat-model' },
             { text: 'Privacy Guarantees', link: '/security/privacy' }
           ]
         }

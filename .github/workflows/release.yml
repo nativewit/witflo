@@ -1,0 +1,318 @@
+# Build and Release Witflo App
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # Triggers on version tags like v0.1.0, v1.0.0, etc.
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., 0.1.0)'
+        required: true
+        default: '0.1.0'
+
+jobs:
+  # Build for macOS (Intel + Apple Silicon)
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.5'
+          channel: 'stable'
+      
+      - name: Install dependencies
+        run: flutter pub get
+        working-directory: witflo
+      
+      - name: Build macOS app (Universal Binary)
+        run: flutter build macos --release
+        working-directory: witflo
+      
+      - name: Create DMG
+        run: |
+          brew install create-dmg
+          cd witflo/build/macos/Build/Products/Release
+          create-dmg \
+            --volname "Witflo" \
+            --window-pos 200 120 \
+            --window-size 800 400 \
+            --icon-size 100 \
+            --app-drop-link 600 185 \
+            "Witflo-macOS.dmg" \
+            "witflo_app.app"
+      
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-dmg
+          path: witflo/build/macos/Build/Products/Release/Witflo-macOS.dmg
+
+  # Build for Linux
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.5'
+          channel: 'stable'
+      
+      - name: Install dependencies
+        run: flutter pub get
+        working-directory: witflo
+      
+      - name: Build Linux app
+        run: flutter build linux --release
+        working-directory: witflo
+      
+      - name: Create Linux archive
+        run: |
+          cd witflo/build/linux/x64/release/bundle
+          tar -czf Witflo-Linux-x64.tar.gz *
+          mv Witflo-Linux-x64.tar.gz ../../../../../
+      
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-tar
+          path: witflo/Witflo-Linux-x64.tar.gz
+
+  # Build for Windows
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.5'
+          channel: 'stable'
+      
+      - name: Install dependencies
+        run: flutter pub get
+        working-directory: witflo
+      
+      - name: Build Windows app
+        run: flutter build windows --release
+        working-directory: witflo
+      
+      - name: Create Windows archive
+        run: |
+          cd witflo/build/windows/x64/runner/Release
+          Compress-Archive -Path * -DestinationPath ../../../../../Witflo-Windows-x64.zip
+      
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-zip
+          path: witflo/Witflo-Windows-x64.zip
+
+  # Build for Web
+  build-web:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.5'
+          channel: 'stable'
+      
+      - name: Install dependencies
+        run: flutter pub get
+        working-directory: witflo
+      
+      - name: Build Web app
+        run: flutter build web --release --base-href=/witflo/
+        working-directory: witflo
+      
+      - name: Create Web archive
+        run: |
+          cd witflo/build/web
+          tar -czf ../../Witflo-Web.tar.gz *
+      
+      - name: Upload Web artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-tar
+          path: witflo/Witflo-Web.tar.gz
+
+  # Build for Android (APK)
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.5'
+          channel: 'stable'
+      
+      - name: Install dependencies
+        run: flutter pub get
+        working-directory: witflo
+      
+      - name: Build Android APK
+        run: flutter build apk --release --split-per-abi
+        working-directory: witflo
+      
+      - name: Upload Android APK (arm64-v8a)
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk-arm64
+          path: witflo/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+      
+      - name: Upload Android APK (armeabi-v7a)
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk-armeabi
+          path: witflo/build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
+      
+      - name: Upload Android APK (x86_64)
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk-x86
+          path: witflo/build/app/outputs/flutter-apk/app-x86_64-release.apk
+
+  # Build for iOS (requires macOS)
+  build-ios:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.5'
+          channel: 'stable'
+      
+      - name: Install dependencies
+        run: flutter pub get
+        working-directory: witflo
+      
+      - name: Build iOS app (no codesign)
+        run: flutter build ios --release --no-codesign
+        working-directory: witflo
+      
+      - name: Create iOS archive
+        run: |
+          cd witflo/build/ios/iphoneos
+          zip -r ../../../Witflo-iOS.zip Runner.app
+      
+      - name: Upload iOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-zip
+          path: witflo/Witflo-iOS.zip
+
+  # Create GitHub Release
+  create-release:
+    needs: [build-macos, build-linux, build-windows, build-web, build-android, build-ios]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      
+      - name: Get version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.version.outputs.VERSION }}
+          name: Witflo v${{ steps.version.outputs.VERSION }}
+          draft: false
+          prerelease: true
+          body: |
+            ## Witflo v${{ steps.version.outputs.VERSION }}
+            
+            **Initial Preview Release** - Core features are working but many features are still in development.
+            
+            ### Downloads
+            
+            Choose the version for your platform:
+            
+            **Desktop:**
+            - 🍎 **macOS**: Download the `.dmg` file
+            - 🐧 **Linux**: Download the `.tar.gz` file and extract
+            - 🪟 **Windows**: Download the `.zip` file and extract
+            
+            **Mobile:**
+            - 🤖 **Android**: Download the APK for your device architecture (arm64-v8a for most modern devices)
+            - 🍎 **iOS**: Requires Xcode to install (not signed for App Store)
+            
+            **Web:**
+            - 🌐 **Web**: Extract and host on any static web server
+            
+            ### Installation
+            
+            See the [Installation Guide](https://nativewit.github.io/witflo/guide/installation) for detailed instructions.
+            
+            ### What's New
+            
+            - Encrypted notes with zero-trust encryption
+            - Multi-workspace support
+            - Rich text editor with markdown
+            - Offline-first architecture
+            - Cross-platform support
+            
+            ### Known Issues
+            
+            - Sync is not yet implemented
+            - Search is in development
+            - Tags are in development
+            
+            ---
+            
+            **Full Changelog**: https://github.com/nativewit/witflo/commits/v${{ steps.version.outputs.VERSION }}
+          files: |
+            artifacts/macos-dmg/Witflo-macOS.dmg
+            artifacts/linux-tar/Witflo-Linux-x64.tar.gz
+            artifacts/windows-zip/Witflo-Windows-x64.zip
+            artifacts/web-tar/Witflo-Web.tar.gz
+            artifacts/android-apk-arm64/app-arm64-v8a-release.apk
+            artifacts/android-apk-armeabi/app-armeabi-v7a-release.apk
+            artifacts/android-apk-x86/app-x86_64-release.apk
+            artifacts/ios-zip/Witflo-iOS.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

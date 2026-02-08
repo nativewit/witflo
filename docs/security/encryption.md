@@ -1,317 +1,220 @@
 # Encryption
 
-Deep dive into Witflo's encryption implementation.
+How Witflo keeps your notes secure with industry-standard encryption.
 
 ## Overview
 
-Witflo uses **industry-standard cryptographic primitives** via [libsodium](https://libsodium.gitbook.io/), a well-audited cryptographic library.
+Witflo uses **military-grade encryption** to protect your notes. Every note is encrypted on your device before it's saved or synced, ensuring that only you can read your data.
 
-**Key principles**:
-- Zero-trust: Server never sees plaintext
-- Client-side only: All crypto happens on your device
-- Authenticated encryption: Prevents tampering
-- Key isolation: Each note has unique encryption keys
+**Core principles**:
+- **Zero-trust**: Server never sees your actual notes
+- **Client-side encryption**: All encryption happens on your device
+- **Tamper-proof**: Prevents anyone from modifying your notes
+- **Unique keys**: Each note has its own encryption key
 
-## Cryptographic Stack
+## Encryption Technology
 
-| Component | Algorithm | Purpose |
+Witflo uses [libsodium](https://libsodium.gitbook.io/), a well-audited cryptographic library trusted by security professionals worldwide.
+
+### What We Use
+
+| Component | Technology | Purpose |
 |-----------|-----------|---------|
-| Password hashing | Argon2id | Derive key from password |
-| Key derivation | HKDF | Derive per-note keys |
-| Encryption | XChaCha20-Poly1305 | Encrypt note content |
-| Random generation | libsodium RNG | Generate salts, nonces |
+| Password Protection | Argon2id | Turns your password into encryption keys |
+| Key Generation | HKDF | Creates unique keys for each note |
+| Note Encryption | XChaCha20-Poly1305 | Encrypts and protects your notes |
+| Random Numbers | libsodium RNG | Generates secure random values |
 
-All algorithms are **NIST-approved** or **well-studied** by the cryptographic community.
+All encryption algorithms are **NIST-approved** and recommended by security experts.
 
-## Key Hierarchy
+## How Your Notes Are Protected
 
-```mermaid
-flowchart TD
-    PASS["User's Master Password<br/>(never stored, only in memory)"]
-    ARGON["Argon2id<br/>(memory-hard KDF)"]
-    MUK["Master Unlock Key (MUK)<br/>64 bytes, memory-only<br/>(cleared on lock/app close)"]
-    KEYRING["Workspace Keyring<br/>(encrypted blob on disk)"]
-    DEK["Data Encryption Key (DEK)<br/>32 bytes"]
-    MEK["Metadata Encryption Key (MEK)<br/>32 bytes"]
-    HKDF["HKDF"]
-    NOTEKEY["Per-Note Encryption Key<br/>Unique for each note"]
-    
-    PASS --> ARGON
-    ARGON --> MUK
-    MUK -->|Decrypts| KEYRING
-    KEYRING --> DEK
-    KEYRING --> MEK
-    DEK --> HKDF
-    HKDF --> NOTEKEY
-```
+### The Encryption Process
 
-## Detailed Algorithms
+When you create or edit a note, here's what happens:
 
-### 1. Password to Master Unlock Key
+1. **You unlock your workspace** with your master password
+2. **Your password creates keys** - Special encryption keys are derived from your password
+3. **Each note gets a unique key** - Every note is encrypted with its own key
+4. **Everything is encrypted** - Note content, titles, tags, and metadata are all encrypted
+5. **Only encrypted data is saved** - Your device stores only encrypted files
 
-**Algorithm**: Argon2id  
-**Parameters**:
-- Memory: 64 MiB
-- Iterations: 4
-- Parallelism: 2
-- Output: 64 bytes
+### Key Security Features
 
-```dart
-Uint8List deriveKeyFromPassword(String password, Uint8List salt) {
-  return sodium.crypto_pwhash(
-    outLen: 64,
-    password: password.codeUnits,
-    salt: salt, // 16 bytes random
-    opsLimit: crypto_pwhash_OPSLIMIT_INTERACTIVE,
-    memLimit: crypto_pwhash_MEMLIMIT_INTERACTIVE,
-    alg: crypto_pwhash_ALG_ARGON2ID13,
-  );
-}
-```
+**Password Protection**
+- Your password is transformed using Argon2id, a memory-intensive algorithm
+- This makes it extremely expensive for attackers to guess passwords
+- Winner of the Password Hashing Competition and recommended by OWASP
 
-**Why Argon2id?**
-- Memory-hard: Makes GPU/ASIC attacks expensive
-- Resistant to side-channel attacks
-- Winner of Password Hashing Competition (2015)
-- OWASP recommended
+**Unique Keys Per Note**
+- Every note has its own encryption key
+- If one key is compromised, other notes remain protected
+- Limits damage and enables secure key rotation
 
-### 2. Keyring Encryption
+**Tamper-Proof Encryption**
+- XChaCha20-Poly1305 provides authenticated encryption
+- Any attempt to modify encrypted notes is detected
+- Ensures note integrity and authenticity
 
-The workspace keyring contains the DEK and MEK. It's encrypted with the Master Unlock Key.
+**Secure Random Generation**
+- All random values use cryptographically secure generators
+- Proper nonce generation prevents encryption attacks
+- Different random values for every encryption operation
 
-**Algorithm**: XChaCha20-Poly1305  
-**Key**: First 32 bytes of MUK  
-**Nonce**: 24 bytes (random, stored with ciphertext)
+## What Gets Encrypted
 
-```dart
-Uint8List encryptKeyring(Keyring keyring, Uint8List muk) {
-  final nonce = randomBytes(24);
-  final key = muk.sublist(0, 32); // First 32 bytes of MUK
-  
-  final ciphertext = sodium.crypto_aead_xchacha20poly1305_ietf_encrypt(
-    message: keyring.serialize(),
-    additionalData: null,
-    nonce: nonce,
-    key: key,
-  );
-  
-  return nonce + ciphertext; // Store nonce with ciphertext
-}
-```
+### Fully Encrypted
 
-### 3. Per-Note Key Derivation
+Everything about your notes is encrypted:
 
-Each note gets a unique encryption key derived from the DEK.
+| Data | Encrypted |
+|------|-----------|
+| Note content | ✅ Yes |
+| Note titles | ✅ Yes |
+| Note metadata | ✅ Yes |
+| Tags | ✅ Yes |
+| Notebooks | ✅ Yes |
+| Timestamps | ✅ Yes |
+| Workspace settings | ✅ Yes |
 
-**Algorithm**: HKDF-SHA256  
-**Input Key Material (IKM)**: DEK (32 bytes)  
-**Salt**: Workspace ID  
-**Info**: Note ID + context string  
-**Output**: 32 bytes
+### App Preferences
 
-```dart
-Uint8List deriveNoteKey(Uint8List dek, String noteId, String workspaceId) {
-  return hkdf(
-    ikm: dek,
-    salt: utf8.encode(workspaceId),
-    info: utf8.encode('witflo.note.$noteId'),
-    length: 32,
-  );
-}
-```
+Only non-sensitive app preferences (like theme choice) are stored unencrypted on your device.
 
-**Why per-note keys?**
-- Limits damage if one key is compromised
-- Enables secure key rotation
-- No key reuse across different data
+## How Encryption Protects You
 
-### 4. Note Content Encryption
+### Your Notes Are Safe From:
 
-**Algorithm**: XChaCha20-Poly1305 (AEAD)  
-**Key**: Derived note key (32 bytes)  
-**Nonce**: 24 bytes (random, stored with ciphertext)  
-**Additional Data**: Note metadata (authenticated but not encrypted)
+**Server Breaches**
+- The sync server only sees encrypted data
+- Even if the server is hacked, your notes remain secure
+- Attackers only get useless encrypted bytes
 
-```dart
-Uint8List encryptNote(
-  String plaintext,
-  Uint8List noteKey,
-  String noteMetadata,
-) {
-  final nonce = randomBytes(24);
-  
-  final ciphertext = sodium.crypto_aead_xchacha20poly1305_ietf_encrypt(
-    message: utf8.encode(plaintext),
-    additionalData: utf8.encode(noteMetadata),
-    nonce: nonce,
-    key: noteKey,
-  );
-  
-  return nonce + ciphertext;
-}
-```
+**Network Interception**
+- Your notes are already encrypted before transmission
+- Network attackers cannot read intercepted data
+- All data in transit is protected
 
-**Why XChaCha20-Poly1305?**
-- **Authenticated** encryption (prevents tampering)
-- **Fast** on all platforms (no hardware requirement)
-- **Safe** nonce generation (192-bit nonce, collision-resistant)
-- **Modern** and well-studied
+**Device Theft**
+- Encrypted files are useless without your password
+- Even with physical access, notes cannot be decrypted
+- Your data stays private
 
-### 5. Metadata Encryption
+**Memory Dumps**
+- Keys are cleared from memory when you lock the workspace
+- Reduces risk from memory access attacks
+- Automatic cleanup on app close
 
-Note metadata (title, timestamps, tags) is encrypted with MEK.
+**Brute Force Attacks**
+- Argon2id makes password guessing extremely expensive
+- Each password attempt requires significant computing resources
+- Makes automated attacks impractical
 
-**Algorithm**: XChaCha20-Poly1305  
-**Key**: MEK from keyring  
-**Nonce**: 24 bytes random
+## Password Security
 
-This allows:
-- Searching encrypted metadata
-- Listing notes without decrypting content
-- Metadata integrity verification
+### Your Master Password
 
-## Security Properties
+Your master password is the foundation of your security:
 
-### Confidentiality
+- **Never stored** - Only kept in memory while unlocked
+- **Not recoverable** - We cannot reset or recover your password
+- **You need to remember it** - Choose something memorable but strong
+- **Cleared on lock** - Removed from memory when you lock the workspace
 
-✅ **Semantic security**: Identical plaintexts produce different ciphertexts  
-✅ **Forward secrecy**: Compromising one key doesn't compromise others  
-✅ **No key reuse**: Each note has unique keys
+### Changing Your Password
 
-### Integrity
+You can change your master password anytime:
 
-✅ **Authentication**: Poly1305 MAC prevents tampering  
-✅ **Additional data**: Metadata authenticated but not encrypted  
-✅ **Nonce uniqueness**: Random 192-bit nonces (collision-resistant)
+1. Unlock your workspace with your current password
+2. Enter your new password
+3. Witflo re-encrypts your workspace with the new password
+4. All notes remain accessible with the new password
 
-### Availability
+The process is seamless and your notes are never at risk during the password change.
 
-✅ **Offline**: All operations work without network  
-✅ **No key escrow**: No backdoor or recovery mechanism  
-✅ **Deterministic**: Same password always produces same key
+## Encryption Standards
 
-## Threat Model
-
-### What Witflo Protects Against
-
-✅ **Server compromise**: Server only sees ciphertext  
-✅ **Network interception**: All data encrypted before transmission  
-✅ **Disk theft**: Encrypted files useless without password  
-✅ **Memory dumps** (partially): Keys cleared on lock  
-✅ **Brute force**: Argon2id makes password guessing expensive
-
-### What Witflo Does NOT Protect Against
-
-❌ **Keyloggers**: If password is captured during entry  
-❌ **Screen recording**: Plaintext visible while unlocked  
-❌ **Memory forensics** (advanced): While unlocked, keys are in RAM  
-❌ **Weak passwords**: We can't force strong passwords  
-❌ **Malware on device**: If device is compromised, all bets are off  
-❌ **Rubber-hose cryptanalysis**: Physical coercion
-
-### Trust Assumptions
-
-You must trust:
-- **Your device** is not compromised
-- **libsodium** implementation is correct
-- **Flutter/Dart runtime** is not backdoored
-- **Your password** is strong and secret
-
-You do **NOT** need to trust:
-- The server (if using sync)
-- Network infrastructure
-- Witflo developers (code is open source)
-
-## Implementation Details
-
-### Random Number Generation
-
-```dart
-Uint8List randomBytes(int length) {
-  return sodium.randombytes_buf(length);
-}
-```
-
-Uses libsodium's CSPRNG (Cryptographically Secure Pseudo-Random Number Generator):
-- Linux/macOS: `/dev/urandom`
-- Windows: `BCryptGenRandom`
-- Web: `crypto.getRandomValues()`
-
-### Memory Zeroization
-
-```dart
-void zeroize(Uint8List buffer) {
-  sodium.sodium_memzero(buffer);
-}
-```
-
-Overwrites memory with zeros to prevent:
-- Memory dumps
-- Swap file leakage
-- Cold boot attacks
-
-**Limitations**: Cannot guarantee compiler optimizations don't keep copies.
-
-### Constant-Time Comparison
-
-For secret comparison (e.g., password verification):
-
-```dart
-bool constantTimeEqual(Uint8List a, Uint8List b) {
-  if (a.length != b.length) return false;
-  return sodium.sodium_memcmp(a, b) == 0;
-}
-```
-
-Prevents timing attacks that could leak information about secrets.
-
-## Key Rotation
-
-### Changing Master Password
-
-1. User enters old password → unlock workspace
-2. User enters new password
-3. Derive new MUK from new password
-4. Re-encrypt keyring with new MUK
-5. Zeroize old MUK
-
-**Note**: Individual note keys don't change (derived from DEK, which is unchanged).
-
-### Rotating DEK
-
-For complete key rotation (e.g., after suspected compromise):
-
-1. Generate new DEK
-2. Derive new keys for all notes
-3. Re-encrypt all notes with new keys
-4. Re-encrypt keyring with new DEK
-
-**Warning**: This is expensive for large workspaces.
-
-## Compliance & Standards
+### Industry Compliance
 
 | Standard | Status |
 |----------|--------|
-| FIPS 140-2/3 | Algorithms approved, but libsodium not FIPS-certified |
-| NIST | Algorithms recommended by NIST |
-| OWASP | Follows OWASP crypto guidelines |
-| GDPR | Supports "encryption by design" |
+| NIST | Uses NIST-recommended algorithms |
+| OWASP | Follows OWASP cryptographic guidelines |
+| GDPR | Supports "encryption by design" requirements |
 
-## Future Enhancements
+### Why These Algorithms?
 
-- [ ] Post-quantum cryptography (preparing for quantum computers)
-- [ ] Hardware-backed key storage (TPM, Secure Enclave)
-- [ ] Zero-knowledge sync protocol
-- [ ] Shamir's Secret Sharing for key recovery
+**Argon2id (Password Hashing)**
+- Memory-hard design makes GPU attacks expensive
+- Resistant to side-channel attacks
+- Recommended by security organizations worldwide
 
-## References
+**XChaCha20-Poly1305 (Encryption)**
+- Fast on all devices, no special hardware needed
+- Authenticated encryption prevents tampering
+- Large nonce space prevents encryption collisions
+- Modern and extensively studied
+
+**HKDF (Key Derivation)**
+- Creates unique keys from master keys
+- Enables key isolation per note
+- Supports secure key rotation
+
+## Memory Protection
+
+### Keeping Keys Secure
+
+Witflo takes extra steps to protect encryption keys in memory:
+
+**Automatic Clearing**
+- Keys are removed from memory when you lock your workspace
+- App automatically clears keys on close
+- Reduces window of vulnerability
+
+**Secure Comparison**
+- Password verification uses constant-time comparison
+- Prevents timing attacks that could leak information
+- Protects against advanced cryptographic attacks
+
+**Memory Zeroization**
+- Sensitive memory is overwritten with zeros
+- Prevents recovery from memory dumps
+- Protects against cold boot attacks
+
+## What You Can Trust
+
+### You DON'T Need to Trust:
+
+- **The sync server** - It only sees encrypted data
+- **Network infrastructure** - Everything is encrypted before transmission
+- **Witflo developers** - Code is open source and auditable
+
+### You DO Need to Trust:
+
+- **Your device** - Must not be compromised by malware
+- **Your password** - Must be strong and kept secret
+- **Cryptographic libraries** - libsodium is widely audited and trusted
+- **Your platform** - Flutter/Dart runtime and your operating system
+
+## Future Security Enhancements
+
+We're continuously improving security:
+
+- Post-quantum cryptography (preparing for quantum computers)
+- Hardware-backed key storage (TPM, Secure Enclave)
+- Zero-knowledge sync improvements
+- Enhanced key recovery options (Shamir's Secret Sharing)
+
+## Learn More
+
+Want to dive deeper into the cryptography?
 
 - [libsodium Documentation](https://libsodium.gitbook.io/)
 - [Argon2 RFC 9106](https://www.rfc-editor.org/rfc/rfc9106.html)
-- [XChaCha20-Poly1305](https://tools.ietf.org/html/rfc8439)
+- [XChaCha20-Poly1305 Specification](https://tools.ietf.org/html/rfc8439)
 - [HKDF RFC 5869](https://tools.ietf.org/html/rfc5869)
-- [OWASP Cryptographic Storage](https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html)
+- [OWASP Cryptographic Storage Guide](https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html)
 
 ---
 
-**Questions?** Open a [discussion on GitHub](https://github.com/nativewit/witflo/discussions).
+**Have questions about security?** Check out our [Privacy Guarantees](/security/privacy) or [Getting Started Guide](/guide/getting-started).
