@@ -14,7 +14,7 @@ Witflo is a zero-trust, privacy-first, offline-first encrypted note-taking appli
 <details>
 <summary>Is Witflo really free?</summary>
 
-Yes! Witflo is free and open-source software licensed under AGPL-3.0. You can use it and modify it without paying anything.
+Yes! Witflo is free and open-source software licensed under MPL-2.0 (Mozilla Public License 2.0). You can use it and modify it without paying anything.
 
 </details>
 

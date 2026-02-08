@@ -172,4 +172,4 @@ npm install
 
 Documentation is licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 
-Code examples in documentation are licensed under [AGPL-3.0](../LICENSE).
+Code examples in documentation are licensed under [MPL-2.0](../witflo/LICENSE).

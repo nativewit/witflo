@@ -10,7 +10,8 @@ export default withMermaid(defineConfig({
   // Ignore dead links in README.md (not part of docs site)
   ignoreDeadLinks: [
     /^http:\/\/localhost/,
-    /\.\.\/LICENSE/
+    /\.\.\/LICENSE/,
+    /\.\.\/witflo\/LICENSE/
   ],
   
   head: [
@@ -55,7 +56,7 @@ export default withMermaid(defineConfig({
     ],
 
     footer: {
-      message: 'Released under the AGPL-3.0 License.',
+      message: 'Released under the MPL-2.0 License.',
       copyright: 'Copyright © 2025-present Witflo'
     },
 
