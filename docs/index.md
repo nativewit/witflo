@@ -10,8 +10,8 @@ hero:
     alt: Witflo
   actions:
     - theme: brand
-      text: Download App
-      link: https://github.com/nativewit/witflo/releases/latest
+      text: Launch App
+      link: https://app.witflo.com
     - theme: alt
       text: Get Started
       link: /guide/getting-started
@@ -171,8 +171,8 @@ Your journal entries, business ideas, therapy notes, personal thoughts — they 
   <h2 style="font-size: 2rem; margin-bottom: 1rem; color: #6b7280;">Ready to Take Control of Your Notes?</h2>
   <p style="font-size: 1.1rem; color: #9ca3af; margin-bottom: 2rem;">Download Witflo today and experience truly private note-taking.</p>
   
-  <a href="https://github.com/nativewit/witflo/releases/latest" style="display: inline-block; padding: 16px 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 12px; font-weight: 700; font-size: 1.1rem; box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4); transition: transform 0.2s ease, box-shadow 0.2s ease;">
-    Download Witflo
+  <a href="https://app.witflo.com" style="display: inline-block; padding: 16px 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 12px; font-weight: 700; font-size: 1.1rem; box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4); transition: transform 0.2s ease, box-shadow 0.2s ease;">
+    Launch Witflo
   </a>
   
   <p style="margin-top: 1.5rem; color: #888;">
