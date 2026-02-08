@@ -1,0 +1,28 @@
+/* Custom styles for Witflo documentation */
+
+/* Ensure mermaid diagrams are centered and responsive */
+.mermaid {
+  text-align: center;
+  margin: 2rem 0;
+}
+
+.mermaid svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Adjust mermaid diagram styling for better integration with VitePress theme */
+:root {
+  --vp-c-mermaid-bg: var(--vp-c-bg);
+}
+
+.dark .mermaid {
+  /* Mermaid dark mode adjustments if needed */
+}
+
+/* Make sure diagrams don't overflow on mobile */
+@media (max-width: 768px) {
+  .mermaid {
+    overflow-x: auto;
+  }
+}
