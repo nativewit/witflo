@@ -5,7 +5,7 @@ import { withMermaid } from 'vitepress-plugin-mermaid'
 export default withMermaid(defineConfig({
   title: "Witflo",
   description: "Zero-trust, privacy-first, offline-first encrypted notes",
-  base: '/',
+  base: '/witflo/',
   
   // Ignore dead links in README.md (not part of docs site)
   ignoreDeadLinks: [
